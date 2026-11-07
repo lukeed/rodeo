@@ -19,3 +19,7 @@ missing_errors_doc = "allow"
 must_use_candidate = "allow"
 missing_panics_doc = "allow"
 struct_excessive_bools = "allow"
+
+[profile.dev.package.libghostty-vt-sys]
+debug = false
+opt-level = 3
