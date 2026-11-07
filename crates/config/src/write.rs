@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use toml_edit::{DocumentMut, Item, Table, TableLike, value};
+use toml_edit::{DocumentMut, Item, Table, TableLike, Value};
 
 use crate::load::read_config;
 use crate::model::{StatusIndicators, ToastDelivery};
@@ -63,18 +63,26 @@ impl Edit {
         match self {
             Self::Theme(name) => {
                 let theme = section(&mut doc, &["theme"])?;
-                theme.insert("name", value(name.as_str()));
-                theme.insert("auto_switch", value(false));
+                set(theme, "name", name.as_str().into());
+                set(theme, "auto_switch", false.into());
             }
             Self::StatusIndicators(style) => {
-                section(&mut doc, &["ui"])?.insert("status_indicators", value(style.as_str()));
+                set(
+                    section(&mut doc, &["ui"])?,
+                    "status_indicators",
+                    style.as_str().into(),
+                );
             }
             Self::Sound(enabled) => {
-                section(&mut doc, &["ui", "sound"])?.insert("enabled", value(*enabled));
+                set(
+                    section(&mut doc, &["ui", "sound"])?,
+                    "enabled",
+                    (*enabled).into(),
+                );
             }
             Self::ToastDelivery(delivery) => {
                 let toast = section(&mut doc, &["ui", "toast"])?;
-                toast.insert("delivery", value(delivery.as_str()));
+                set(toast, "delivery", delivery.as_str().into());
                 toast.remove("enabled");
             }
         }
@@ -89,16 +97,40 @@ impl Edit {
     }
 }
 
+fn set(table: &mut dyn TableLike, key: &str, new: Value) {
+    match table.get_mut(key).and_then(Item::as_value_mut) {
+        Some(old) => {
+            let decor = old.decor().clone();
+            *old = new;
+            *old.decor_mut() = decor;
+        }
+        None => {
+            table.insert(key, Item::Value(new));
+        }
+    }
+}
+
 fn section<'a>(
     doc: &'a mut DocumentMut,
     path: &[&str],
 ) -> Result<&'a mut dyn TableLike, WriteError> {
+    let comments = doc
+        .as_table()
+        .is_empty()
+        .then(|| doc.trailing().as_str().unwrap_or_default().to_string())
+        .filter(|comments| !comments.is_empty());
+    if comments.is_some() {
+        doc.set_trailing("");
+    }
     let mut current: &mut dyn TableLike = doc.as_table_mut();
     for (depth, key) in path.iter().enumerate() {
         let leaf = depth + 1 == path.len();
         if !current.contains_key(key) {
             let mut table = Table::new();
             table.set_implicit(!leaf);
+            if let Some(comments) = comments.as_deref().filter(|_| leaf) {
+                table.decor_mut().set_prefix(comments);
+            }
             current.insert(key, Item::Table(table));
         }
         let item = current.get_mut(key).expect("section was inserted above");
