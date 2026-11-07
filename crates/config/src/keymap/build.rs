@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crossterm::event::{KeyCode, KeyModifiers};
-use tracing::warn;
 
 use super::action::{ACTION_FIELDS, NAVIGATE_FIELDS, Slot};
 use super::combo::parse_modifiers;
@@ -150,7 +149,6 @@ struct Builder<'a> {
 
 impl Builder<'_> {
     fn note(&mut self, diagnostic: String) {
-        warn!(message = %diagnostic, "config diagnostic");
         self.diagnostics.push(diagnostic);
     }
 
@@ -186,38 +184,31 @@ impl Builder<'_> {
     }
 
     fn action(&mut self, field: &str, values: &[String], source: Source) -> Vec<Binding> {
-        let mut bindings = Vec::new();
-        for (raw, parsed) in self.parse_values(field, values) {
-            match parsed {
-                Parsed::Single(binding) => {
-                    if self.accept(field, &binding, source) {
-                        bindings.push(binding);
-                    }
-                }
-                Parsed::Range(_) => {
-                    self.note(format!(
-                        "range keybinding is only valid for indexed actions: {field} = {raw:?}; disabling binding"
-                    ));
-                }
-            }
-        }
-        bindings
+        self.singles(field, values, source, Self::accept)
     }
 
     fn navigate(&mut self, field: &str, values: &[String], source: Source) -> Vec<Binding> {
+        self.singles(field, values, source, Self::accept_navigate)
+    }
+
+    fn singles(
+        &mut self,
+        field: &str,
+        values: &[String],
+        source: Source,
+        accept: fn(&mut Self, &str, &Binding, Source) -> bool,
+    ) -> Vec<Binding> {
         let mut bindings = Vec::new();
         for (raw, parsed) in self.parse_values(field, values) {
             match parsed {
                 Parsed::Single(binding) => {
-                    if self.accept_navigate(field, &binding, source) {
+                    if accept(self, field, &binding, source) {
                         bindings.push(binding);
                     }
                 }
-                Parsed::Range(_) => {
-                    self.note(format!(
-                        "range keybinding is only valid for indexed actions: {field} = {raw:?}; disabling binding"
-                    ));
-                }
+                Parsed::Range(_) => self.note(format!(
+                    "range keybinding is only valid for indexed actions: {field} = {raw:?}; disabling binding"
+                )),
             }
         }
         bindings
@@ -409,9 +400,6 @@ fn parse_prefixes(keys: &KeysConfig) -> (Vec<KeyCombo>, Option<String>, Vec<Stri
 impl Keymap {
     pub fn build(keys: &KeysConfig) -> KeymapBuild {
         let (prefixes, prefix_error, diagnostics) = parse_prefixes(keys);
-        for diagnostic in prefix_error.iter().chain(&diagnostics) {
-            warn!(message = %diagnostic, "config diagnostic");
-        }
         let prefix_source = if keys.prefix.is_some() || keys.extra_prefixes.is_some() {
             Source::User
         } else {
