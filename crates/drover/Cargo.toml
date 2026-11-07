@@ -1,0 +1,33 @@
+[package]
+name = "drover"
+description = "A terminal UI for herdr-core with Herdr's keys and look"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+base64 = "0.22.1"
+config = { package = "drover-config", path = "../config" }
+crossterm = { version = "0.29", features = ["event-stream"] }
+doc = { package = "drover-doc", path = "../doc" }
+futures-util = "0.3.34"
+hc = { package = "drover-hc", path = "../hc" }
+ratatui = "0.30"
+rustix = { version = "1.1.6", features = ["event", "stdio", "system", "termios"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "local-offset"] }
+tokio = { version = "1.53.1", features = ["rt", "macros", "sync", "time", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "std"] }
+unicode-segmentation = "1.13"
+unicode-width = "0.2"
+vt = { package = "drover-vt", path = "../vt" }
+
+[dev-dependencies]
+hc = { package = "drover-hc", path = "../hc", features = ["testing"] }
+tempfile = "3"
+
+[lints]
+workspace = true

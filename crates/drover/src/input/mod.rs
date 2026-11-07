@@ -1,0 +1,102 @@
+mod copy;
+mod keys;
+mod mouse;
+
+use crossterm::event::Event;
+use ratatui::layout::Rect;
+
+use crate::app::App;
+use crate::overlay::Outcome;
+use crate::view::Mode;
+
+impl App {
+    pub fn host_event(&mut self, event: Event) {
+        match event {
+            Event::Key(key) => {
+                self.error = None;
+                self.key(key);
+            }
+            Event::Mouse(mouse) => {
+                self.error = None;
+                self.mouse(mouse);
+            }
+            Event::Paste(text) => {
+                self.error = None;
+                self.paste(&text);
+            }
+            Event::FocusGained => self.focus_changed(true),
+            Event::FocusLost => self.focus_changed(false),
+            Event::Resize(cols, rows) => {
+                self.screen = Rect::new(0, 0, cols, rows);
+                self.view.reveal_tab = true;
+                self.relayout();
+            }
+        }
+        self.dirty = true;
+    }
+
+    fn paste(&mut self, text: &str) {
+        if let Some(mut overlay) = self.view.overlay.take() {
+            let outcome = overlay.paste(text);
+            self.view.overlay = Some(overlay);
+            self.overlay_outcome(outcome);
+            return;
+        }
+        if let Some(prompt) = self.view.copy.as_mut().and_then(|c| c.prompt.as_mut()) {
+            prompt.field.insert(text);
+            return;
+        }
+        if matches!(self.view.mode, Mode::Copy | Mode::Navigate) {
+            return;
+        }
+        self.view.selection = None;
+        let Some(address) = self.focused_address() else {
+            return;
+        };
+        if let Some(pane) = self.panes.get_mut(&address) {
+            let bytes = pane.term.paste(text);
+            pane.term.scroll_to_bottom();
+            pane.input(&bytes);
+        }
+    }
+
+    fn focus_changed(&mut self, focused: bool) {
+        self.view.host_focused = focused;
+        if focused {
+            self.full_redraw = self.config.ui.redraw_on_focus_gained;
+        } else if matches!(
+            self.view.drag,
+            Some(crate::view::Drag::Program { .. } | crate::view::Drag::Select { .. })
+        ) {
+            self.view.drag = None;
+        }
+        self.relayout();
+        if focused {
+            self.write_seen();
+        }
+    }
+
+    pub fn overlay_outcome(&mut self, outcome: Outcome) {
+        match outcome {
+            Outcome::Stay => {}
+            Outcome::Close => self.view.overlay = None,
+            Outcome::Done(request) => {
+                self.view.overlay = None;
+                self.overlay_request(request);
+            }
+        }
+    }
+
+    fn overlay_request(&mut self, request: crate::overlay::Request) {
+        use crate::overlay::Request;
+        match request {
+            Request::Action(action) => self.run_action(action),
+            Request::Rename { target, text } => self.finish_rename(target, text),
+            Request::Close(target) => self.close(&target),
+            Request::Navigate => {
+                self.view.nav = self.view.space.clone();
+                self.view.mode = Mode::Navigate;
+            }
+        }
+    }
+}
