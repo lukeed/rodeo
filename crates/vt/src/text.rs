@@ -133,11 +133,12 @@ fn line_at<G: Grid + ?Sized>(grid: &G, row: u64) -> Option<Line> {
         return None;
     }
     let mut line = Line::default();
-    let mut current = line_start(grid, row);
+    let start = line_start(grid, row);
+    let mut current = start;
     while current < rows.end {
         let text = grid.row(current)?;
         line.push_row(current, &text);
-        if !text.wrapped || current - row >= MAX_LINE_ROWS {
+        if !text.wrapped || current - start >= 2 * MAX_LINE_ROWS {
             break;
         }
         current += 1;
@@ -265,6 +266,7 @@ fn trailing_url_junk(url: &[char]) -> bool {
         ')' => !balanced('(', ')'),
         ']' => !balanced('[', ']'),
         '}' => !balanced('{', '}'),
+        '>' => !balanced('<', '>'),
         _ => false,
     }
 }
