@@ -139,6 +139,6 @@ fn hand_written_numbers_take_the_apps_f32_form() {
     let doc = Document::parse(&json!({"spaces":[{"tabs":[{"root":{"type":"row","children":[],"size":{"weight":0.7},"font_size":13}}]}]})).unwrap();
     assert_eq!(
         doc.to_value()["spaces"][0]["tabs"][0]["root"],
-        json!({"id":"","type":"row","children":[],"size":{"weight":0.699999988079071},"font_size":13.0})
+        json!({"id":"","type":"row","children":[],"size":{"weight":0.699_999_988_079_071},"font_size":13.0})
     );
 }

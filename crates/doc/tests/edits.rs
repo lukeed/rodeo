@@ -2,7 +2,7 @@ use doc::{Adopted, Axis, Closed, Document, Error, Node, Place, Prefix, Tab, is_i
 use serde_json::{Value, json};
 
 fn doc(value: Value) -> Document {
-    Document::parse(&value).unwrap()
+    serde_json::from_value(value).unwrap()
 }
 
 fn term(id: &str, address: &str) -> Value {
@@ -10,11 +10,15 @@ fn term(id: &str, address: &str) -> Value {
 }
 
 fn space(id: &str, tabs: Value) -> Value {
-    json!({"id": id, "name": "", "folder": "/w", "tabs": tabs})
+    let mut space = json!({"id": id, "name": "", "folder": "/w"});
+    space["tabs"] = tabs;
+    space
 }
 
 fn tab(id: &str, children: Value) -> Value {
-    json!({"id": id, "name": "", "root": {"id": id, "type": "row", "children": children}})
+    let mut tab = json!({"id": id, "name": "", "root": {"id": id, "type": "row"}});
+    tab["root"]["children"] = children;
+    tab
 }
 
 fn root(d: &Document, tab: &str) -> Value {
@@ -636,5 +640,5 @@ fn gone_terminals_lose_their_panes_tabs_and_spaces() {
         ]
     );
     assert_eq!(d.spaces.len(), 1);
-    assert!(d.remove_gone(|_| false).is_empty());
+    assert_eq!(d.remove_gone(|_| false), []);
 }
