@@ -96,7 +96,7 @@ fn missing_file_is_defaults() {
     let path = temp.path().join("config.toml");
     let loaded = Config::load(&path);
     assert_eq!(loaded.config, Config::default());
-    assert!(loaded.diagnostics.is_empty());
+    assert!(loaded.diagnostics.is_empty(), "{:?}", loaded.diagnostics);
     assert_eq!(check(&path), Ok(()));
 }
 
@@ -243,7 +243,11 @@ fn soft_diagnostics() {
     let config = loaded.config;
     assert_eq!(config.theme.name.as_deref(), Some("neon"));
     assert_eq!(config.ui.sidebar_bounds_or_default(), (18, 36));
-    assert!(config.keymap().keymap.commands().is_empty());
+    assert!(
+        config.keymap().keymap.commands().is_empty(),
+        "{:?}",
+        config.keymap().keymap.commands()
+    );
 }
 
 #[test]
@@ -307,7 +311,7 @@ fn reload_applies_valid_sections() {
     let current = parse("[theme]\nname = \"nord\"\n[ui]\nsidebar_width = 30\n").config;
     let reload = current.reload_text("[ui]\nsidebar_width = 20\n", dir());
     assert_eq!(reload.status, ReloadStatus::Applied);
-    assert!(reload.diagnostics.is_empty());
+    assert!(reload.diagnostics.is_empty(), "{:?}", reload.diagnostics);
     assert_eq!(reload.config.ui.sidebar_width, 20);
     assert_eq!(reload.config.theme.name, None);
 }

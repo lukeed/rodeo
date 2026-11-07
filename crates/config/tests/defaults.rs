@@ -35,7 +35,11 @@ fn top_level_and_runtime_sections() {
     assert_eq!(experimental.kitty_graphics, None);
     assert!(!experimental.pane_history);
     assert!(!experimental.reveal_hidden_cursor_for_cjk_ime);
-    assert!(experimental.cjk_ime_agents.is_empty());
+    assert!(
+        experimental.cjk_ime_agents.is_empty(),
+        "{:?}",
+        experimental.cjk_ime_agents
+    );
     assert_eq!(experimental.cjk_ime_cursor_shape, CursorShape::SteadyBlock);
     assert_eq!(experimental.cjk_ime_cursor_shape.decscusr(), 2);
     assert!(!experimental.switch_ascii_input_source_in_prefix);
@@ -80,7 +84,7 @@ fn ui_section() {
     assert!(!ui.show_agent_labels_on_pane_borders);
     assert!(!ui.hide_tab_bar_when_single_tab);
     assert_eq!(ui.tab_bar_position, TabBarPosition::Top);
-    assert!(ui.tab_bar_right.is_empty());
+    assert!(ui.tab_bar_right.is_empty(), "{:?}", ui.tab_bar_right);
     assert_eq!(ui.tab_bar_right_separator, " ");
     assert_eq!(ui.window_title, "{hostname}: {workspace}");
     assert_eq!(ui.agent_panel_sort, AgentPanelSort::Spaces);
@@ -125,7 +129,11 @@ fn sidebar_rows() {
             vec![Token::plain(AgentToken::Agent)],
         ]
     );
-    assert!(sidebar.agents.rows_by_agent.is_empty());
+    assert!(
+        sidebar.agents.rows_by_agent.is_empty(),
+        "{:?}",
+        sidebar.agents.rows_by_agent
+    );
     assert_eq!(sidebar.agents.row_gap, 0);
     assert_eq!(
         sidebar.spaces.rows,
@@ -212,7 +220,7 @@ fn key_defaults() {
     let keys = Config::default().keys;
     assert_eq!(keys.remote_image_paste(), "ctrl+v");
     assert_eq!(keys.indexed(), config::IndexedKeys::default());
-    assert!(keys.command.is_empty());
+    assert!(keys.command.is_empty(), "{:?}", keys.command);
     assert!(binding_fields().all(|field| keys.binding(field).is_none()));
 }
 
@@ -245,15 +253,15 @@ fn default_text_lists_every_key_default() {
     let text = default_config_text();
     let start = text.find("\n[keys]\n").expect("keys section");
     let end = text.find("\n[ui]\n").expect("ui section");
-    let keys: String = text[start..end]
+    let keys = text[start..end]
         .lines()
         .filter_map(|line| line.strip_prefix("# "))
         .filter(|line| {
             line.split_once(" = ")
                 .is_some_and(|(key, _)| key.chars().all(|ch| ch.is_ascii_lowercase() || ch == '_'))
         })
-        .map(|line| format!("{line}\n"))
-        .collect();
+        .collect::<Vec<_>>()
+        .join("\n");
     let table: toml::Table = keys.parse().expect("commented keys are valid TOML");
     for field in binding_fields() {
         let value = table
