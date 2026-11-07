@@ -1,4 +1,7 @@
+wrappers = { cargo = { command = "mbx", env = { MBX_CARGO_SHIM_MODE = "1" } } }
+
 [tools]
+mr-boxington = "1.29.2"
 zig = "0.15.2"
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.146"
 
