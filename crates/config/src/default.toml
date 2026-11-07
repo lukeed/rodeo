@@ -1,0 +1,332 @@
+# drover config
+#
+# drover reads ~/.config/drover/config.toml (or $XDG_CONFIG_HOME/drover/config.toml,
+# or the file named by DROVER_CONFIG_PATH). The format is the Herdr TUI 0.9.5
+# config.toml format, so a Herdr config works as is.
+#
+# Every setting below shows its default value and is commented out.
+# Remove the leading "# " from a line to change that setting.
+# Run `drover config check` to see problems in this file.
+# Press prefix+shift+r in drover to load changes without a restart.
+
+# Herdr's first-run setup screen. drover reads this key and ignores it.
+# onboarding = true
+
+[theme]
+# The color theme. Built-in themes:
+#   catppuccin, catppuccin-latte, terminal, tokyo-night, tokyo-night-day,
+#   dracula, nord, gruvbox, gruvbox-light, one-dark, one-light, solarized,
+#   solarized-light, kanagawa, kanagawa-lotus, rose-pine, rose-pine-dawn, vesper
+# "terminal" uses the 16 colors of your terminal.
+# name = "catppuccin"
+
+# Switch themes when your terminal changes between light and dark mode.
+# When unset, dark_name and light_name are the dark and light forms of name.
+# auto_switch = false
+# dark_name = "catppuccin"
+# light_name = "catppuccin-latte"
+
+# Change single colors on top of the theme. A color is "#rrggbb", "#rgb",
+# "rgb(r, g, b)", a color name such as "blue", or "reset" for the terminal color.
+# Roles: accent, panel_bg, sidebar_bg, active_row_bg, selection_bg, surface0,
+#   surface1, surface_dim, overlay0, overlay1, text, subtext0, mauve, green,
+#   yellow, red, blue, teal, peach
+# [theme.custom]
+# accent = "#f5c2e7"
+# sidebar_bg = "reset"
+
+# More changes that apply only when auto_switch picks the light or dark theme.
+# [theme.custom.light]
+# text = "#4c4f69"
+# [theme.custom.dark]
+# text = "#cdd6f4"
+
+[terminal]
+# The shell for new panes. Empty means the shell that hc starts on the machine.
+# default_shell = ""
+
+# How the shell starts: "auto", "login", or "non_login".
+# shell_mode = "auto"
+
+# The folder for new panes, tabs and spaces:
+#   "follow"  the folder of the focused pane or space
+#   "home"    your home folder
+#   "current" the folder drover started in
+#   any other text is a fixed path, for example "~/code"
+# new_cwd = "follow"
+
+# Show Kitty graphics from panes when your terminal supports them.
+# A change needs a restart of drover.
+# kitty_graphics = true
+
+[session]
+# hc keeps terminals and agents alive. drover reads these keys and ignores them.
+# resume_agents_on_restore = true
+# startup_per_agent_delay_ms = 100
+
+[server]
+# hc sets the size of terminals that no client shows. drover ignores these keys.
+# headless_cols = 120
+# headless_rows = 40
+
+[update]
+# drover does not update itself. These keys are read and ignored.
+# channel = "stable"
+# version_check = true
+# manifest_check = true
+
+[keys]
+# A key is a list of modifiers and one key, joined with "+".
+#   Modifiers: ctrl, shift, alt (also option or meta), cmd (also super), hyper
+#   Named keys: enter, esc, tab, backspace, space, up, down, left, right,
+#     minus, plus, comma, period, slash, backslash, quote, double_quote,
+#     semicolon, colon, percent, ampersand, backtick, f1 to f12
+#   Any other single character is a key. "N" is the same as "shift+n".
+# Start a binding with "prefix+" to use it after the prefix key.
+# A binding without "prefix+" works at any time, so it needs a modifier
+# other than shift, for example "ctrl+alt+n".
+# A value can be one binding or a list of bindings.
+# Use "" or [] to remove a binding.
+# Run `drover config reset-keys` to go back to the default keys.
+
+# The prefix key. A list gives more than one prefix key.
+# Press the prefix two times to send it to the pane.
+# prefix = "ctrl+b"
+
+# help = "prefix+?"
+# settings = "prefix+s"
+# detach = "prefix+q"
+# reload_config = "prefix+shift+r"
+# open_notification_target = "prefix+o"
+
+# Spaces and worktrees.
+# new_workspace = "prefix+shift+n"
+# rename_workspace = "prefix+shift+w"
+# close_workspace = "prefix+shift+d"
+# workspace_picker = "prefix+w"
+# goto = "prefix+g"
+# new_worktree = "prefix+shift+g"
+# open_worktree = ""
+# remove_worktree = ""
+# previous_workspace = ""
+# next_workspace = ""
+
+# Keys inside the space list (prefix+w). These work without the prefix.
+# navigate_workspace_up = "up"
+# navigate_workspace_down = "down"
+# navigate_pane_left = "h"
+# navigate_pane_down = "j"
+# navigate_pane_up = "k"
+# navigate_pane_right = "l"
+
+# Agents.
+# previous_agent = ""
+# next_agent = ""
+
+# Tabs.
+# new_tab = "prefix+c"
+# rename_tab = "prefix+shift+t"
+# previous_tab = "prefix+p"
+# next_tab = "prefix+n"
+# move_tab_previous = ""
+# move_tab_next = ""
+# close_tab = "prefix+shift+x"
+
+# Numbered keys. "1..9" makes nine bindings, one for each digit.
+# switch_tab = "prefix+1..9"
+# switch_workspace = ""
+# focus_agent = ""
+
+# Panes.
+# split_vertical = "prefix+v"
+# split_horizontal = "prefix+minus"
+# close_pane = "prefix+x"
+# rename_pane = "prefix+shift+p"
+# zoom = "prefix+z"
+# copy_mode = "prefix+["
+# edit_scrollback = "prefix+e"
+# clear_pane = ""
+# focus_pane_left = "prefix+h"
+# focus_pane_down = "prefix+j"
+# focus_pane_up = "prefix+k"
+# focus_pane_right = "prefix+l"
+# swap_pane_left = "prefix+shift+h"
+# swap_pane_down = "prefix+shift+j"
+# swap_pane_up = "prefix+shift+k"
+# swap_pane_right = "prefix+shift+l"
+# cycle_pane_next = "prefix+tab"
+# cycle_pane_previous = "prefix+shift+tab"
+# last_pane = ""
+# resize_mode = "prefix+r"
+# resize_pane_left = ""
+# resize_pane_down = ""
+# resize_pane_up = ""
+# resize_pane_right = ""
+# toggle_sidebar = "prefix+b"
+
+# Paste an image from your clipboard into the focused pane. Empty turns it off.
+# remote_image_paste = "ctrl+v"
+
+# The old form of numbered keys: modifiers only, used with 1 to 9.
+# [keys.indexed]
+# tabs = "ctrl"
+# workspaces = "alt"
+# agents = "ctrl+alt"
+
+# Your own commands. Add one [[keys.command]] block for each command.
+#   type = "shell"  runs the command in the background
+#   type = "pane"   runs it in a new zoomed pane that closes when it ends
+#   type = "popup"  runs it in a popup; width and height are cells or "80%"
+# [[keys.command]]
+# key = "prefix+alt+g"
+# command = "lazygit"
+# type = "popup"
+# description = "lazygit"
+# width = "90%"
+# height = "90%"
+
+[ui]
+# Sidebar width in columns, and its limits. A width you drag with the mouse
+# is saved and used instead.
+# sidebar_width = 26
+# sidebar_min_width = 18
+# sidebar_max_width = 36
+
+# Start with the sidebar collapsed.
+# sidebar_start_collapsed = false
+
+# How a collapsed sidebar looks: "compact" (a narrow status column) or "hidden".
+# sidebar_collapsed_mode = "compact"
+
+# At this terminal width or less, drover shows one pane at a time.
+# mobile_width_threshold = 64
+
+# Use the mouse in drover. With false, your terminal gets mouse clicks.
+# mouse_capture = true
+
+# Copy text when you select it with the mouse. With false, press ctrl+c to copy.
+# copy_on_select = true
+
+# The text cursor: "auto", "native" (your terminal draws it) or "drawn".
+# host_cursor = "auto"
+
+# Hold this modifier to send right-clicks to the program in the pane.
+# Use ctrl, alt, cmd, meta, hyper, or a list joined with "+". Empty turns it off.
+# right_click_passthrough_modifier = ""
+
+# Draw the full screen again when your terminal gets focus.
+# redraw_on_focus_gained = true
+
+# Lines to scroll for each mouse wheel step.
+# mouse_scroll_lines = 3
+
+# Ask before you close a space, its last tab, or the last pane.
+# confirm_close = true
+
+# Ask for a name when you make a tab or a space.
+# prompt_new_tab_name = true
+# prompt_new_workspace_name = false
+
+# Pane borders: "auto" (only when a tab has more than one pane), "always", or "off".
+# pane_borders = "auto"
+# pane_outer_borders = true
+# pane_scrollbars = true
+# pane_gaps = true
+
+# Show the agent name in the pane border when the pane has no name.
+# show_agent_labels_on_pane_borders = false
+
+# The tab bar: hide it when a space has one tab, and put it at the "top" or "bottom".
+# hide_tab_bar_when_single_tab = false
+# tab_bar_position = "top"
+
+# Items at the right side of the tab bar, at most 16:
+#   { type = "zoom" }        shows ZOOM when a pane is zoomed
+#   { type = "hostname" }    the name of the machine
+#   { type = "datetime", format = "%H:%M" }
+#   { type = "text", text = "hello" }
+#   { type = "command", command = "date +%s", interval_seconds = 5, timeout_seconds = 2 }
+# tab_bar_right = []
+# tab_bar_right_separator = " "
+
+# The title of your terminal window. Tokens: {hostname}, {workspace}, {tab},
+# {pane}, {terminal_title}. Use {{ and }} for braces. Empty leaves the title alone.
+# window_title = "{hostname}: {workspace}"
+
+# Order of the agent list: "spaces" or "priority".
+# agent_panel_sort = "spaces"
+
+# Agent state marks: "dots" or "symbols".
+# status_indicators = "dots"
+
+# The old way to set the accent color. Use theme.custom.accent instead.
+# accent = "cyan"
+
+# What each sidebar row shows. A token is a name, or a table such as
+# { token = "branch", fg = "#a6e3a1", bold = true, dim = false, rules = [...] }.
+# A rule has one test (equals, contains, starts_with, gt, lt), and can set
+# ignore_case, fg, bold, dim, or hide = true. The first rule that matches is used.
+# Agent tokens: state_icon, state_text, machine, workspace, tab, pane, agent,
+#   terminal_title, terminal_title_stripped, $name
+# Space tokens: state_icon, state_text, workspace, branch, git_status, $name
+# [ui.sidebar.agents]
+# rows = [["state_icon", "machine", "workspace", "tab"], ["agent"]]
+# row_gap = 0
+# [ui.sidebar.agents.rows_by_agent]
+# claude = [["state_icon", "agent"]]
+# [ui.sidebar.spaces]
+# rows = [["state_icon", "workspace"], ["branch", "git_status"]]
+# row_gap = 0
+
+# Notices when an agent in the background finishes or needs you.
+# delivery: "off", "herdr" (inside drover), "terminal" (your terminal), or "system".
+# [ui.toast]
+# delivery = "off"
+# delay_seconds = 1
+# [ui.toast.herdr]
+# position = "bottom-right"
+# [ui.toast.clipboard]
+# enabled = true
+# position = "bottom-center"
+
+# Sounds when an agent in the background changes state.
+# path, done_path and request_path are mp3 files, relative to this folder.
+# [ui.sound]
+# enabled = true
+# path = "sounds/all.mp3"
+# done_path = "sounds/done.mp3"
+# request_path = "sounds/request.mp3"
+# Per agent: "default", "on", or "off".
+# [ui.sound.agents]
+# claude = "default"
+# droid = "off"
+
+[worktrees]
+# The folder for new git worktrees, as <repo>/<branch>.
+# directory = "~/.herdr/worktrees"
+
+[advanced]
+# The most scrollback, in bytes, that each pane keeps.
+# scrollback_limit_bytes = 10000000
+
+[remote]
+# hc connects to other machines. drover reads this key and ignores it.
+# manage_ssh_config = true
+
+[experimental]
+# Let drover start inside a drover pane.
+# allow_nested = false
+
+# hc keeps pane history. drover reads this key and ignores it.
+# pane_history = false
+
+# Show the pane cursor to your terminal when the program hides it, so a
+# CJK input method can place its window. Limit it to some agents with
+# cjk_ime_agents, and pick the cursor shape: block, steady_block, underline,
+# steady_underline, bar, steady_bar.
+# reveal_hidden_cursor_for_cjk_ime = false
+# cjk_ime_agents = []
+# cjk_ime_cursor_shape = "steady_block"
+
+# macOS: use an ASCII keyboard input source while the prefix is active.
+# switch_ascii_input_source_in_prefix = false
