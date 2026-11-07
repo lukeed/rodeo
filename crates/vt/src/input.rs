@@ -1,10 +1,11 @@
+use std::fmt::Write;
+
 use crossterm::event::{
     KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MediaKeyCode, ModifierKeyCode,
     MouseButton, MouseEvent, MouseEventKind,
 };
 use libghostty_vt::key::{self, Key, KittyKeyFlags, Mods, OptionAsAlt};
 use libghostty_vt::mouse::{self, Button, EncoderSize};
-use libghostty_vt::screen::Screen;
 
 use crate::term::{Error, Terminal, Vt};
 
@@ -73,7 +74,7 @@ impl Input {
         &mut self,
         vt: &Vt,
         cell_px: (u32, u32),
-        event: &MouseEvent,
+        event: MouseEvent,
         col: u16,
         row: u16,
     ) -> Vec<u8> {
@@ -111,7 +112,8 @@ impl Input {
                 padding_left: 0,
             });
         let center = |cell: u16, size: u32| {
-            (f64::from(cell) * f64::from(size) + f64::from(size) / 2.0) as f32
+            let size = f32::from(u16::try_from(size).unwrap_or(u16::MAX));
+            f32::from(cell) * size + size / 2.0
         };
         self.pointer
             .set_action(action)
@@ -139,7 +141,7 @@ impl Terminal {
         let cell_px = self.cell_px();
         if self.wants_mouse() {
             let (vt, input) = self.input();
-            let out = input.encode_mouse(vt, cell_px, event, col, row);
+            let out = input.encode_mouse(vt, cell_px, *event, col, row);
             return (!out.is_empty()).then_some(out);
         }
         let arrow = match event.kind {
@@ -147,8 +149,7 @@ impl Terminal {
             MouseEventKind::ScrollDown => KeyCode::Down,
             _ => return None,
         };
-        let alternate = self.vt().active_screen().ok() == Some(Screen::Alternate);
-        if !alternate || !self.alternate_scroll() {
+        if !self.alternate_screen() || !self.alternate_scroll() {
             return None;
         }
         let out = self.key(&KeyEvent::new(arrow, KeyModifiers::NONE));
@@ -337,7 +338,8 @@ fn char_key(ch: char) -> Physical {
         return Physical::printable(DIGITS[digit as usize], ch, ch);
     }
     if let Some(digit) = SHIFTED_DIGITS.iter().position(|&c| c == ch) {
-        return Physical::printable(DIGITS[digit], ch, char::from(b'0' + digit as u8));
+        let base = char::from_digit(u32::try_from(digit).unwrap_or(0), 10).unwrap_or('0');
+        return Physical::printable(DIGITS[digit], ch, base);
     }
     if ch == ' ' {
         return Physical::printable(Key::Space, ' ', ' ');
@@ -447,10 +449,10 @@ fn kitty_sequence(code: u32, event: &KeyEvent, flags: KittyKeyFlags) -> Vec<u8> 
         .sum::<u32>();
     let mut out = format!("\x1b[{code}");
     if bits > 0 || kind > 1 {
-        out.push_str(&format!(";{}", bits + 1));
+        let _ = write!(out, ";{}", bits + 1);
     }
     if kind > 1 {
-        out.push_str(&format!(":{kind}"));
+        let _ = write!(out, ":{kind}");
     }
     out.push('u');
     out.into_bytes()

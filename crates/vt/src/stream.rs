@@ -171,8 +171,7 @@ impl Scanner {
         let (payload, terminator) = match body {
             [rest @ .., BEL] => (rest, BEL),
             [rest @ .., ESC, b'\\'] => (rest, b'\\'),
-            [rest @ .., ESC] => (rest, ESC),
-            rest => (rest, ESC),
+            _ => (body.strip_suffix(&[ESC]).unwrap_or(body), ESC),
         };
         let code = payload.split(|&b| b == b';').next()?;
         match code {

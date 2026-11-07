@@ -457,7 +457,7 @@ impl Terminal {
         let uri = self.hyperlink(point)?;
         let cols = self.size().0;
         let (first, end) = (self.first_row(), self.end_row());
-        let step = |p: Point, forward: bool| -> Option<Point> {
+        let neighbor = |p: Point, forward: bool| -> Option<Point> {
             if forward {
                 if p.col + 1 < cols {
                     Some(Point::new(p.row, p.col + 1))
@@ -472,31 +472,34 @@ impl Terminal {
         };
         let mut limit = 8192;
         let mut start = point;
-        while let Some(prev) = step(start, false) {
+        while let Some(prev) = neighbor(start, false) {
             if limit == 0 || self.hyperlink(prev).as_deref() != Some(uri.as_str()) {
                 break;
             }
             limit -= 1;
             start = prev;
         }
-        let mut stop = point;
-        while let Some(next) = step(stop, true) {
+        let mut last = point;
+        while let Some(next) = neighbor(last, true) {
             if limit == 0 || self.hyperlink(next).as_deref() != Some(uri.as_str()) {
                 break;
             }
             limit -= 1;
-            stop = next;
+            last = next;
         }
         Some(text::Link {
             uri,
             start,
-            end: stop,
+            end: last,
         })
     }
 
     fn hyperlink(&self, point: Point) -> Option<String> {
         let grid_ref = self.vt.grid_ref(self.screen_point(point)?).ok()?;
-        let wide = grid_ref.cell().and_then(|cell| cell.wide()).ok()?;
+        let wide = grid_ref
+            .cell()
+            .and_then(libghostty_vt::screen::Cell::wide)
+            .ok()?;
         if wide == CellWide::SpacerTail && point.col > 0 {
             return self.hyperlink(Point::new(point.row, point.col - 1));
         }
@@ -548,7 +551,7 @@ impl Grid for Terminal {
             .vt
             .grid_ref(VtPoint::Screen(start))
             .and_then(|grid_ref| grid_ref.row())
-            .and_then(|row| row.is_wrapped())
+            .and_then(libghostty_vt::screen::Row::is_wrapped)
             .ok()?;
         let mut out = TextRow::new(wrapped);
         let mut chars = ['\0'; 16];
@@ -558,7 +561,11 @@ impl Grid for Terminal {
                 .vt
                 .grid_ref(VtPoint::Screen(PointCoordinate { x, y: start.y }))
                 .ok()?;
-            let width = match grid_ref.cell().and_then(|cell| cell.wide()).ok()? {
+            let width = match grid_ref
+                .cell()
+                .and_then(libghostty_vt::screen::Cell::wide)
+                .ok()?
+            {
                 CellWide::Narrow => 1,
                 CellWide::Wide => 2,
                 CellWide::SpacerTail | CellWide::SpacerHead => 0,

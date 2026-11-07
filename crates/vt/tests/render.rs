@@ -35,7 +35,11 @@ fn styles_map_to_modifiers() {
         Modifier::empty(),
     ];
     for (x, modifier) in expect.into_iter().enumerate() {
-        assert_eq!(buf[(x as u16, 0)].modifier, modifier, "col {x}");
+        assert_eq!(
+            buf[(u16::try_from(x).unwrap(), 0)].modifier,
+            modifier,
+            "col {x}"
+        );
     }
     assert_eq!(buf[(8, 0)].underline_color, Color::Indexed(2));
     assert_eq!(buf[(3, 0)].underline_color, Color::Reset);

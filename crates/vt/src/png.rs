@@ -50,12 +50,16 @@ pub(crate) fn decode(data: &[u8]) -> Option<(u32, u32, Vec<u8>)> {
     let rgba = match info.color_type {
         ColorType::Rgba => pixels.to_vec(),
         ColorType::Rgb => pixels
-            .chunks_exact(3)
-            .flat_map(|p| [p[0], p[1], p[2], 0xff])
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .flat_map(|&[r, g, b]| [r, g, b, 0xff])
             .collect(),
         ColorType::GrayscaleAlpha => pixels
-            .chunks_exact(2)
-            .flat_map(|p| [p[0], p[0], p[0], p[1]])
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .flat_map(|&[g, a]| [g, g, g, a])
             .collect(),
         ColorType::Grayscale => pixels.iter().flat_map(|&g| [g, g, g, 0xff]).collect(),
         ColorType::Indexed => return None,

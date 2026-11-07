@@ -13,6 +13,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    #[must_use]
     pub fn reverse(self) -> Self {
         match self {
             Self::Forward => Self::Backward,
@@ -439,12 +440,12 @@ pub(crate) fn search<G: Grid + ?Sized>(
         for &hit in &found {
             first.get_or_insert((total, hit));
             last = Some((total, hit));
-            match direction {
-                Direction::Forward if target.is_none() && hit.start > origin => {
-                    target = Some((total, hit))
-                }
-                Direction::Backward if hit.end < origin => target = Some((total, hit)),
-                _ => {}
+            let ahead = match direction {
+                Direction::Forward => target.is_none() && hit.start > origin,
+                Direction::Backward => hit.end < origin,
+            };
+            if ahead {
+                target = Some((total, hit));
             }
             total += 1;
         }

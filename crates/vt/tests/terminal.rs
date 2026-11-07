@@ -1,5 +1,7 @@
 mod common;
 
+use std::fmt::Write;
+
 use common::{lines, screen, term};
 use vt::{CursorShape, Event, MouseFormat, MouseMode, Options, Point, Terminal};
 
@@ -61,7 +63,7 @@ fn answers_queries_the_core_passes_through() {
     let mut t = term(10, 2);
     t.feed(b"\x1b[6n");
     assert_eq!(t.take_replies(), b"\x1b[1;1R");
-    assert!(t.take_replies().is_empty());
+    assert_eq!(t.take_replies(), b"");
     t.feed(b"\x1b[16t");
     assert_eq!(t.take_replies(), b"\x1b[6;20;10t");
 }
@@ -116,7 +118,7 @@ fn osc_9_subcommands_are_not_notifications() {
 fn kitty_notifications_join_chunks_and_answer_queries() {
     let mut t = term(10, 2);
     t.feed(b"\x1b]99;i=1:d=0;Hello\x1b\\");
-    assert!(t.take_events().is_empty());
+    assert_eq!(t.take_events(), Vec::<Event>::new());
     t.feed(b"\x1b]99;i=1:p=body:e=1;d29ybGQ=\x1b\\");
     assert_eq!(
         t.take_events(),
@@ -240,7 +242,7 @@ fn scroll_by_page_and_to_edges() {
 #[test]
 fn absolute_rows_survive_scrollback_pruning() {
     let mut t = Terminal::new(
-        40,
+        1000,
         5,
         Options {
             scrollback_bytes: 1,
@@ -248,20 +250,32 @@ fn absolute_rows_survive_scrollback_pruning() {
         },
     )
     .unwrap();
-    let find = |t: &Terminal, text: &str| {
-        (t.first_row()..t.end_row()).find(|&row| t.row_text(row).as_deref() == Some(text))
+    let rows = |range: std::ops::Range<u64>| -> String {
+        range.fold(String::new(), |mut out, i| {
+            let _ = write!(out, "row {i}\r\n");
+            out
+        })
     };
-    for i in 0..2000 {
-        t.feed(format!("row {i}\r\n").as_bytes());
-    }
+    t.feed(rows(0..10).as_bytes());
     let first = t.first_row();
-    let row = find(&t, "row 1999").expect("row in buffer");
-    for i in 2000..6000 {
-        t.feed(format!("row {i}\r\n").as_bytes());
+    let row = t.viewport_top() + 3;
+    assert_eq!(t.row_text(row).as_deref(), Some("row 9"));
+    let mut next = 10;
+    while t.first_row() == first && next < 100_000 {
+        t.feed(rows(next..next + 10).as_bytes());
+        next += 10;
     }
     assert!(t.first_row() > first);
-    assert_eq!(find(&t, "row 5999"), Some(row + 4000));
     assert!(t.row_text(first).is_none());
+    let last = row + next - 10;
+    assert_eq!(t.viewport_top() + 3, last);
+    assert_eq!(t.row_text(last), Some(format!("row {}", next - 1)));
+    let held = t.end_row() - t.first_row();
+    t.feed(rows(next..next + 3 * held).as_bytes());
+    let newest = format!("row {}", next + 3 * held - 1);
+    assert_eq!(t.row_text(t.viewport_top() + 3), Some(newest));
+    assert!(t.first_row() > last);
+    assert_eq!(t.row_text(last), None);
 }
 
 #[test]

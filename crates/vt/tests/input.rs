@@ -97,23 +97,20 @@ fn function_keys_past_twelve() {
 #[test]
 fn kitty_only_keys_are_silent_in_legacy_mode() {
     let mut t = term(10, 2);
-    assert!(
-        t.key(&plain(KeyCode::Media(MediaKeyCode::PlayPause)))
-            .is_empty()
-    );
-    assert!(t.key(&plain(KeyCode::Menu)).is_empty());
-    assert!(
-        t.key(&plain(KeyCode::Modifier(ModifierKeyCode::LeftShift)))
-            .is_empty()
+    assert_eq!(t.key(&plain(KeyCode::Media(MediaKeyCode::PlayPause))), b"");
+    assert_eq!(t.key(&plain(KeyCode::Menu)), b"");
+    assert_eq!(
+        t.key(&plain(KeyCode::Modifier(ModifierKeyCode::LeftShift))),
+        b""
     );
 }
 
 #[test]
 fn releases_are_silent_in_legacy_mode() {
     let mut t = term(10, 2);
-    assert!(
-        t.key(&kind(plain(KeyCode::Char('a')), KeyEventKind::Release))
-            .is_empty()
+    assert_eq!(
+        t.key(&kind(plain(KeyCode::Char('a')), KeyEventKind::Release)),
+        b""
     );
     assert_eq!(
         t.key(&kind(plain(KeyCode::Char('a')), KeyEventKind::Repeat)),
@@ -142,9 +139,9 @@ fn kitty_keyboard_flags() {
     assert_eq!(t.key(&plain(KeyCode::Esc)), b"\x1b[27u");
     assert_eq!(t.key(&key(KeyCode::Char('c'), CTRL)), b"\x1b[99;5u");
     assert_eq!(t.key(&plain(KeyCode::Char('a'))), b"a");
-    assert!(
-        t.key(&kind(plain(KeyCode::Char('a')), KeyEventKind::Release))
-            .is_empty()
+    assert_eq!(
+        t.key(&kind(plain(KeyCode::Char('a')), KeyEventKind::Release)),
+        b""
     );
     t.feed(b"\x1b[>3u");
     assert_eq!(
