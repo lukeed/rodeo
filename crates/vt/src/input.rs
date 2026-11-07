@@ -2,7 +2,7 @@ use crossterm::event::{
     KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MediaKeyCode, ModifierKeyCode,
     MouseButton, MouseEvent, MouseEventKind,
 };
-use libghostty_vt::key::{self, Key, Mods, OptionAsAlt};
+use libghostty_vt::key::{self, Key, KittyKeyFlags, Mods, OptionAsAlt};
 use libghostty_vt::mouse::{self, Button, EncoderSize};
 use libghostty_vt::screen::Screen;
 
@@ -26,6 +26,18 @@ impl Input {
     }
 
     fn encode_key(&mut self, vt: &Vt, event: &KeyEvent) -> Vec<u8> {
+        let flags = vt.kitty_keyboard_flags().unwrap_or(KittyKeyFlags::empty());
+        if let Some(code) = kitty_only(event.code) {
+            return kitty_sequence(code, event, flags);
+        }
+        if let KeyCode::F(n @ 13..=24) = event.code
+            && flags.is_empty()
+        {
+            let mut shifted = *event;
+            shifted.code = KeyCode::F(n - 12);
+            shifted.modifiers |= KeyModifiers::SHIFT;
+            return self.encode_key(vt, &shifted);
+        }
         let Some(physical) = physical(event) else {
             return fallback(event);
         };
@@ -187,7 +199,6 @@ fn physical(event: &KeyEvent) -> Option<Physical> {
             ..Physical::named(Key::Tab)
         },
         KeyCode::F(n) => Physical::named(function_key(n)?),
-        KeyCode::Media(media) => Physical::named(media_key(media)?),
         KeyCode::Modifier(modifier) => Physical::named(modifier_key(modifier)?),
         code => Physical::named(named_key(code)?),
     })
@@ -214,7 +225,6 @@ fn named_key(code: KeyCode) -> Option<Key> {
         KeyCode::NumLock => Key::NumLock,
         KeyCode::PrintScreen => Key::PrintScreen,
         KeyCode::Pause => Key::Pause,
-        KeyCode::Menu => Key::ContextMenu,
         KeyCode::KeypadBegin => Key::NumpadBegin,
         _ => return None,
     })
@@ -373,17 +383,77 @@ fn function_key(n: u8) -> Option<Key> {
     KEYS.get(usize::from(n.checked_sub(1)?)).copied()
 }
 
-fn media_key(media: MediaKeyCode) -> Option<Key> {
-    Some(match media {
-        MediaKeyCode::PlayPause => Key::MediaPlayPause,
-        MediaKeyCode::Stop => Key::MediaStop,
-        MediaKeyCode::TrackNext => Key::MediaTrackNext,
-        MediaKeyCode::TrackPrevious => Key::MediaTrackPrevious,
-        MediaKeyCode::LowerVolume => Key::AudioVolumeDown,
-        MediaKeyCode::RaiseVolume => Key::AudioVolumeUp,
-        MediaKeyCode::MuteVolume => Key::AudioVolumeMute,
+fn kitty_only(code: KeyCode) -> Option<u32> {
+    Some(match code {
+        KeyCode::Menu => 57363,
+        KeyCode::Media(media) => match media {
+            MediaKeyCode::Play => 57428,
+            MediaKeyCode::Pause => 57429,
+            MediaKeyCode::PlayPause => 57430,
+            MediaKeyCode::Reverse => 57431,
+            MediaKeyCode::Stop => 57432,
+            MediaKeyCode::FastForward => 57433,
+            MediaKeyCode::Rewind => 57434,
+            MediaKeyCode::TrackNext => 57435,
+            MediaKeyCode::TrackPrevious => 57436,
+            MediaKeyCode::Record => 57437,
+            MediaKeyCode::LowerVolume => 57438,
+            MediaKeyCode::RaiseVolume => 57439,
+            MediaKeyCode::MuteVolume => 57440,
+        },
+        KeyCode::Modifier(modifier) => match modifier {
+            ModifierKeyCode::LeftHyper => 57445,
+            ModifierKeyCode::LeftMeta => 57446,
+            ModifierKeyCode::RightHyper => 57451,
+            ModifierKeyCode::RightMeta => 57452,
+            ModifierKeyCode::IsoLevel3Shift => 57453,
+            ModifierKeyCode::IsoLevel5Shift => 57454,
+            _ => return None,
+        },
         _ => return None,
     })
+}
+
+fn kitty_sequence(code: u32, event: &KeyEvent, flags: KittyKeyFlags) -> Vec<u8> {
+    if flags.is_empty() {
+        return Vec::new();
+    }
+    let events = flags.contains(KittyKeyFlags::REPORT_EVENTS);
+    let kind = match event.kind {
+        KeyEventKind::Release if !events => return Vec::new(),
+        KeyEventKind::Release => 3,
+        KeyEventKind::Repeat if events => 2,
+        _ => 1,
+    };
+    let bits = [
+        (KeyModifiers::SHIFT, 1),
+        (KeyModifiers::ALT, 2),
+        (KeyModifiers::CONTROL, 4),
+        (KeyModifiers::SUPER, 8),
+        (KeyModifiers::HYPER, 16),
+        (KeyModifiers::META, 32),
+    ]
+    .into_iter()
+    .filter(|(flag, _)| event.modifiers.contains(*flag))
+    .map(|(_, bit)| bit)
+    .sum::<u32>()
+        + [
+            (KeyEventState::CAPS_LOCK, 64),
+            (KeyEventState::NUM_LOCK, 128),
+        ]
+        .into_iter()
+        .filter(|(flag, _)| event.state.contains(*flag))
+        .map(|(_, bit)| bit)
+        .sum::<u32>();
+    let mut out = format!("\x1b[{code}");
+    if bits > 0 || kind > 1 {
+        out.push_str(&format!(";{}", bits + 1));
+    }
+    if kind > 1 {
+        out.push_str(&format!(":{kind}"));
+    }
+    out.push('u');
+    out.into_bytes()
 }
 
 fn modifier_key(modifier: ModifierKeyCode) -> Option<Key> {
