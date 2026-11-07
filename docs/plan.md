@@ -36,8 +36,9 @@ Also out of scope: Herdr TUI plugins.
 - Each visible pane: `terminal.attach` (framed connection) → a libghostty-vt terminal → cells drawn into the ratatui buffer. Input goes back on the same stream.
 - Key encoding goes through libghostty.
 - Kitty graphics: pass through to the host terminal.
-- Pane size: drover sets each attached terminal's size to its pane size. Known hc bug: herdr-core issue #5814 (a smaller client leaves a stale screen size after detach).
-- Panes that are not visible are not attached. The sidebar status comes from `events.subscribe`, not from screens.
+- Pane size: drover sets each attached terminal's size to its pane size. Known hc bug: herdr issue #5814 (a smaller client leaves a stale screen size after detach).
+- Every terminal pane in the doc is attached, visible or not, as the app does. Hidden tabs are sized as their panes would be. Reason: when the last viewer detaches, hc resizes the program to its headless size (200x120), so detaching hidden panes would resize their programs on every tab switch. Observe-only attaches are not a fix (herdr-core #111).
+- The sidebar status comes from `events.subscribe`, not from screens.
 - Image paste: read the clipboard image on the client, `terminal.put` it beside the terminal, then bracket-paste the returned path. This works for local and remote terminals the same way.
 
 ### UI
@@ -67,13 +68,13 @@ The target is Herdr TUI at tag `v0.9.5` (refs `herdr/`): its key binds, its visi
 ## Testing
 
 - Unit: doc ↔ layout mapping, conflict retry, tree edits (split, close, move, resize), keymap, config parsing, config migration.
-- E2E: drive `drover` in tmux on workbox (`send-keys`, `capture-pane -p -e`) against a real hc. Use an isolated core for tests so they never touch the user's terminals. Find how hc selects its state dir or scope first (`HC_SCOPE`, `~/.local/state/herdr-core/<scope>`). See also `herdr-core/crates/herdr-core/tests/fake_tui.py` and followcat `scripts/parity/`.
+- E2E: drive `drover` in tmux on workbox (`send-keys`, `capture-pane -p -e`) against a real hc. Use an isolated core for tests so they never touch the user's terminals. Isolate with `HOME`, `HC_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME` and `XDG_CONFIG_HOME` under one temp root, and stop with `hc server stop` (`docs/research/hc-integration.md` 1.2). See also `herdr-core/crates/herdr-core/tests/fake_tui.py` and followcat `scripts/parity/`.
 - Integration with the app: the user's Mac app can add workbox as a machine (`hc machine add`, target `lukeed@workbox`). Then a change in drover must show in the app, and a change in the app must show in drover.
 - Parity check: run drover and `herdr` 0.9.5 on the same layout. The same keys must give the same result, and the same elements must show.
 
 ## Known hc issues to design around
 
-- herdr-core #5814: stale screen size after a smaller client detaches.
+- herdr #5814: stale screen size after a smaller client detaches.
 - herdr-core #111: `hc attach --observe` on a busy terminal uses about 99% CPU per stream.
 - herdr #5710: hc terminals answer OSC 10/11 with a fixed dark palette until the app shows them.
 - macOS: programs in hc cannot read `~/Desktop`, `~/Documents` or `~/Downloads` until Herdr Core gets access (TCC). This is a property of hc, not of drover. A dropped file path there fails for any client.
