@@ -44,6 +44,30 @@ fn can_cancels_a_partial_osc_and_apc() {
 }
 
 #[test]
+fn can_in_ground_state_prints_nothing() {
+    let mut t = term(10, 2);
+    t.feed(b"ab\x18c\x1a\x1b[1m\x18d");
+    assert_eq!(screen(&t)[0], "abcd");
+    t.feed(b"\x1b[3\x18");
+    t.feed(b"1mx");
+    assert_eq!(screen(&t)[0], "abcd1mx");
+}
+
+#[test]
+fn reset_and_clear_abort_a_partial_sequence() {
+    let mut t = term(20, 3);
+    t.feed(b"\x1b]2;partial");
+    t.reset();
+    t.feed(b"after");
+    assert_eq!(screen(&t)[0], "after");
+    assert_eq!(t.title(), "");
+    t.feed(b"\x1b[3");
+    t.clear();
+    t.feed(b"!");
+    assert_eq!(screen(&t)[0], "after!");
+}
+
+#[test]
 fn repaint_with_history_fills_scrollback() {
     let mut t = term(20, 3);
     t.feed(

@@ -32,6 +32,8 @@ enum State {
     #[default]
     Ground,
     Esc,
+    EscIntermediate,
+    Csi,
     Text {
         osc: bool,
         esc: bool,
@@ -78,6 +80,14 @@ impl Scanner {
         })
     }
 
+    pub(crate) fn cancel(&mut self) -> bool {
+        let busy = self.state != State::Ground;
+        self.state = State::Ground;
+        self.holding = false;
+        self.held.clear();
+        busy
+    }
+
     pub(crate) fn scan(&mut self, bytes: &[u8]) -> Vec<Op> {
         let mut ops = Ops {
             bytes,
@@ -86,8 +96,8 @@ impl Scanner {
         };
         for (i, &byte) in bytes.iter().enumerate() {
             match self.state {
-                State::Ground | State::Esc => self.idle(byte, i, &mut ops),
                 State::Text { osc, esc } => self.text(byte, i, osc, esc, &mut ops),
+                _ => self.idle(byte, i, &mut ops),
             }
         }
         if self.holding {
@@ -105,7 +115,16 @@ impl Scanner {
 
     fn idle(&mut self, byte: u8, at: usize, ops: &mut Ops) {
         self.state = match (self.state, byte) {
+            (State::Ground, CAN | SUB) => {
+                ops.pass(at);
+                ops.from = at + 1;
+                State::Ground
+            }
+            (_, CAN | SUB) => State::Ground,
             (_, ESC) => State::Esc,
+            (State::Esc | State::EscIntermediate, 0x20..=0x2f) => State::EscIntermediate,
+            (State::Csi, 0x40..=0x7e) => State::Ground,
+            (State::Esc, b'[') | (State::Csi, _) => State::Csi,
             (State::Esc, b']' | b'P' | b'_' | b'^' | b'X') => {
                 ops.pass(at);
                 self.holding = true;

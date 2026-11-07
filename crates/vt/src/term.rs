@@ -174,6 +174,9 @@ impl Terminal {
     }
 
     pub fn reset(&mut self) {
+        if self.stream.cancel() {
+            self.vt.vt_write(b"\x18");
+        }
         self.vt.reset();
         let _ = self.vt.set_mode(Mode::GRAPHEME_CLUSTER, true);
         self.rows.sync(&mut self.vt);
@@ -190,8 +193,9 @@ impl Terminal {
         } else {
             String::new()
         };
+        let abort = if self.stream.cancel() { "\x18" } else { "" };
         self.vt
-            .vt_write(format!("{scroll}\x1b[3J\x1b[1;{col}H").as_bytes());
+            .vt_write(format!("{abort}{scroll}\x1b[3J\x1b[1;{col}H").as_bytes());
         self.vt.scroll_viewport(ScrollViewport::Bottom);
         self.rows.sync(&mut self.vt);
     }
@@ -417,9 +421,44 @@ impl Terminal {
     }
 
     pub fn cell(&self, point: Point) -> Option<(String, u8)> {
-        let row = self.row(point.row)?;
-        let (text, width) = row.cell(point.col)?;
-        Some((text.to_owned(), width))
+        if point.col >= self.size().0 {
+            return None;
+        }
+        let VtPoint::Screen(at) = self.screen_point(point)? else {
+            return None;
+        };
+        let mut text = String::new();
+        let width = self.read_cell(at, &mut text)?;
+        Some((text, width))
+    }
+
+    fn read_cell(&self, at: PointCoordinate, text: &mut String) -> Option<u8> {
+        let grid_ref = self.vt.grid_ref(VtPoint::Screen(at)).ok()?;
+        let width = match grid_ref
+            .cell()
+            .and_then(libghostty_vt::screen::Cell::wide)
+            .ok()?
+        {
+            CellWide::Narrow => 1,
+            CellWide::Wide => 2,
+            CellWide::SpacerTail | CellWide::SpacerHead => 0,
+        };
+        text.clear();
+        let mut chars = ['\0'; 16];
+        match grid_ref.graphemes(&mut chars) {
+            Ok(len) => text.extend(&chars[..len]),
+            Err(libghostty_vt::Error::OutOfSpace { required }) => {
+                let mut chars = vec!['\0'; required];
+                let len = grid_ref.graphemes(&mut chars).unwrap_or(0);
+                text.extend(&chars[..len]);
+            }
+            Err(_) => {}
+        }
+        if width > 0 && (text.is_empty() || text.starts_with(KITTY_PLACEHOLDER)) {
+            text.clear();
+            text.push(' ');
+        }
+        Some(width)
     }
 
     pub fn selection_bounds(&self, selection: &Selection) -> (Point, Point) {
@@ -428,8 +467,12 @@ impl Terminal {
 
     pub fn selection_text(&self, selection: &Selection) -> String {
         let (start, end) = self.selection_bounds(selection);
-        let first = self.first_row();
-        let start = start.max(Point::new(first, 0));
+        let (cols, last) = (self.size().0, self.end_row().saturating_sub(1));
+        let start = start.max(Point::new(self.first_row(), 0));
+        let end = end.min(Point::new(last, cols - 1));
+        if start > end {
+            return String::new();
+        }
         let (Some(a), Some(b)) = (self.screen_point(start), self.screen_point(end)) else {
             return String::new();
         };
@@ -557,38 +600,9 @@ impl Grid for Terminal {
             .and_then(libghostty_vt::screen::Row::is_wrapped)
             .ok()?;
         let mut out = TextRow::new(wrapped);
-        let mut chars = ['\0'; 16];
         let mut text = String::new();
         for x in 0..self.size().0 {
-            let grid_ref = self
-                .vt
-                .grid_ref(VtPoint::Screen(PointCoordinate { x, y: start.y }))
-                .ok()?;
-            let width = match grid_ref
-                .cell()
-                .and_then(libghostty_vt::screen::Cell::wide)
-                .ok()?
-            {
-                CellWide::Narrow => 1,
-                CellWide::Wide => 2,
-                CellWide::SpacerTail | CellWide::SpacerHead => 0,
-            };
-            text.clear();
-            let len = match grid_ref.graphemes(&mut chars) {
-                Ok(len) => len,
-                Err(libghostty_vt::Error::OutOfSpace { required }) => {
-                    let mut big = vec!['\0'; required];
-                    let len = grid_ref.graphemes(&mut big).unwrap_or(0);
-                    text.extend(&big[..len]);
-                    0
-                }
-                Err(_) => 0,
-            };
-            text.extend(&chars[..len]);
-            if width > 0 && (text.is_empty() || text.starts_with(KITTY_PLACEHOLDER)) {
-                text.clear();
-                text.push(' ');
-            }
+            let width = self.read_cell(PointCoordinate { x, y: start.y }, &mut text)?;
             out.push(&text, width);
         }
         Some(out)
