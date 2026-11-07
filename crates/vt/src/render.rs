@@ -250,31 +250,24 @@ impl Terminal {
             .draw(self.vt(), area, buf, scrolled)
             .ok()
             .flatten();
-        let top = self.viewport_top();
         let (cols, rows) = self.size();
-        let width = cols.min(area.width);
+        let (width, height) = (cols.min(area.width), rows.min(area.height));
+        if width == 0 || height == 0 {
+            return Rendered { cursor };
+        }
+        let top = self.viewport_top();
+        let bottom = top + u64::from(height) - 1;
         for highlight in options.highlights {
             let (start, end) = if highlight.start <= highlight.end {
                 (highlight.start, highlight.end)
             } else {
                 (highlight.end, highlight.start)
             };
-            let first = start.row.max(top);
-            let last = end
-                .row
-                .min(top + u64::from(rows.min(area.height)).saturating_sub(1));
-            for row in first..=last {
-                if row < top || end.row < top {
-                    break;
-                }
+            for row in start.row.max(top)..=end.row.min(bottom) {
                 let y = area.y + u16::try_from(row - top).unwrap_or(0);
                 let from = if row == start.row { start.col } else { 0 };
-                let to = if row == end.row {
-                    end.col
-                } else {
-                    cols.saturating_sub(1)
-                };
-                for col in from..=to.min(width.saturating_sub(1)) {
+                let to = if row == end.row { end.col } else { cols - 1 };
+                for col in from..=to.min(width - 1) {
                     buf[(area.x + col, y)].set_style(highlight.style);
                 }
             }
