@@ -31,6 +31,13 @@ fn rhs(app: &App, action: Action) -> String {
         .unwrap_or_else(|| "unset".to_owned())
 }
 
+#[derive(Clone, Copy)]
+struct Styles {
+    base: Style,
+    key: Style,
+    badge: Style,
+}
+
 pub fn render(app: &App, buf: &mut Buffer, hits: &mut Hits) {
     let Some(bar) = bar(app) else {
         return;
@@ -39,105 +46,34 @@ pub fn render(app: &App, buf: &mut Buffer, hits: &mut Hits) {
         hits.tabs = crate::hits::TabHits::default();
     }
     let p = &app.palette;
-    let base = Style::new().fg(p.overlay0).bg(p.panel_bg);
-    buf.set_style(bar, base);
+    let styles = Styles {
+        base: Style::new().fg(p.overlay0).bg(p.panel_bg),
+        key: Style::new()
+            .fg(p.accent)
+            .bg(p.panel_bg)
+            .add_modifier(Modifier::BOLD),
+        badge: Style::new()
+            .fg(contrast(p))
+            .bg(if app.view.mode == Mode::Resize {
+                p.mauve
+            } else {
+                p.accent
+            })
+            .add_modifier(Modifier::BOLD),
+    };
+    buf.set_style(bar, styles.base);
     for x in bar.left()..bar.right() {
         buf[(x, bar.y)].set_symbol(" ");
     }
-    let key = Style::new()
-        .fg(p.accent)
-        .bg(p.panel_bg)
-        .add_modifier(Modifier::BOLD);
-    let badge = Style::new()
-        .fg(contrast(p))
-        .bg(if app.view.mode == Mode::Resize {
-            p.mauve
-        } else {
-            p.accent
-        })
-        .add_modifier(Modifier::BOLD);
-    let mut segments: Vec<(String, Style)> = Vec::new();
-    if let Some((error, _)) = &app.error {
-        segments.push((" ERROR ".into(), badge));
-        segments.push((format!(" {error}"), base));
-    } else {
-        match app.view.mode {
-            Mode::Terminal => return,
-            Mode::Prefix => segments.extend([
-                (" PREFIX ".into(), badge),
-                (" ".into(), base),
-                ("esc".into(), key),
-                (" cancel  ".into(), base),
-                (app.keymap.prefix_label(), key),
-                (" send prefix  ".into(), base),
-                (rhs(app, Action::WorkspacePicker), key),
-                (" workspace nav  ".into(), base),
-                (rhs(app, Action::Help), key),
-                (" keybinds".into(), base),
-            ]),
-            Mode::Navigate => segments.extend([
-                (" NAVIGATE ".into(), badge),
-                (" esc back  ".into(), base),
-                ("↑/↓".into(), key),
-                (" workspace  ".into(), base),
-                ("tab".into(), key),
-                (" pane  ".into(), base),
-                (rhs(app, Action::Help), key),
-                (" keybinds".into(), base),
-            ]),
-            Mode::Resize => segments.extend([
-                (" RESIZE ".into(), badge),
-                ("  ".into(), base),
-                ("h/l".into(), key),
-                (" width  ".into(), base),
-                ("j/k".into(), key),
-                (" height  ".into(), base),
-                ("esc".into(), key),
-                (" done".into(), base),
-            ]),
-            Mode::Copy => {
-                let Some(copy) = &app.view.copy else {
-                    return;
-                };
-                if copy.prompt.is_some() {
-                    prompt(app, buf, bar, badge, key, base);
-                    return;
-                }
-                let search = copy.mode.search();
-                let status = search
-                    .map(|s| match s.current {
-                        Some(_) => format!(" {}/{}", s.index + 1, s.total),
-                        None => " 0/0".to_owned(),
-                    })
-                    .unwrap_or_default();
-                let selecting = copy.mode.is_selecting();
-                let select = if selecting { "selecting" } else { "select" };
-                let (exit_keys, exit_label) = if search.is_none() && !selecting {
-                    ("q/esc", " exit")
-                } else {
-                    ("esc", " clear  q exit")
-                };
-                segments.extend([
-                    (" COPY ".into(), badge),
-                    (" ".into(), base),
-                    ("h/j/k/l w/b/e { }".into(), key),
-                    (" move  ".into(), base),
-                    ("/ ?".into(), key),
-                    (" search  ".into(), base),
-                    ("n/N".into(), key),
-                    (format!(" repeat{status}  "), base),
-                    ("v/space".into(), key),
-                    (format!(" {select}  "), base),
-                    ("y/enter".into(), key),
-                    (" copy  ".into(), base),
-                    (exit_keys.into(), key),
-                    (exit_label.into(), base),
-                ]);
-            }
-        }
+    if app.error.is_none()
+        && app.view.mode == Mode::Copy
+        && app.view.copy.as_ref().is_some_and(|c| c.prompt.is_some())
+    {
+        prompt(app, buf, bar, &styles);
+        return;
     }
     let mut x = bar.x;
-    for (text, style) in segments {
+    for (text, style) in segments(app, &styles) {
         if x >= bar.right() {
             break;
         }
@@ -147,7 +83,88 @@ pub fn render(app: &App, buf: &mut Buffer, hits: &mut Hits) {
     }
 }
 
-fn prompt(app: &App, buf: &mut Buffer, bar: Rect, badge: Style, key: Style, base: Style) {
+fn segments(app: &App, styles: &Styles) -> Vec<(String, Style)> {
+    let Styles { base, key, badge } = *styles;
+    if let Some((error, _)) = &app.error {
+        return vec![(" ERROR ".into(), badge), (format!(" {error}"), base)];
+    }
+    match app.view.mode {
+        Mode::Terminal => Vec::new(),
+        Mode::Prefix => vec![
+            (" PREFIX ".into(), badge),
+            (" ".into(), base),
+            ("esc".into(), key),
+            (" cancel  ".into(), base),
+            (app.keymap.prefix_label(), key),
+            (" send prefix  ".into(), base),
+            (rhs(app, Action::WorkspacePicker), key),
+            (" workspace nav  ".into(), base),
+            (rhs(app, Action::Help), key),
+            (" keybinds".into(), base),
+        ],
+        Mode::Navigate => vec![
+            (" NAVIGATE ".into(), badge),
+            (" esc back  ".into(), base),
+            ("↑/↓".into(), key),
+            (" workspace  ".into(), base),
+            ("tab".into(), key),
+            (" pane  ".into(), base),
+            (rhs(app, Action::Help), key),
+            (" keybinds".into(), base),
+        ],
+        Mode::Resize => vec![
+            (" RESIZE ".into(), badge),
+            ("  ".into(), base),
+            ("h/l".into(), key),
+            (" width  ".into(), base),
+            ("j/k".into(), key),
+            (" height  ".into(), base),
+            ("esc".into(), key),
+            (" done".into(), base),
+        ],
+        Mode::Copy => copy_segments(app, styles),
+    }
+}
+
+fn copy_segments(app: &App, styles: &Styles) -> Vec<(String, Style)> {
+    let Styles { base, key, badge } = *styles;
+    let Some(copy) = &app.view.copy else {
+        return Vec::new();
+    };
+    let search = copy.mode.search();
+    let status = search
+        .map(|s| match s.current {
+            Some(_) => format!(" {}/{}", s.index + 1, s.total),
+            None => " 0/0".to_owned(),
+        })
+        .unwrap_or_default();
+    let selecting = copy.mode.is_selecting();
+    let select = if selecting { "selecting" } else { "select" };
+    let (exit_keys, exit_label) = if search.is_none() && !selecting {
+        ("q/esc", " exit")
+    } else {
+        ("esc", " clear  q exit")
+    };
+    vec![
+        (" COPY ".into(), badge),
+        (" ".into(), base),
+        ("h/j/k/l w/b/e { }".into(), key),
+        (" move  ".into(), base),
+        ("/ ?".into(), key),
+        (" search  ".into(), base),
+        ("n/N".into(), key),
+        (format!(" repeat{status}  "), base),
+        ("v/space".into(), key),
+        (format!(" {select}  "), base),
+        ("y/enter".into(), key),
+        (" copy  ".into(), base),
+        (exit_keys.into(), key),
+        (exit_label.into(), base),
+    ]
+}
+
+fn prompt(app: &App, buf: &mut Buffer, bar: Rect, styles: &Styles) {
+    let Styles { base, key, badge } = *styles;
     let Some(prompt) = app.view.copy.as_ref().and_then(|c| c.prompt.as_ref()) else {
         return;
     };

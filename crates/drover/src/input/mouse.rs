@@ -49,7 +49,7 @@ impl App {
             MouseEventKind::Down(MouseButton::Right) => self.right_down(event),
             MouseEventKind::Down(MouseButton::Middle) => {
                 if let Some(hit) = self.hits.pane_at(event.column, event.row).cloned()
-                    && self.forward(&hit, &event)
+                    && self.forward(&hit, event)
                 {
                     self.view.drag = hit.address.map(|address| Drag::Program { address });
                 }
@@ -59,7 +59,7 @@ impl App {
                 if let Some(hit) = self.hits.pane_at(event.column, event.row).cloned()
                     && self.focused_address() == hit.address
                 {
-                    self.forward(&hit, &event);
+                    self.forward(&hit, event);
                 }
             }
             _ => {}
@@ -73,7 +73,7 @@ impl App {
             .is_some_and(|p| p.term.wants_mouse())
     }
 
-    fn forward(&mut self, hit: &PaneHit, event: &MouseEvent) -> bool {
+    fn forward(&mut self, hit: &PaneHit, event: MouseEvent) -> bool {
         let Some(address) = &hit.address else {
             return false;
         };
@@ -81,7 +81,7 @@ impl App {
         let Some(pane) = self.panes.get_mut(address) else {
             return false;
         };
-        match pane.term.mouse(event, col, row) {
+        match pane.term.mouse(&event, col, row) {
             Some(bytes) => {
                 if pane.term.wants_mouse() {
                     pane.term.scroll_to_bottom();
@@ -126,9 +126,13 @@ impl App {
             });
             return;
         }
-        let Some(hit) = self.hits.pane_at(x, y).cloned() else {
-            return;
-        };
+        if let Some(hit) = self.hits.pane_at(x, y).cloned() {
+            self.pane_down(&hit, event);
+        }
+    }
+
+    fn pane_down(&mut self, hit: &PaneHit, event: MouseEvent) {
+        let (x, y) = (event.column, event.row);
         self.view.selection = None;
         self.focus_pane(&hit.key);
         if self.view.mode == Mode::Navigate {
@@ -151,8 +155,8 @@ impl App {
         if !inside(hit.content, x, y) {
             return;
         }
-        if self.program_wants_mouse(&hit) && !event.modifiers.contains(KeyModifiers::SHIFT) {
-            if self.forward(&hit, &event) {
+        if self.program_wants_mouse(hit) && !event.modifiers.contains(KeyModifiers::SHIFT) {
+            if self.forward(hit, event) {
                 self.view.drag = Some(Drag::Program { address });
             }
             return;
@@ -326,7 +330,7 @@ impl App {
                     event.modifiers.remove(m);
                 }
                 self.focus_pane(&hit.key);
-                if self.forward(&hit, &event) {
+                if self.forward(&hit, event) {
                     self.view.drag = hit.address.map(|address| Drag::Program { address });
                 }
                 return;
@@ -378,7 +382,7 @@ impl App {
         if self.view.focused_pane(&self.machines).as_deref() != Some(hit.key.as_str()) {
             self.focus_pane(&hit.key);
         }
-        if self.forward(&hit, &event) {
+        if self.forward(&hit, event) {
             return;
         }
         let Some(address) = hit.address else {
@@ -413,31 +417,7 @@ impl App {
             return;
         };
         match drag {
-            Drag::Split {
-                machine,
-                tab,
-                container,
-                index,
-                axis,
-                grab,
-                origin,
-                ..
-            } => {
-                let pointer = match axis {
-                    doc::Axis::Row => x,
-                    doc::Axis::Column => y,
-                };
-                let new_a = (i32::from(pointer) + grab - i32::from(origin)).max(0);
-                #[allow(clippy::cast_precision_loss, reason = "cell counts are small")]
-                let new_a = new_a as f32;
-                if up {
-                    self.view.drag = None;
-                    self.drag_divider(machine.as_deref(), &tab, &container, index, new_a);
-                } else if let Some(Drag::Split { preview, .. }) = self.view.drag.as_mut() {
-                    *preview = Some(new_a);
-                }
-                self.relayout();
-            }
+            Drag::Split { .. } => self.drag_split(&drag, x, y, up),
             Drag::SidebarEdge => {
                 let (min, max) = self.config.ui.sidebar_bounds_or_default();
                 self.prefs.sidebar_width = Some((x + 1).clamp(min, max));
@@ -471,7 +451,7 @@ impl App {
                     .find(|p| p.address.as_deref() == Some(address.as_str()))
                     .cloned()
                 {
-                    self.forward(&hit, &event);
+                    self.forward(&hit, event);
                 }
                 if up {
                     self.view.drag = None;
@@ -492,45 +472,72 @@ impl App {
                 }
             }
             Drag::Press { target, at } => {
-                if !up {
-                    return;
-                }
-                self.view.drag = None;
-                let moved = at.0.abs_diff(x).max(at.1.abs_diff(y)) >= 1;
-                match target {
-                    Press::Space(space) => {
-                        if !moved
-                            || self
-                                .hits
-                                .sidebar
-                                .spaces
-                                .iter()
-                                .any(|(r, k)| *k == space && inside(*r, x, y))
-                        {
-                            self.focus_space(&space);
-                            if self.view.mode == Mode::Navigate {
-                                self.view.mode = Mode::Terminal;
-                                self.view.nav = None;
-                            }
-                        }
-                    }
-                    Press::Tab(tab) => {
-                        let over = self.hits.tab_at(x, y).map(str::to_owned);
-                        match over {
-                            Some(other) if moved && other != tab => {
-                                let index =
-                                    self.snapshot().tabs.iter().position(|t| t.key == other);
-                                if let Some(index) = index {
-                                    self.move_tab_to(&tab, index);
-                                }
-                            }
-                            _ if !moved => self.focus_tab(&tab),
-                            _ => {}
-                        }
-                    }
+                if up {
+                    self.view.drag = None;
+                    self.release_press(target, at, x, y);
                 }
             }
         }
+    }
+
+    fn release_press(&mut self, target: Press, at: (u16, u16), x: u16, y: u16) {
+        let moved = at.0.abs_diff(x).max(at.1.abs_diff(y)) >= 1;
+        match target {
+            Press::Space(space) => {
+                let over = self
+                    .hits
+                    .sidebar
+                    .spaces
+                    .iter()
+                    .any(|(r, k)| *k == space && inside(*r, x, y));
+                if !moved || over {
+                    self.focus_space(&space);
+                    if self.view.mode == Mode::Navigate {
+                        self.view.mode = Mode::Terminal;
+                        self.view.nav = None;
+                    }
+                }
+            }
+            Press::Tab(tab) => match self.hits.tab_at(x, y).map(str::to_owned) {
+                Some(other) if moved && other != tab => {
+                    let index = self.snapshot().tabs.iter().position(|t| t.key == other);
+                    if let Some(index) = index {
+                        self.move_tab_to(&tab, index);
+                    }
+                }
+                _ if !moved => self.focus_tab(&tab),
+                _ => {}
+            },
+        }
+    }
+
+    fn drag_split(&mut self, drag: &Drag, x: u16, y: u16, up: bool) {
+        let Drag::Split {
+            machine,
+            tab,
+            container,
+            index,
+            axis,
+            grab,
+            origin,
+            ..
+        } = drag
+        else {
+            return;
+        };
+        let pointer = match axis {
+            doc::Axis::Row => x,
+            doc::Axis::Column => y,
+        };
+        let cells = (i32::from(pointer) + grab - i32::from(*origin)).max(0);
+        let new_a = f32::from(u16::try_from(cells).unwrap_or(u16::MAX));
+        if up {
+            self.view.drag = None;
+            self.drag_divider(machine.as_deref(), tab, container, *index, new_a);
+        } else if let Some(Drag::Split { preview, .. }) = self.view.drag.as_mut() {
+            *preview = Some(new_a);
+        }
+        self.relayout();
     }
 
     fn drag_select(&mut self, address: &str, anchor: Point, word: bool, x: u16, y: u16, up: bool) {

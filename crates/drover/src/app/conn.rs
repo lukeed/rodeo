@@ -106,7 +106,7 @@ impl App {
                         }
                     }
                     let _ = tx.send(apply(Box::new(|app| {
-                        app.disconnected("hc closed the event stream")
+                        app.disconnected("hc closed the event stream");
                     })));
                 }
                 Err(error) => {
@@ -202,7 +202,7 @@ impl App {
         };
         self.conn.retry_at = Some(Instant::now() + self.conn.backoff);
         let wait = self.conn.backoff;
-        self.later(wait, |app| app.conn_tick());
+        self.later(wait, App::conn_tick);
     }
 
     pub(super) fn conn_tick(&mut self) {

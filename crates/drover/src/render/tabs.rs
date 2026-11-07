@@ -69,148 +69,169 @@ fn datetime(format: &str) -> String {
 }
 
 pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect, hits: &mut Hits) {
-    let p = app.palette;
-    buf.set_style(area, Style::new().bg(p.panel_bg));
+    buf.set_style(area, Style::new().bg(app.palette.panel_bg));
     hits.tabs.row = Some(area);
-    let mouse = app.config.ui.mouse_capture;
     let mut content = area;
-    let segments = status_segments(app, snapshot);
-    if !segments.is_empty() {
-        let separator: String = app
-            .config
-            .ui
-            .tab_bar_right_separator
-            .chars()
-            .filter(|c| !c.is_control())
-            .collect();
-        let total: u16 = segments.iter().map(|(t, _)| width(t)).sum::<u16>()
-            + width(&separator) * u16::try_from(segments.len() - 1).unwrap_or(0);
-        if area.width.saturating_sub(total + 1) >= MIN_STRIP {
-            let mut x = area.right() - total;
-            for (i, (text, accent)) in segments.iter().enumerate() {
-                if i > 0 {
-                    buf.set_string(
-                        x,
-                        area.y,
-                        &separator,
-                        Style::new().fg(p.overlay0).bg(p.panel_bg),
-                    );
-                    x += width(&separator);
-                }
-                let style = if *accent {
-                    Style::new()
-                        .fg(contrast(&p))
-                        .bg(p.accent)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::new().fg(p.overlay1).bg(p.panel_bg)
-                };
-                buf.set_string(x, area.y, text, style);
-                x += width(text);
-            }
-            content.width -= total + 1;
-        }
-    }
-    let tabs = &snapshot.tabs;
-    let widths: Vec<u16> = tabs.iter().map(tab_width).collect();
-    let gaps = u16::try_from(tabs.len().saturating_sub(1)).unwrap_or(0);
+    content.width -= status_area(app, snapshot, buf, area);
+    let widths: Vec<u16> = snapshot.tabs.iter().map(tab_width).collect();
+    let mouse = app.config.ui.mouse_capture;
+    let gaps = u16::try_from(widths.len().saturating_sub(1)).unwrap_or(0);
     let desired = widths.iter().sum::<u16>() + gaps + if mouse { NEW_TAB } else { 0 };
-    let overflow = desired > content.width && (!mouse || content.width >= MIN_STRIP);
-    if !overflow {
-        app.view.tab_scroll = 0;
-        let mut x = content.x;
-        for (tab, w) in tabs.iter().zip(&widths) {
-            if x >= content.right() {
-                break;
-            }
-            let shown = (*w).min(content.right() - x);
-            draw_tab(buf, &p, tab, Rect::new(x, area.y, shown, 1));
-            hits.tabs
-                .tabs
-                .push((Rect::new(x, area.y, shown, 1), tab.key.clone()));
-            x += shown + 1;
-        }
-        if mouse && x + NEW_TAB <= content.right() + 1 {
-            let x = x.min(content.right().saturating_sub(NEW_TAB));
-            let rect = Rect::new(x, area.y, NEW_TAB, 1);
-            buf.set_string(x, area.y, " + ", Style::new().fg(p.overlay1).bg(p.panel_bg));
-            hits.tabs.new_tab = Some(rect);
-        }
-        app.view.reveal_tab = false;
-        return;
+    if desired > content.width && (!mouse || content.width >= MIN_STRIP) {
+        overflowing(app, snapshot, buf, content, &widths, hits);
+    } else {
+        fitting(app, snapshot, buf, content, &widths, hits);
     }
+    app.view.reveal_tab = false;
+}
+
+fn status_area(app: &App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) -> u16 {
+    let p = &app.palette;
+    let segments = status_segments(app, snapshot);
+    if segments.is_empty() {
+        return 0;
+    }
+    let separator: String = app
+        .config
+        .ui
+        .tab_bar_right_separator
+        .chars()
+        .filter(|c| !c.is_control())
+        .collect();
+    let total: u16 = segments.iter().map(|(t, _)| width(t)).sum::<u16>()
+        + width(&separator) * u16::try_from(segments.len() - 1).unwrap_or(0);
+    if area.width.saturating_sub(total + 1) < MIN_STRIP {
+        return 0;
+    }
+    let mut x = area.right() - total;
+    for (i, (text, accent)) in segments.iter().enumerate() {
+        if i > 0 {
+            let style = Style::new().fg(p.overlay0).bg(p.panel_bg);
+            buf.set_string(x, area.y, &separator, style);
+            x += width(&separator);
+        }
+        let style = if *accent {
+            Style::new()
+                .fg(contrast(p))
+                .bg(p.accent)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(p.overlay1).bg(p.panel_bg)
+        };
+        buf.set_string(x, area.y, text, style);
+        x += width(text);
+    }
+    total + 1
+}
+
+fn new_tab_button(app: &App, buf: &mut Buffer, rect: Rect, hits: &mut Hits) {
+    let style = Style::new()
+        .fg(app.palette.overlay1)
+        .bg(app.palette.panel_bg);
+    buf.set_string(rect.x, rect.y, " + ", style);
+    hits.tabs.new_tab = Some(rect);
+}
+
+fn fitting(
+    app: &mut App,
+    snapshot: &Snapshot,
+    buf: &mut Buffer,
+    content: Rect,
+    widths: &[u16],
+    hits: &mut Hits,
+) {
+    app.view.tab_scroll = 0;
+    let mut x = content.x;
+    for (tab, w) in snapshot.tabs.iter().zip(widths) {
+        if x >= content.right() {
+            break;
+        }
+        let rect = Rect::new(x, content.y, (*w).min(content.right() - x), 1);
+        draw_tab(buf, &app.palette, tab, rect);
+        hits.tabs.tabs.push((rect, tab.key.clone()));
+        x += rect.width + 1;
+    }
+    if app.config.ui.mouse_capture && x + NEW_TAB <= content.right() + 1 {
+        let x = x.min(content.right().saturating_sub(NEW_TAB));
+        new_tab_button(app, buf, Rect::new(x, content.y, NEW_TAB, 1), hits);
+    }
+}
+
+fn overflowing(
+    app: &mut App,
+    snapshot: &Snapshot,
+    buf: &mut Buffer,
+    content: Rect,
+    widths: &[u16],
+    hits: &mut Hits,
+) {
+    let mouse = app.config.ui.mouse_capture;
+    let tabs = &snapshot.tabs;
     let strip = if mouse {
-        Rect::new(
-            content.x + BUTTON,
-            area.y,
-            content.width.saturating_sub(BUTTON * 2 + NEW_TAB),
-            1,
-        )
+        let room = content.width.saturating_sub(BUTTON * 2 + NEW_TAB);
+        Rect::new(content.x + BUTTON, content.y, room, 1)
     } else {
         content
     };
-    let focused = tabs.iter().position(|t| t.focused).unwrap_or(0);
-    let max_scroll = max_scroll(&widths, strip.width);
+    let most = max_scroll(widths, strip.width);
     let mut first = app.view.tab_scroll;
     if app.view.reveal_tab {
-        first = reveal(&widths, focused, strip.width);
-        app.view.reveal_tab = false;
+        let focused = tabs.iter().position(|t| t.focused).unwrap_or(0);
+        first = reveal(widths, focused, strip.width);
     }
-    first = first.min(max_scroll);
+    first = first.min(most);
     app.view.tab_scroll = first;
     let mut x = strip.x;
     let mut last = first;
-    for (i, (tab, w)) in tabs.iter().zip(&widths).enumerate().skip(first) {
+    for (i, (tab, w)) in tabs.iter().zip(widths).enumerate().skip(first) {
         if x >= strip.right() {
             break;
         }
-        let shown = (*w).min(strip.right() - x);
-        draw_tab(buf, &p, tab, Rect::new(x, area.y, shown, 1));
-        hits.tabs
-            .tabs
-            .push((Rect::new(x, area.y, shown, 1), tab.key.clone()));
+        let rect = Rect::new(x, strip.y, (*w).min(strip.right() - x), 1);
+        draw_tab(buf, &app.palette, tab, rect);
+        hits.tabs.tabs.push((rect, tab.key.clone()));
         last = i;
-        x += shown + 1;
-        if shown < *w {
+        x += rect.width + 1;
+        if rect.width < *w {
             break;
         }
     }
+    let p = app.palette;
     let ellipsis = Style::new().fg(p.overlay0);
     if first > 0 {
-        buf[(strip.x, area.y)].set_symbol("…").set_style(ellipsis);
+        buf[(strip.x, strip.y)].set_symbol("…").set_style(ellipsis);
     }
-    let hidden_right = last + 1 < tabs.len() || x > strip.right() + 1;
-    if hidden_right && strip.width > 0 {
-        buf[(strip.right() - 1, area.y)]
+    if (last + 1 < tabs.len() || x > strip.right() + 1) && strip.width > 0 {
+        buf[(strip.right() - 1, strip.y)]
             .set_symbol("…")
             .set_style(ellipsis);
     }
-    if mouse {
-        let left = Rect::new(content.x, area.y, BUTTON, 1);
-        let right = Rect::new(
-            content.right().saturating_sub(BUTTON + NEW_TAB),
-            area.y,
-            BUTTON,
-            1,
-        );
-        let can = |yes: bool| {
-            Style::new()
-                .fg(if yes { p.overlay1 } else { p.overlay0 })
-                .bg(p.surface0)
-        };
-        buf.set_string(left.x, area.y, " < ", can(first > 0));
-        buf.set_string(right.x, area.y, " > ", can(first < max_scroll));
-        hits.tabs.scroll_left = Some(left);
-        hits.tabs.scroll_right = Some(right);
-        let plus = Rect::new(content.right().saturating_sub(NEW_TAB), area.y, NEW_TAB, 1);
-        buf.set_string(
-            plus.x,
-            area.y,
-            " + ",
-            Style::new().fg(p.overlay1).bg(p.panel_bg),
-        );
-        hits.tabs.new_tab = Some(plus);
+    if !mouse {
+        return;
     }
+    let can = |yes: bool| {
+        Style::new()
+            .fg(if yes { p.overlay1 } else { p.overlay0 })
+            .bg(p.surface0)
+    };
+    let left = Rect::new(content.x, content.y, BUTTON, 1);
+    let right = Rect::new(
+        content.right().saturating_sub(BUTTON + NEW_TAB),
+        content.y,
+        BUTTON,
+        1,
+    );
+    buf.set_string(left.x, left.y, " < ", can(first > 0));
+    buf.set_string(right.x, right.y, " > ", can(first < most));
+    hits.tabs.scroll_left = Some(left);
+    hits.tabs.scroll_right = Some(right);
+    let plus = Rect::new(
+        content.right().saturating_sub(NEW_TAB),
+        content.y,
+        NEW_TAB,
+        1,
+    );
+    new_tab_button(app, buf, plus, hits);
 }
 
 fn draw_tab(buf: &mut Buffer, p: &config::Palette, tab: &TabRow, rect: Rect) {

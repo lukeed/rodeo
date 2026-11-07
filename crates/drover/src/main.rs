@@ -31,7 +31,7 @@ fn main() -> ExitCode {
         }
         Command::ConfigCheck => check(&paths),
         Command::ResetKeys => reset_keys(&paths),
-        Command::Run { session } => run(&paths, session),
+        Command::Run { session } => run(&paths, session.as_deref()),
     }
 }
 
@@ -86,7 +86,7 @@ fn hostname() -> String {
         .to_owned()
 }
 
-fn run(paths: &config::Paths, session: Option<String>) -> ExitCode {
+fn options(paths: &config::Paths, session: Option<&str>) -> Result<Options, ExitCode> {
     let mut notes = Vec::new();
     match paths.migrate() {
         Ok(Some(migration)) => {
@@ -112,20 +112,36 @@ fn run(paths: &config::Paths, session: Option<String>) -> ExitCode {
             "drover: this shell runs inside hc terminal {id}; set experimental.allow_nested = true in {} to open drover here",
             paths.config.display()
         );
-        return ExitCode::FAILURE;
+        return Err(ExitCode::FAILURE);
     }
-    logging::init(&paths.state);
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), "drover starting");
     let mut env = hc::Env::current();
-    if let Some(name) = &session {
+    if let Some(name) = session {
         env.set("HC_SESSION", name);
     }
     let session_name = session
-        .clone()
+        .map(str::to_owned)
         .or_else(|| std::env::var("HC_SESSION").ok())
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| "default".to_owned());
-    let prefs_path = paths.preferences(&session_name);
+    Ok(Options {
+        env,
+        config_path: paths.config.clone(),
+        prefs_path: paths.preferences(&session_name),
+        loaded,
+        host: drover::app::HostInfo::default(),
+        caller,
+        notes,
+        hostname: hostname(),
+    })
+}
+
+fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
+    let mut options = match options(paths, session) {
+        Ok(options) => options,
+        Err(code) => return code,
+    };
+    logging::init(&paths.state);
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "drover starting");
     host::install_panic_hook();
     let guard = match host::enter() {
         Ok(guard) => guard,
@@ -135,17 +151,7 @@ fn run(paths: &config::Paths, session: Option<String>) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let info = host::probe();
-    let options = Options {
-        env,
-        config_path: paths.config.clone(),
-        prefs_path,
-        loaded,
-        host: info,
-        caller,
-        notes,
-        hostname: hostname(),
-    };
+    options.host = host::probe();
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -158,48 +164,7 @@ fn run(paths: &config::Paths, session: Option<String>) -> ExitCode {
         }
     };
     let local = tokio::task::LocalSet::new();
-    let result = local.block_on(&runtime, async move {
-        let backend = CrosstermBackend::new(std::io::stdout());
-        let mut runner = Runner::new(options, backend, Box::new(std::io::stdout()))?;
-        let tx = runner.sender();
-        tokio::task::spawn_local(async move {
-            let mut events = crossterm::event::EventStream::new();
-            while let Some(event) = events.next().await {
-                match event {
-                    Ok(event) => {
-                        if tx.send(Msg::Host(event)).is_err() {
-                            return;
-                        }
-                    }
-                    Err(error) => {
-                        tracing::error!(%error, "host input failed");
-                        break;
-                    }
-                }
-            }
-            let _ = tx.send(Msg::Quit);
-        });
-        let signals = runner.sender();
-        tokio::task::spawn_local(async move {
-            use tokio::signal::unix::{SignalKind, signal};
-            let (Ok(mut term), Ok(mut hup), Ok(mut int)) = (
-                signal(SignalKind::terminate()),
-                signal(SignalKind::hangup()),
-                signal(SignalKind::interrupt()),
-            ) else {
-                return;
-            };
-            tokio::select! {
-                _ = term.recv() => {}
-                _ = hup.recv() => {}
-                _ = int.recv() => {}
-            }
-            let _ = signals.send(Msg::Quit);
-        });
-        runner.run().await;
-        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
-        Ok::<(), std::io::Error>(())
-    });
+    let result = local.block_on(&runtime, drive(options));
     drop(guard);
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -208,4 +173,47 @@ fn run(paths: &config::Paths, session: Option<String>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+async fn drive(options: Options) -> std::io::Result<()> {
+    let backend = CrosstermBackend::new(std::io::stdout());
+    let mut runner = Runner::new(options, backend, Box::new(std::io::stdout()))?;
+    let input = runner.sender();
+    tokio::task::spawn_local(async move {
+        let mut events = crossterm::event::EventStream::new();
+        while let Some(event) = events.next().await {
+            match event {
+                Ok(event) => {
+                    if input.send(Msg::Host(event)).is_err() {
+                        return;
+                    }
+                }
+                Err(error) => {
+                    tracing::error!(%error, "host input failed");
+                    break;
+                }
+            }
+        }
+        let _ = input.send(Msg::Quit);
+    });
+    let signals = runner.sender();
+    tokio::task::spawn_local(async move {
+        use tokio::signal::unix::{SignalKind, signal};
+        let (Ok(mut term), Ok(mut hup), Ok(mut int)) = (
+            signal(SignalKind::terminate()),
+            signal(SignalKind::hangup()),
+            signal(SignalKind::interrupt()),
+        ) else {
+            return;
+        };
+        tokio::select! {
+            _ = term.recv() => {}
+            _ = hup.recv() => {}
+            _ = int.recv() => {}
+        }
+        let _ = signals.send(Msg::Quit);
+    });
+    runner.run().await;
+    tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+    Ok(())
 }

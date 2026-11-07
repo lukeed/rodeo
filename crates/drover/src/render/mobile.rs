@@ -80,10 +80,21 @@ pub fn header(app: &App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) {
             Style::new().fg(p.overlay1),
         );
     }
-    if area.height < 2 {
-        return;
+    if area.height >= 2 {
+        summary(
+            app,
+            snapshot,
+            buf,
+            Rect::new(area.x, area.y + 1, button.x - area.x, 1),
+        );
     }
-    let y = area.y + 1;
+}
+
+fn summary(app: &App, snapshot: &Snapshot, buf: &mut Buffer, row: Rect) {
+    let p = &app.palette;
+    let indicators = app.config.ui.status_indicators;
+    let y = row.y;
+    let area = row;
     if snapshot.agents.is_empty() {
         buf.set_string(area.x, y, " no agents", Style::new().fg(p.overlay0));
         return;
@@ -122,7 +133,7 @@ pub fn header(app: &App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) {
             style = style.add_modifier(Modifier::BOLD);
         }
         let text = format!("{glyph} {n} {}", state.text());
-        if x + width(&text) >= button.x {
+        if x + width(&text) >= row.right() {
             break;
         }
         buf.set_string(x, y, &text, style);

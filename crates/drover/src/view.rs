@@ -4,7 +4,7 @@ use std::time::Instant;
 use doc::Axis;
 use vt::{CopyMode, Direction, Point, Selection};
 
-use crate::machines::Machines;
+use crate::machines::{Machines, SpaceRef};
 use crate::overlay::{Overlay, TextField};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,11 +176,11 @@ impl View {
             .as_ref()
             .is_none_or(|s| machines.space(s).is_none())
         {
-            self.space = spaces.first().map(|s| s.key());
+            self.space = spaces.first().map(SpaceRef::key);
         }
         let tabs: HashSet<String> = machines.tabs().map(|t| t.key()).collect();
         let panes: HashSet<String> = machines.panes().map(|p| p.key()).collect();
-        let spaces: HashSet<String> = spaces.iter().map(|s| s.key()).collect();
+        let spaces: HashSet<String> = spaces.iter().map(SpaceRef::key).collect();
         self.tabs
             .retain(|space, tab| spaces.contains(space) && tabs.contains(tab));
         self.focus

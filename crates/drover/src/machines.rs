@@ -185,23 +185,20 @@ impl Machines {
         let mut changed = Vec::new();
         for view in views {
             let connected = view.is_connected();
-            match self.get_mut(Some(&view.name)) {
-                Some(machine) => {
-                    let was = machine.is_connected();
-                    machine.info = Some(view);
-                    if was != connected {
-                        machine.slot.reset();
-                        changed.push(machine.name.clone());
-                    }
+            if let Some(machine) = self.get_mut(Some(&view.name)) {
+                let was = machine.is_connected();
+                machine.info = Some(view);
+                if was != connected {
+                    machine.slot.reset();
+                    changed.push(machine.name.clone());
                 }
-                None => {
-                    changed.push(Some(view.name.clone()));
-                    self.list.push(Machine {
-                        name: Some(view.name.clone()),
-                        info: Some(view),
-                        slot: Slot::default(),
-                    });
-                }
+            } else {
+                changed.push(Some(view.name.clone()));
+                self.list.push(Machine {
+                    name: Some(view.name.clone()),
+                    info: Some(view),
+                    slot: Slot::default(),
+                });
             }
         }
         self.list[1..].sort_by(|a, b| a.name.cmp(&b.name));

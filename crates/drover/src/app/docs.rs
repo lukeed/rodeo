@@ -49,7 +49,7 @@ impl App {
             return;
         }
         let errors = entry.slot.take_errors();
-        let command = entry.slot.next();
+        let command = entry.slot.command();
         for error in errors {
             self.show_error(error);
         }

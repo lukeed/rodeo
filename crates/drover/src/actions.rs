@@ -7,6 +7,7 @@ use hc::ExecParams;
 
 use crate::app::{App, NoticeDot};
 use crate::ids::{local, qualify};
+use crate::machines::SpaceRef;
 use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, MenuTarget, Rename, RenameTarget};
 use crate::sync::Edit;
 use crate::view::{CopyState, Mode};
@@ -87,9 +88,10 @@ impl App {
     }
 
     pub fn open_overlay(&mut self, kind: &Kind) {
-        match self.overlay_ctx_open(kind) {
-            Some(opened) => self.set_overlay(opened),
-            None => tracing::info!(?kind, "overlay not available yet"),
+        if let Some(opened) = self.overlay_ctx_open(kind) {
+            self.set_overlay(opened);
+        } else {
+            tracing::info!(?kind, "overlay not available yet");
         }
     }
 
@@ -288,7 +290,7 @@ impl App {
     }
 
     fn step_nav(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(|s| s.key()).collect();
+        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
         if keys.is_empty() {
             return;
         }
@@ -371,7 +373,7 @@ impl App {
     }
 
     fn step_space(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(|s| s.key()).collect();
+        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
         let Some(next) = step(&keys, self.view.space.as_deref(), forward) else {
             return;
         };
@@ -379,7 +381,7 @@ impl App {
     }
 
     fn switch_workspace(&mut self, index: usize) {
-        let key = self.machines.spaces().get(index).map(|s| s.key());
+        let key = self.machines.spaces().get(index).map(SpaceRef::key);
         if let Some(key) = key {
             self.focus_space(&key);
         }

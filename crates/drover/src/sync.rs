@@ -133,7 +133,7 @@ impl Slot {
         self.stale = true;
     }
 
-    pub fn next(&mut self) -> Option<Command> {
+    pub fn command(&mut self) -> Option<Command> {
         if self.is_busy() {
             return None;
         }
@@ -153,20 +153,19 @@ impl Slot {
             Ok::<(), Infallible>(())
         });
         match planned {
-            Ok(planned) => match planned.write {
-                Some(write) => {
+            Ok(planned) => {
+                if let Some(write) = planned.write {
                     self.sent = Some((queue.len(), write.value.clone()));
                     Some(Command::Write {
                         value: write.value,
                         version: write.version,
                     })
-                }
-                None => {
+                } else {
                     self.queue.clear();
                     self.doc = planned.doc;
                     None
                 }
-            },
+            }
             Err(PlanError::Undecodable(error)) => {
                 self.queue.clear();
                 self.state = State::Undecodable(error.to_string());
@@ -267,7 +266,7 @@ mod tests {
 
     fn loaded(value: Value, version: u64) -> Slot {
         let mut slot = Slot::default();
-        assert_eq!(slot.next(), Some(Command::Read));
+        assert_eq!(slot.command(), Some(Command::Read));
         slot.read_done(Ok((value, version)));
         slot
     }
@@ -277,16 +276,16 @@ mod tests {
         let mut slot = loaded(Value::Null, 0);
         assert!(slot.edit(space("a")).unwrap());
         assert_eq!(slot.doc().spaces.len(), 1);
-        let Some(Command::Write { version, value }) = slot.next() else {
+        let Some(Command::Write { version, value }) = slot.command() else {
             panic!("expected a write");
         };
         assert_eq!(version, 0);
         assert_eq!(value["spaces"][0]["id"], "a");
         assert!(slot.edit(space("b")).unwrap());
-        assert_eq!(slot.next(), None, "one write in flight");
+        assert_eq!(slot.command(), None, "one write in flight");
         slot.write_done(Written::Ok(1));
         assert_eq!(slot.doc().spaces.len(), 2);
-        let Some(Command::Write { version, value }) = slot.next() else {
+        let Some(Command::Write { version, value }) = slot.command() else {
             panic!("expected the queued write");
         };
         assert_eq!(version, 1);
@@ -300,21 +299,21 @@ mod tests {
         let mut slot = loaded(json!({"spaces": []}), 3);
         let noop: Edit = Rc::new(|_: &mut Document| Ok(()));
         assert!(!slot.edit(noop).unwrap());
-        assert_eq!(slot.next(), None);
+        assert_eq!(slot.command(), None);
     }
 
     #[test]
     fn conflict_rereads_and_keeps_both_edits() {
         let mut slot = loaded(Value::Null, 0);
         slot.edit(space("mine")).unwrap();
-        assert!(matches!(slot.next(), Some(Command::Write { .. })));
+        assert!(matches!(slot.command(), Some(Command::Write { .. })));
         slot.write_done(Written::Conflict);
-        assert_eq!(slot.next(), Some(Command::Read));
+        assert_eq!(slot.command(), Some(Command::Read));
         let theirs = json!({"spaces": [{"id": "theirs", "name": "", "folder": "/t", "tabs": []}]});
         slot.read_done(Ok((theirs, 5)));
         let ids: Vec<_> = slot.doc().spaces.iter().map(|s| s.id.clone()).collect();
         assert_eq!(ids, ["theirs", "mine"]);
-        let Some(Command::Write { version, value }) = slot.next() else {
+        let Some(Command::Write { version, value }) = slot.command() else {
             panic!("expected a retry");
         };
         assert_eq!(version, 5);
@@ -325,13 +324,13 @@ mod tests {
     fn doc_events_wait_for_the_write_in_flight() {
         let mut slot = loaded(Value::Null, 0);
         slot.edit(space("a")).unwrap();
-        assert!(matches!(slot.next(), Some(Command::Write { .. })));
+        assert!(matches!(slot.command(), Some(Command::Write { .. })));
         slot.doc_event(1);
-        assert_eq!(slot.next(), None);
+        assert_eq!(slot.command(), None);
         slot.write_done(Written::Ok(1));
-        assert_eq!(slot.next(), None, "the event was our own write");
+        assert_eq!(slot.command(), None, "the event was our own write");
         slot.doc_event(2);
-        assert_eq!(slot.next(), Some(Command::Read));
+        assert_eq!(slot.command(), Some(Command::Read));
     }
 
     #[test]
@@ -346,10 +345,10 @@ mod tests {
     fn failed_writes_drop_their_edits_and_reread() {
         let mut slot = loaded(Value::Null, 0);
         slot.edit(space("a")).unwrap();
-        slot.next();
+        slot.command();
         slot.write_done(Written::Failed("boom".into()));
         assert_eq!(slot.take_errors(), ["boom"]);
-        assert!(slot.doc().spaces.is_empty());
-        assert_eq!(slot.next(), Some(Command::Read));
+        assert_eq!(slot.doc().spaces.len(), 0);
+        assert_eq!(slot.command(), Some(Command::Read));
     }
 }

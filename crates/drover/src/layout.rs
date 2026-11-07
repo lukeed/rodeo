@@ -389,17 +389,13 @@ impl Line {
             (true, true, false, true) => "├",
             (true, false, true, true) => "┴",
             (false, true, true, true) => "┬",
-            (true, true, false, false)
-            | (true, false, false, false)
-            | (false, true, false, false) => "│",
-            (false, false, true, true)
-            | (false, false, true, false)
-            | (false, false, false, true) => "─",
             (false, true, false, true) => "┌",
             (false, true, true, false) => "┐",
             (true, false, false, true) => "└",
             (true, false, true, false) => "┘",
-            (false, false, false, false) => "",
+            _ if self.up || self.down => "│",
+            _ if self.left || self.right => "─",
+            _ => "",
         }
     }
 }
@@ -675,7 +671,7 @@ mod tests {
         assert_eq!(z.panes.len(), 1);
         assert_eq!(z.panes[0].rect, area);
         assert_eq!(z.panes[0].borders, Borders::ALL);
-        assert!(z.splits.is_empty());
+        assert_eq!(z.splits.len(), 0);
     }
 
     #[test]

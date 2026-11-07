@@ -251,6 +251,45 @@ fn scrollbar(buf: &mut Buffer, track: Rect, first: usize, total: usize, ctx: &Ct
     }
 }
 
+fn agent_span(token: &Token<AgentToken>, agent: &AgentRow, ctx: &Ctx<'_>) -> Option<Span> {
+    let p = ctx.palette;
+    let secondary = Style::new().fg(p.overlay0);
+    let titled = Style::new().fg(p.overlay1);
+    let multi = ctx.snapshot.machines.len() > 1;
+    let (value, base) = match &token.kind {
+        AgentToken::StateIcon => {
+            return Some(Span::icon(
+                agent.state.icon(ctx.config.ui.status_indicators),
+                token.style.patch(Style::new().fg(agent.state.color(p))),
+            ));
+        }
+        AgentToken::StateText => {
+            let text = if agent.state == State::Unknown {
+                "idle"
+            } else {
+                agent.state.text()
+            };
+            (Some(text), Style::new().fg(agent.state.color(p)))
+        }
+        AgentToken::Machine => (multi.then_some(agent.machine.as_str()), secondary),
+        AgentToken::Workspace => {
+            let fg = if agent.focused { p.text } else { p.subtext0 };
+            (
+                Some(agent.workspace.as_str()),
+                Style::new().fg(fg).add_modifier(Modifier::BOLD),
+            )
+        }
+        AgentToken::Tab => (agent.tab_label.as_deref(), secondary),
+        AgentToken::Pane => (agent.pane_label.as_deref(), secondary),
+        AgentToken::Agent => (Some(agent.agent.as_str()), secondary),
+        AgentToken::TerminalTitle => (Some(agent.terminal_title.as_str()), titled),
+        AgentToken::TerminalTitleStripped => (Some(agent.terminal_title_stripped.as_str()), titled),
+        AgentToken::Custom(_) => (None, secondary),
+    };
+    let value = value.filter(|v| !v.is_empty())?;
+    styled(token, value, base).map(|style| Span::text(value, style))
+}
+
 fn agent_lines(agent: &AgentRow, ctx: &Ctx<'_>) -> Vec<Vec<Span>> {
     let p = ctx.palette;
     let rows = ctx
@@ -259,67 +298,15 @@ fn agent_lines(agent: &AgentRow, ctx: &Ctx<'_>) -> Vec<Vec<Span>> {
         .sidebar
         .agents
         .rows_for(Some(agent.agent.as_str()).filter(|a| !a.is_empty()));
-    let multi = ctx.snapshot.machines.len() > 1;
-    let mut lines = Vec::new();
-    for row in rows {
-        let mut spans = Vec::new();
-        for token in row {
-            let secondary = Style::new().fg(p.overlay0);
-            let span = match &token.kind {
-                AgentToken::StateIcon => Some(Span::icon(
-                    agent.state.icon(ctx.config.ui.status_indicators),
-                    token.style.patch(Style::new().fg(agent.state.color(p))),
-                )),
-                AgentToken::StateText => {
-                    let text = if agent.state == State::Unknown {
-                        "idle"
-                    } else {
-                        agent.state.text()
-                    };
-                    styled(token, text, Style::new().fg(agent.state.color(p)))
-                        .map(|s| Span::text(text, s))
-                }
-                AgentToken::Machine if multi => {
-                    styled(token, &agent.machine, secondary).map(|s| Span::text(&agent.machine, s))
-                }
-                AgentToken::Machine => None,
-                AgentToken::Workspace => {
-                    let base = if agent.focused {
-                        Style::new().fg(p.text).add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::new().fg(p.subtext0).add_modifier(Modifier::BOLD)
-                    };
-                    styled(token, &agent.workspace, base).map(|s| Span::text(&agent.workspace, s))
-                }
-                AgentToken::Tab => agent
-                    .tab_label
-                    .as_deref()
-                    .and_then(|t| styled(token, t, secondary).map(|s| Span::text(t, s))),
-                AgentToken::Pane => agent
-                    .pane_label
-                    .as_deref()
-                    .and_then(|t| styled(token, t, secondary).map(|s| Span::text(t, s))),
-                AgentToken::Agent => Some(agent.agent.as_str())
-                    .filter(|a| !a.is_empty())
-                    .and_then(|t| styled(token, t, secondary).map(|s| Span::text(t, s))),
-                AgentToken::TerminalTitle => Some(agent.terminal_title.as_str())
-                    .filter(|t| !t.is_empty())
-                    .and_then(|t| {
-                        styled(token, t, Style::new().fg(p.overlay1)).map(|s| Span::text(t, s))
-                    }),
-                AgentToken::TerminalTitleStripped => Some(agent.terminal_title_stripped.as_str())
-                    .filter(|t| !t.is_empty())
-                    .and_then(|t| {
-                        styled(token, t, Style::new().fg(p.overlay1)).map(|s| Span::text(t, s))
-                    }),
-                AgentToken::Custom(_) => None,
-            };
-            spans.extend(span);
-        }
-        if !spans.is_empty() {
-            lines.push(spans);
-        }
-    }
+    let mut lines: Vec<Vec<Span>> = rows
+        .iter()
+        .map(|row| {
+            row.iter()
+                .filter_map(|token| agent_span(token, agent, ctx))
+                .collect::<Vec<_>>()
+        })
+        .filter(|spans| !spans.is_empty())
+        .collect();
     if lines.is_empty() {
         lines.push(vec![Span::icon(
             agent.state.icon(ctx.config.ui.status_indicators),

@@ -7,6 +7,7 @@ use hc::ExecParams;
 
 use super::App;
 use crate::ids::qualify;
+use crate::machines::SpaceRef;
 
 const GIT_EVERY: Duration = Duration::from_secs(10);
 const FILES_EVERY: Duration = Duration::from_secs(5);
@@ -112,7 +113,7 @@ impl App {
     }
 
     fn refresh_git(&mut self) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(|s| s.key()).collect();
+        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
         self.git.retain(|key, _| keys.contains(key));
         for key in keys {
             let Some((machine, cwd)) = self.space_cwd(&key) else {
