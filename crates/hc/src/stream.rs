@@ -102,8 +102,24 @@ impl Attach {
     }
 }
 
+struct Closing(Arc<Link>);
+
+impl std::ops::Deref for Closing {
+    type Target = Link;
+
+    fn deref(&self) -> &Link {
+        &self.0
+    }
+}
+
+impl Drop for Closing {
+    fn drop(&mut self) {
+        let _ = self.0.close();
+    }
+}
+
 pub struct AttachReader {
-    link: Arc<Link>,
+    link: Closing,
     chunks: mpsc::UnboundedReceiver<Chunk>,
 }
 
@@ -126,7 +142,7 @@ impl AttachReader {
 
 #[derive(Clone)]
 pub struct AttachWriter {
-    link: Arc<Link>,
+    link: Arc<Closing>,
     automatic_input: bool,
 }
 
@@ -251,11 +267,11 @@ impl Client {
             terminal: attached.terminal,
             resize_notifications: attached.resize_notifications,
             reader: AttachReader {
-                link: Arc::clone(&link),
+                link: Closing(Arc::clone(&link)),
                 chunks,
             },
             writer: AttachWriter {
-                link,
+                link: Arc::new(Closing(link)),
                 automatic_input: attached.automatic_input
                     && self.hello().has_feature("automatic_input"),
             },
