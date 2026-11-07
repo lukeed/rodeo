@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::marker::PhantomData;
 
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Deserializer, de};
@@ -301,13 +302,6 @@ struct RawStyledToken {
     rules: Vec<TokenRule>,
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum RawToken {
-    Plain(String),
-    Styled(RawStyledToken),
-}
-
 fn token_kind<T: TokenKind>(name: &str) -> Result<T, String> {
     if let Some(kind) = T::builtin(name) {
         return Ok(kind);
@@ -327,35 +321,50 @@ fn token_kind<T: TokenKind>(name: &str) -> Result<T, String> {
     Ok(T::custom(custom.to_string()))
 }
 
+impl<T: TokenKind> Token<T> {
+    fn from_raw(raw: RawStyledToken) -> Result<Self, String> {
+        if raw.rules.len() > MAX_RULES {
+            return Err(format!(
+                "sidebar tokens may contain at most {MAX_RULES} rules"
+            ));
+        }
+        if !raw.rules.is_empty() && matches!(raw.token.as_str(), "state_icon" | "git_status") {
+            return Err("sidebar rules require a text-valued token".into());
+        }
+        Ok(Self {
+            kind: token_kind(&raw.token)?,
+            style: TokenStyle {
+                fg: raw.fg.map(|color| color.0),
+                bold: raw.bold,
+                dim: raw.dim,
+            },
+            rules: raw.rules,
+        })
+    }
+}
+
 impl<'de, T: TokenKind> Deserialize<'de> for Token<T> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        match RawToken::deserialize(deserializer)? {
-            RawToken::Plain(name) => token_kind(&name).map(Self::plain),
-            RawToken::Styled(raw) => {
-                if raw.rules.len() > MAX_RULES {
-                    return Err(de::Error::custom(format!(
-                        "sidebar tokens may contain at most {MAX_RULES} rules"
-                    )));
-                }
-                if !raw.rules.is_empty()
-                    && matches!(raw.token.as_str(), "state_icon" | "git_status")
-                {
-                    return Err(de::Error::custom(
-                        "sidebar rules require a text-valued token",
-                    ));
-                }
-                token_kind(&raw.token).map(|kind| Self {
-                    kind,
-                    style: TokenStyle {
-                        fg: raw.fg.map(|color| color.0),
-                        bold: raw.bold,
-                        dim: raw.dim,
-                    },
-                    rules: raw.rules,
-                })
+        struct Visitor<T>(PhantomData<T>);
+
+        impl<'de, T: TokenKind> de::Visitor<'de> for Visitor<T> {
+            type Value = Token<T>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a sidebar token name or a { token = ... } table")
+            }
+
+            fn visit_str<E: de::Error>(self, name: &str) -> Result<Token<T>, E> {
+                token_kind(name).map(Token::plain).map_err(E::custom)
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, map: A) -> Result<Token<T>, A::Error> {
+                let raw = RawStyledToken::deserialize(de::value::MapAccessDeserializer::new(map))?;
+                Token::from_raw(raw).map_err(de::Error::custom)
             }
         }
-        .map_err(de::Error::custom)
+
+        deserializer.deserialize_any(Visitor(PhantomData))
     }
 }
 
