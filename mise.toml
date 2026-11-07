@@ -1,0 +1,20 @@
+[tools]
+zig = "0.15.2"
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.146"
+
+[tools.rust]
+version = "1.99.1"
+profile = "default"
+components = ["clippy", "rustfmt"]
+
+[tasks.check]
+depends = ["fmt", "clippy", "test"]
+
+[tasks.fmt]
+run = "cargo fmt --check"
+
+[tasks.clippy]
+run = "cargo clippy --all-targets -- -D warnings"
+
+[tasks.test]
+run = "cargo nextest run --status-level fail --final-status-level fail"
