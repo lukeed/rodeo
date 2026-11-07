@@ -303,3 +303,18 @@ fn clear_keeps_the_cursor_line() {
     let cursor = t.cursor();
     assert_eq!((cursor.col, cursor.row), (8, 0));
 }
+
+#[test]
+fn grapheme_clusters_stay_on_after_full_reset() {
+    let mut t = term(10, 2);
+    t.feed("\x1bc✍\u{fe0f}x".as_bytes());
+    assert_eq!(
+        t.cell(Point::new(t.viewport_top(), 2)),
+        Some(("x".into(), 1))
+    );
+    t.feed("\x1b[?2027l\r\n✍\u{fe0f}x".as_bytes());
+    assert_eq!(
+        t.cell(Point::new(t.viewport_top() + 1, 1)),
+        Some(("x".into(), 1))
+    );
+}

@@ -24,6 +24,7 @@ pub(crate) enum Op {
     Pass(Range<usize>),
     Held(Vec<u8>),
     Found(Found),
+    Reset,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -113,6 +114,11 @@ impl Scanner {
                     osc: byte == b']',
                     esc: false,
                 }
+            }
+            (State::Esc, b'c') => {
+                ops.pass(at + 1);
+                ops.out.push(Op::Reset);
+                State::Ground
             }
             _ => State::Ground,
         };

@@ -157,6 +157,9 @@ impl Terminal {
                 Op::Found(Found::Reply(reply)) => {
                     self.effects.borrow_mut().replies.extend_from_slice(&reply);
                 }
+                Op::Reset => {
+                    let _ = self.vt.set_mode(Mode::GRAPHEME_CLUSTER, true);
+                }
             }
         }
         self.rows.sync(&mut self.vt);
