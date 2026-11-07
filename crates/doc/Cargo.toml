@@ -1,0 +1,18 @@
+[package]
+name = "drover-doc"
+description = "The herdr-app layout doc: types, queries and edits"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "doc"
+
+[dependencies]
+getrandom = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[lints]
+workspace = true

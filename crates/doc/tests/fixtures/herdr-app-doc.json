@@ -1,0 +1,137 @@
+{
+  "value": {
+    "spaces": [
+      {
+        "folder": "/Users/lukee/repos/personal/dotfiles",
+        "id": "sp874378e9ef2f9d3a940581867df86550",
+        "name": "",
+        "tabs": [
+          {
+            "id": "tb55e652c308a3d5a693b88db556af86f9",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t12"
+                  },
+                  "id": "p296173af484d2549499c25afbafec540",
+                  "type": "block"
+                }
+              ],
+              "id": "tb55e652c308a3d5a693b88db556af86f9",
+              "type": "row"
+            }
+          },
+          {
+            "id": "tbd8c5603e569395fa48fa87f9baab9f9c",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t11"
+                  },
+                  "id": "p0dc5c96b305fca1b567d2d9e2322d4c1",
+                  "type": "block"
+                }
+              ],
+              "id": "tbd8c5603e569395fa48fa87f9baab9f9c",
+              "type": "row"
+            }
+          }
+        ]
+      },
+      {
+        "folder": "/Users/lukee/repos/personal/lukeed.com",
+        "id": "sp4ef8e0e1a4b20f1ec8a4f54be19af2a8",
+        "name": "",
+        "tabs": [
+          {
+            "id": "tb4671c9c0f16d0e88d9f35c96f43141e4",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t4"
+                  },
+                  "id": "p2d86ac001208b2a0ff3284ea8f36f080",
+                  "type": "block"
+                }
+              ],
+              "id": "tb4671c9c0f16d0e88d9f35c96f43141e4",
+              "type": "row"
+            }
+          }
+        ]
+      },
+      {
+        "folder": "/Users/lukee/repos/oss/tidyrs",
+        "id": "sp9a9feef9953911e67eace298b609f76e",
+        "name": "tidy",
+        "tabs": [
+          {
+            "id": "tbd0f07105204d6cf19744d58556a35a68",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t1h"
+                  },
+                  "id": "p894eab0f92e0029c03979c0df21fd857",
+                  "type": "block"
+                }
+              ],
+              "id": "tbd0f07105204d6cf19744d58556a35a68",
+              "type": "row"
+            }
+          }
+        ]
+      },
+      {
+        "folder": "/Users/lukee",
+        "id": "sp542a9ea3d351e52878d6c0283ccf0b48",
+        "name": "rdna/www",
+        "tabs": [
+          {
+            "id": "tbf0250057129a274bec7c264ab7ec385f",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t1m"
+                  },
+                  "id": "p0725eabbde91188e32b500ae3180d34d",
+                  "type": "block"
+                }
+              ],
+              "id": "tbf0250057129a274bec7c264ab7ec385f",
+              "type": "row"
+            }
+          },
+          {
+            "id": "tb7f1af9e4716a715d57f5f756f1cea840",
+            "name": "",
+            "root": {
+              "children": [
+                {
+                  "content": {
+                    "terminal": "t1n"
+                  },
+                  "id": "p10f11082afc7969c33c04af3a565424c",
+                  "type": "block"
+                }
+              ],
+              "id": "tb7f1af9e4716a715d57f5f756f1cea840",
+              "type": "row"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "version": 58
+}
