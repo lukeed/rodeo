@@ -330,6 +330,7 @@ impl App {
             .retain(|_, at| now.duration_since(*at) < Duration::from_secs(30));
         if self.ticks.is_multiple_of(10) {
             self.poll_machines();
+            self.retry_docs();
         }
         if self.ticks.is_multiple_of(4) {
             self.reconcile();

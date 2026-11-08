@@ -31,6 +31,20 @@ impl App {
         Ok(changed)
     }
 
+    pub(super) fn retry_docs(&mut self) {
+        let mut retry = Vec::new();
+        for machine in self.machines.iter_mut() {
+            let failed = matches!(machine.slot.state(), crate::sync::State::Unreadable(_));
+            if failed && machine.is_connected() && !machine.slot.is_busy() {
+                machine.slot.refresh();
+                retry.push(machine.name.clone());
+            }
+        }
+        for name in retry {
+            self.pump(name.as_deref());
+        }
+    }
+
     pub fn pump_all(&mut self) {
         let names: Vec<Option<String>> = self.machines.iter().map(|m| m.name.clone()).collect();
         for name in names {
