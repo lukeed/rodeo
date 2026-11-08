@@ -51,11 +51,11 @@ fn an_empty_window_title_leaves_the_host_alone_and_bells_pass() {
         let mut h = Harness::with_config("[ui]\nwindow_title = \"\"\n").await;
         h.ready().await;
         h.screen();
-        assert!(titles(&h).is_empty());
+        assert_eq!(titles(&h), Vec::<String>::new());
         assert!(!h.host_output().contains('\x07'));
         h.typed("printf '\\007'\r").await;
         h.until("the bell", |h| h.host_output().contains('\x07'))
             .await;
-        assert!(titles(&h).is_empty());
+        assert_eq!(titles(&h), Vec::<String>::new());
     });
 }
