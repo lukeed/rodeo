@@ -1,6 +1,6 @@
 use crate::agents::{self, State};
 use crate::machines::{LOCAL_LABEL, SpaceRef, TabRef};
-use crate::model::{AgentRow, MachineRow, Snapshot, SpaceRow, TabRow};
+use crate::model::{AgentRow, MachineRow, PaneRow, Snapshot, SpaceRow, TabRow};
 use crate::view::Mode;
 
 use super::App;
@@ -17,10 +17,12 @@ impl App {
 
     pub fn snapshot(&self) -> Snapshot {
         let mut spaces = Vec::new();
+        let mut panes = Vec::new();
         let mut agents = Vec::new();
         for (index, space) in self.machines.spaces().into_iter().enumerate() {
             let row = self.space_row(index, space);
             for tab in space.tabs() {
+                self.pane_rows(tab, &mut panes);
                 self.agent_rows(&row, tab, &mut agents);
             }
             spaces.push(row);
@@ -29,6 +31,7 @@ impl App {
             machines: self.machine_rows(),
             spaces,
             tabs: self.tab_rows(),
+            panes,
             agents,
             active_space: self.view.space.clone(),
             active_tab: self.view.active_tab(&self.machines),
@@ -133,6 +136,29 @@ impl App {
                 changed_ms: terminal.status_ms.unwrap_or(0),
                 focused: focused.as_deref() == Some(pane.key().as_str()),
                 address,
+            });
+        }
+    }
+
+    fn pane_rows(&self, tab: TabRef<'_>, out: &mut Vec<PaneRow>) {
+        let focused = self.view.focused_pane(&self.machines);
+        for pane in tab.panes() {
+            let key = pane.key();
+            let address = pane.address();
+            let terminal = address.as_deref().and_then(|a| self.terminals.get(a));
+            out.push(PaneRow {
+                address: address.clone(),
+                space: pane.space_key(),
+                tab: tab.key(),
+                title: pane.node.title.clone(),
+                terminal_title: terminal.map(|t| t.title.clone()).unwrap_or_default(),
+                module: match pane.node.content() {
+                    Some(doc::Content::Mod { name, .. }) => Some(name.clone()),
+                    _ => None,
+                },
+                state: address.as_deref().and_then(|a| self.agent_state(a)),
+                focused: focused.as_deref() == Some(key.as_str()),
+                key,
             });
         }
     }

@@ -84,6 +84,7 @@ impl App {
                 self.view.overlay = None;
                 self.overlay_request(request);
             }
+            Outcome::Keep(request) => self.overlay_request(request),
         }
     }
 
@@ -97,6 +98,15 @@ impl App {
                 self.view.nav = self.view.space.clone();
                 self.view.mode = Mode::Navigate;
             }
+            Request::Focus(crate::overlay::Focus::Space(space)) => self.focus_space(&space),
+            Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
+            Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),
+            Request::Settings(edit) => match edit.write(&self.config_path) {
+                Ok(()) => self.reload_config(),
+                Err(error) => {
+                    self.show_error(format!("cannot save the {}: {error}", edit.description()));
+                }
+            },
         }
     }
 }

@@ -21,12 +21,21 @@ pub struct Ctx<'a> {
     pub snapshot: &'a Snapshot,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Focus {
+    Space(String),
+    Tab(String),
+    Pane(String),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Request {
     Action(config::Action),
     Rename { target: RenameTarget, text: String },
     Close(CloseTarget),
     Navigate,
+    Focus(Focus),
+    Settings(config::Edit),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +43,7 @@ pub enum Outcome {
     Stay,
     Close,
     Done(Request),
+    Keep(Request),
 }
 
 pub trait Overlay {

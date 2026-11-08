@@ -40,6 +40,19 @@ pub struct TabRow {
     pub state: Option<State>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PaneRow {
+    pub key: String,
+    pub address: Option<String>,
+    pub space: String,
+    pub tab: String,
+    pub title: Option<String>,
+    pub terminal_title: String,
+    pub module: Option<String>,
+    pub state: Option<State>,
+    pub focused: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentRow {
     pub pane: String,
@@ -63,6 +76,7 @@ pub struct Snapshot {
     pub machines: Vec<MachineRow>,
     pub spaces: Vec<SpaceRow>,
     pub tabs: Vec<TabRow>,
+    pub panes: Vec<PaneRow>,
     pub agents: Vec<AgentRow>,
     pub active_space: Option<String>,
     pub active_tab: Option<String>,
@@ -80,6 +94,7 @@ impl Default for Snapshot {
             machines: Vec::new(),
             spaces: Vec::new(),
             tabs: Vec::new(),
+            panes: Vec::new(),
             agents: Vec::new(),
             active_space: None,
             active_tab: None,
