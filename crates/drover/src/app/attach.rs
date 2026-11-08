@@ -11,6 +11,7 @@ use crate::ids::{local, split};
 use crate::layout::{self, Chrome, SidebarWidth};
 use crate::panes::{Link, Pane};
 use crate::sync::Edit;
+use crate::view::Drag;
 
 const HISTORY: usize = 2000;
 const EXIT_REASONS: [&str; 3] = ["exited", "killed", "finished"];
@@ -381,8 +382,9 @@ impl App {
                         .and_then(|a| self.panes.get(&a))
                         .is_none_or(|p| !p.term.alternate_screen())
                 };
+                let previewed = self.preview(&key, tab.tab);
                 let geom = layout::tab(
-                    tab.tab,
+                    previewed.as_ref().unwrap_or(tab.tab),
                     space_regions.surface,
                     chrome,
                     zoom.as_deref(),
@@ -444,6 +446,39 @@ impl App {
         self.geoms = geoms;
         self.regions = regions;
         self.update_mouse_capture();
+    }
+
+    fn preview(&self, key: &str, tab: &doc::Tab) -> Option<doc::Tab> {
+        let Some(Drag::Split {
+            tab: dragged,
+            container,
+            index,
+            preview: Some(new_a),
+            ..
+        }) = &self.view.drag
+        else {
+            return None;
+        };
+        if dragged != key {
+            return None;
+        }
+        let geom = self.geoms.get(key)?;
+        let mut scratch = Document {
+            spaces: vec![doc::Space {
+                tabs: vec![tab.clone()],
+                ..doc::Space::default()
+            }],
+        };
+        scratch
+            .drag_divider(
+                container,
+                *index,
+                *new_a,
+                |id| geom.rect_of(id),
+                self.cell(),
+            )
+            .ok()?;
+        scratch.spaces.pop()?.tabs.pop()
     }
 
     fn update_mouse_capture(&mut self) {

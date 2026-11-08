@@ -320,6 +320,9 @@ fn dragging_a_border_writes_weights_on_release() {
             .await;
         h.settle().await;
         assert_eq!(h.stored().await.1, version, "no write while dragging");
+        h.screen();
+        let left = h.app().hits.panes[0].rect.width;
+        assert!(left < split.pos, "the drag previews live: {left}");
         h.mouse(MouseEventKind::Up(MouseButton::Left), x - 10, y)
             .await;
         let doc = h
