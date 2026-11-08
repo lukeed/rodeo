@@ -2,7 +2,7 @@ mod copy;
 mod keys;
 mod mouse;
 
-use crossterm::event::Event;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Rect;
 
 use crate::app::App;
@@ -14,7 +14,16 @@ impl App {
         match event {
             Event::Key(key) => {
                 self.error = None;
-                self.key(key);
+                if key.code == KeyCode::Esc && key.modifiers == KeyModifiers::ALT {
+                    let esc = KeyEvent {
+                        modifiers: KeyModifiers::NONE,
+                        ..key
+                    };
+                    self.key(esc);
+                    self.key(esc);
+                } else {
+                    self.key(key);
+                }
             }
             Event::Mouse(mouse) => {
                 self.error = None;

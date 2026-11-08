@@ -118,3 +118,16 @@ fn a_restart_keeps_the_focused_pane_and_zoom() {
         assert!(app.view.is_zoomed(&tab));
     });
 }
+
+#[test]
+fn two_escapes_in_one_read_leave_copy_mode() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        h.prefix_char('[').await;
+        h.press(KeyCode::Char('v'), KeyModifiers::NONE).await;
+        assert_eq!(h.app().view.mode, drover::view::Mode::Copy);
+        h.press(KeyCode::Esc, KeyModifiers::ALT).await;
+        assert_eq!(h.app().view.mode, drover::view::Mode::Terminal);
+    });
+}
