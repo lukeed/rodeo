@@ -46,6 +46,7 @@ fn app() -> App {
             caller: None,
             notes: Vec::new(),
             hostname: "box".into(),
+            launch_dir: None,
         },
         tx,
     );

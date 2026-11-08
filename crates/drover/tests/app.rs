@@ -22,13 +22,13 @@ fn root_kind(doc: &doc::Document) -> Vec<String> {
 #[test]
 fn an_empty_doc_gets_a_space_with_a_running_shell() {
     run(|| async {
-        let mut h = Harness::start().await;
+        let mut h = Harness::launched_in("launch").await;
         h.ready().await;
         let doc = h.until_stored("one space", |d| d.spaces.len() == 1).await;
         let space = &doc.spaces[0];
         assert!(doc::is_id(&space.id, doc::Prefix::Space));
         assert_eq!(space.name, "");
-        let launched = std::env::current_dir().expect("a cwd");
+        let launched = h.core.root().join("launch");
         assert_eq!(space.folder, launched.display().to_string());
         let tab = &space.tabs[0];
         assert_eq!(tab.root.id, tab.id);

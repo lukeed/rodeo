@@ -130,6 +130,9 @@ fn options(paths: &config::Paths, session: Option<&str>) -> Result<Options, Exit
         caller,
         notes,
         hostname: hostname(),
+        launch_dir: std::env::current_dir()
+            .ok()
+            .map(|d| d.to_string_lossy().into_owned()),
     })
 }
 

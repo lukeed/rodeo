@@ -100,6 +100,7 @@ fn a_restart_keeps_the_focused_pane_and_zoom() {
             caller: None,
             notes: Vec::new(),
             hostname: "testhost".into(),
+            launch_dir: Some(h.core.root().display().to_string()),
         };
         let mut again = Runner::new(
             options,

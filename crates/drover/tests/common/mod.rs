@@ -62,7 +62,17 @@ impl Harness {
     }
 
     pub async fn sized(cols: u16, rows: u16, text: &str) -> Self {
+        Self::build(cols, rows, text, None).await
+    }
+
+    pub async fn launched_in(folder: &str) -> Self {
+        Self::build(120, 40, "", Some(folder)).await
+    }
+
+    async fn build(cols: u16, rows: u16, text: &str, folder: Option<&str>) -> Self {
         let core = TestCore::start().await;
+        let launch = folder.map_or_else(|| core.root().to_path_buf(), |f| core.root().join(f));
+        std::fs::create_dir_all(&launch).expect("a launch folder");
         let dir = core.root().join("config").join("drover");
         std::fs::create_dir_all(&dir).expect("config dir");
         let config_path = dir.join("config.toml");
@@ -80,6 +90,7 @@ impl Harness {
             caller: None,
             notes: Vec::new(),
             hostname: "testhost".into(),
+            launch_dir: Some(launch.display().to_string()),
         };
         let host = Sink::default();
         let runner = Runner::new(
@@ -116,6 +127,7 @@ impl Harness {
             caller: None,
             notes: Vec::new(),
             hostname: "testhost".into(),
+            launch_dir: Some(self.core.root().display().to_string()),
         };
         Runner::new(
             options,

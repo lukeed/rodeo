@@ -56,7 +56,11 @@ impl App {
                 .or(folder)
                 .or(home),
             NewCwd::Home => home,
-            NewCwd::Current => launch_dir().filter(|_| machine.is_none()).or(home),
+            NewCwd::Current => self
+                .launch_dir
+                .clone()
+                .filter(|_| machine.is_none())
+                .or(home),
             NewCwd::Path(path) => Some(expand(path, &self.home())),
         }
     }
@@ -443,12 +447,6 @@ fn split_edit(target: &str, holds: Option<&str>, axis: Axis, pane: &str, address
         doc.split_pane(&target, axis, Node::terminal(pane.clone(), address.clone()))
             .map(|_| ())
     })
-}
-
-pub fn launch_dir() -> Option<String> {
-    std::env::current_dir()
-        .ok()
-        .map(|d| d.to_string_lossy().into_owned())
 }
 
 pub fn expand(path: &str, home: &str) -> String {

@@ -78,6 +78,7 @@ pub struct Options {
     pub caller: Option<String>,
     pub notes: Vec<String>,
     pub hostname: String,
+    pub launch_dir: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,6 +116,7 @@ pub struct App {
     pub host: HostInfo,
     pub caller: Option<String>,
     pub hostname: String,
+    pub launch_dir: Option<String>,
     pub conn: Conn,
     pub terminals: hc::Terminals,
     pub terminals_ready: bool,
@@ -178,6 +180,7 @@ impl App {
             host: options.host,
             caller: options.caller,
             hostname: options.hostname,
+            launch_dir: options.launch_dir,
             conn: Conn::default(),
             terminals: hc::Terminals::default(),
             terminals_ready: false,

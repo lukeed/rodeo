@@ -171,7 +171,7 @@ impl App {
         }
         self.first_space = true;
         if self.machines.spaces().is_empty() {
-            match super::spawn::launch_dir() {
+            match self.launch_dir.clone() {
                 Some(dir) => self.new_space_in(None, dir, String::new()),
                 None => self.new_workspace_now(String::new()),
             }
