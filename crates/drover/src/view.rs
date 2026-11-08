@@ -67,6 +67,7 @@ pub enum Drag {
         at: (u16, u16),
         now: (u16, u16),
     },
+    Sidebar(crate::sidebar::Drag),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,7 +97,6 @@ pub struct View {
     pub previous: Option<String>,
     pub mode: Mode,
     pub nav: Option<String>,
-    pub highlight: Option<(String, Instant)>,
     pub tab_scroll: usize,
     pub reveal_tab: bool,
     pub host_focused: bool,
@@ -108,7 +108,9 @@ pub struct View {
     pub sidebar_scroll: usize,
     pub reveal_space: bool,
     pub agent_scroll: usize,
+    pub switcher_scroll: usize,
     pub want_focus: Option<String>,
+    pub sidebar: crate::sidebar::State,
 }
 
 impl Default for View {
@@ -121,7 +123,6 @@ impl Default for View {
             previous: None,
             mode: Mode::Terminal,
             nav: None,
-            highlight: None,
             tab_scroll: 0,
             reveal_tab: true,
             host_focused: true,
@@ -133,7 +134,9 @@ impl Default for View {
             sidebar_scroll: 0,
             reveal_space: true,
             agent_scroll: 0,
+            switcher_scroll: 0,
             want_focus: None,
+            sidebar: crate::sidebar::State::default(),
         }
     }
 }

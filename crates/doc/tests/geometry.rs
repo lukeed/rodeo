@@ -256,8 +256,8 @@ fn resize_keeps_the_pair_sum_and_leaves_other_siblings_alone() {
 #[test]
 fn resize_falls_back_to_an_ancestor_divider() {
     let mut d = tab(json!([
-        {"id":"col","type":"column","children":[term("p1"), term("p2")]},
-        term("p3"),
+        {"id":"col","type":"column","size":{"weight":1.2},"children":[term("p1"), term("p2")]},
+        {"id":"p3","type":"block","content":{"terminal":"p3"},"size":{"weight":0.8}},
     ]));
     let r = rects(&[
         ("t", Rect::new(0, 0, 100, 40)),
@@ -278,6 +278,26 @@ fn resize_falls_back_to_an_ancestor_divider() {
             .unwrap()
     );
     assert!(close(weight_of(&d, "p1"), 2.0 * 22.0 / 40.0));
+}
+
+#[test]
+fn resize_steps_from_the_weights_not_the_rounded_cells() {
+    let mut d = tab(json!([term("a"), term("b")]));
+    let r = rects(&[
+        ("t", Rect::new(0, 0, 100, 35)),
+        ("a", Rect::new(0, 0, 100, 18)),
+        ("b", Rect::new(0, 18, 100, 17)),
+    ]);
+    if let doc::Kind::Row { children } = &mut d.spaces[0].tabs[0].root.kind {
+        let children = std::mem::take(children);
+        d.spaces[0].tabs[0].root.kind = doc::Kind::Column { children };
+    }
+    assert!(
+        d.resize_pane("a", Direction::Down, RESIZE_STEP, &r, CELL)
+            .unwrap()
+    );
+    let share = 35.0 * weight_of(&d, "a") / (weight_of(&d, "a") + weight_of(&d, "b"));
+    assert!(close(share, 19.25), "{share}");
 }
 
 #[test]

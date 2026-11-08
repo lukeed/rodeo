@@ -4,8 +4,6 @@ use drover::app::{Msg, Options};
 use drover::cli::{self, Command, USAGE};
 use drover::runtime::Runner;
 use drover::{host, logging};
-use futures_util::StreamExt;
-use ratatui::backend::CrosstermBackend;
 
 fn main() -> ExitCode {
     let command = match cli::parse(std::env::args_os().skip(1)) {
@@ -176,26 +174,9 @@ fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
 }
 
 async fn drive(options: Options) -> std::io::Result<()> {
-    let backend = CrosstermBackend::new(std::io::stdout());
+    let backend = drover::backend::HostBackend::new(std::io::stdout());
     let mut runner = Runner::new(options, backend, Box::new(std::io::stdout()))?;
-    let input = runner.sender();
-    tokio::task::spawn_local(async move {
-        let mut events = crossterm::event::EventStream::new();
-        while let Some(event) = events.next().await {
-            match event {
-                Ok(event) => {
-                    if input.send(Msg::Host(event)).is_err() {
-                        return;
-                    }
-                }
-                Err(error) => {
-                    tracing::error!(%error, "host input failed");
-                    break;
-                }
-            }
-        }
-        let _ = input.send(Msg::Quit);
-    });
+    drover::host_input::start(runner.sender());
     let signals = runner.sender();
     tokio::task::spawn_local(async move {
         use tokio::signal::unix::{SignalKind, signal};

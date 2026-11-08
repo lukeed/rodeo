@@ -128,6 +128,21 @@ fn reports_events_in_stream_order() {
 }
 
 #[test]
+fn byte_at_a_time_feeds_match_one_feed() {
+    let stream: &[u8] =
+        b"plain text\r\n\x1b[1mbold\x1b[0m\x1b]9;done\x07more\x1b]777;notify;T;B\x1b\\x\x18tail\x1b]2;t\x07";
+    let mut whole = term(20, 4);
+    whole.feed(stream);
+    let mut bytes = term(20, 4);
+    for byte in stream {
+        bytes.feed(std::slice::from_ref(byte));
+    }
+    assert_eq!(screen(&whole), screen(&bytes));
+    assert_eq!(whole.take_events(), bytes.take_events());
+    assert_eq!(whole.title(), "t");
+}
+
+#[test]
 fn osc_9_subcommands_are_not_notifications() {
     let mut t = term(10, 2);
     t.feed(b"\x1b]9;4;1;50\x07\x1b]9;9;/tmp\x07");
@@ -215,6 +230,29 @@ fn resize_reflows() {
     assert_eq!(t.size(), (20, 3));
     assert_eq!(t.cell_px(), (8, 16));
     assert_eq!(screen(&t)[0], "0123456789abc");
+}
+
+#[test]
+fn shrinking_keeps_text_on_screen_while_blank_rows_remain() {
+    let mut t = term(40, 10);
+    t.feed(b"a line that is longer than twenty cells\r\nnext\r\n\r\n$ ");
+    t.resize(20, 8, (8, 16)).unwrap();
+    assert_eq!(t.viewport_top(), 0);
+    assert_eq!(
+        screen(&t)[..5],
+        [
+            "a line that is longe",
+            "r than twenty cells",
+            "next",
+            "",
+            "$"
+        ]
+    );
+    assert!(!t.is_scrolled_back());
+    lines(&mut t, 12);
+    t.resize(40, 6, (8, 16)).unwrap();
+    assert_eq!(screen(&t)[5], "");
+    assert_eq!(screen(&t)[4], "line 11");
 }
 
 #[test]

@@ -47,9 +47,11 @@ impl Rows {
             (None, None) => track.base,
         };
         track.total = total;
-        let Some(last) = total.checked_sub(1) else {
+        if total == 0 {
             return;
-        };
+        }
+        let height = vt.rows().map_or(1, u64::from);
+        let last = total.saturating_sub(height);
         let point = Point::Screen(PointCoordinate {
             x: 0,
             y: u32::try_from(last).unwrap_or(u32::MAX),

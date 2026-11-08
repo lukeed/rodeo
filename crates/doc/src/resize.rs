@@ -39,6 +39,9 @@ impl Document {
         let whole = length(&node.id)?;
         let children = node.children();
         let (la, lb) = (length(&children[a].id)?, length(&children[b].id)?);
+        let pair = la + lb;
+        let la = weighted_share(children[a].size, children[b].size, pair).unwrap_or(la);
+        let lb = pair - la;
         let step = amount.abs().min(0.5) * whole;
         let step = if step.is_finite() { step } else { 0.0 };
         let new_a = if forward { la + step } else { la - step };
@@ -169,6 +172,16 @@ fn set_pair(
     let changed = children[target].size != Some(size);
     children[target].size = Some(size);
     changed
+}
+
+fn weighted_share(a: Option<Size>, b: Option<Size>, total: f32) -> Option<f32> {
+    let weight = |s: Option<Size>| match s {
+        None => Some(1.0),
+        Some(Size::Weight { weight }) if weight.is_finite() && weight > 0.0 => Some(weight),
+        Some(_) => None,
+    };
+    let (wa, wb) = (weight(a)?, weight(b)?);
+    Some(total * wa / (wa + wb))
 }
 
 fn finite(size: Size) -> bool {

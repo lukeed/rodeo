@@ -8,11 +8,8 @@ use hc::{RunParams, Size};
 
 use super::App;
 use crate::agents::SEEN;
-use crate::ids::{local, qualify};
-use crate::layout::{self, Chrome};
+use crate::ids::{is_pending, local, pending, qualify};
 use crate::sync::Edit;
-
-const PLACEHOLDER: &str = "t0";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Spawn {
@@ -85,49 +82,6 @@ impl App {
         argv
     }
 
-    pub fn predicted_size(
-        &self,
-        machine: Option<&str>,
-        edit: &Edit,
-        tab: &str,
-        pane: &str,
-    ) -> (u16, u16) {
-        let fallback = (
-            self.regions.surface.width.max(2) - 1,
-            self.regions.surface.height.max(1),
-        );
-        let Some(slot) = self.machines.get(machine).map(|m| &m.slot) else {
-            return fallback;
-        };
-        let mut doc = slot.doc().clone();
-        if edit(&mut doc).is_err() {
-            return fallback;
-        }
-        let Some(space) = doc.space_of(tab) else {
-            return fallback;
-        };
-        let Some(found) = space.tab(tab) else {
-            return fallback;
-        };
-        let regions = layout::regions(
-            self.screen,
-            &self.config.ui,
-            self.sidebar_width(),
-            space.tabs.len(),
-        );
-        let geom = layout::tab(
-            found,
-            regions.surface,
-            Chrome::from_ui(&self.config.ui),
-            regions.mobile.then_some(pane),
-            self.cell(),
-            &|_| true,
-        );
-        geom.pane(pane).map_or(fallback, |p| {
-            (p.content.width.max(1), p.content.height.max(1))
-        })
-    }
-
     pub fn launch(
         &mut self,
         spawn: Spawn,
@@ -176,23 +130,58 @@ impl App {
         });
     }
 
-    fn landed(&mut self, machine: Option<&str>, address: &str, edit: Edit, pane: String) {
-        let qualified = qualify(address, machine);
-        self.edit(machine, edit);
-        let placed = self.machines.pane_of_address(&qualified).map(|p| p.key());
-        match placed {
-            Some(placed) => {
-                self.view.want_focus = Some(if placed == pane { pane } else { placed });
-                self.after_docs();
-            }
-            None => self.kill(qualified),
+    fn open_pane(
+        &mut self,
+        spawn: Spawn,
+        pane: &str,
+        make: impl Fn(&str) -> Edit + 'static,
+        zoom: bool,
+    ) {
+        let machine = spawn.machine.clone();
+        let placeholder = pending(pane);
+        let Some(held) = self.hold_edit(machine.as_deref(), make(&placeholder)) else {
+            return;
+        };
+        let pane_key = qualify(pane, machine.as_deref());
+        let waiting = qualify(&placeholder, machine.as_deref());
+        if zoom && let Some(tab) = self.machines.pane(&pane_key).map(|p| p.tab_key()) {
+            self.view.zoomed.insert(tab);
         }
+        self.focus_pane(&pane_key);
+        let surface = self.regions.surface;
+        let size = self
+            .panes
+            .get(&waiting)
+            .map_or((surface.width.max(2) - 1, surface.height.max(1)), |p| {
+                p.size
+            });
+        self.launch(Spawn { size, ..spawn }, move |app, result| match result {
+            Ok(address) => {
+                let qualified = qualify(&address, machine.as_deref());
+                app.panes.rename(&waiting, &qualified);
+                app.settle_edit(machine.as_deref(), held, Some(make(&address)));
+                if app.machines.pane_of_address(&qualified).is_none() {
+                    app.kill(qualified);
+                }
+            }
+            Err(error) => {
+                app.settle_edit(machine.as_deref(), held, None);
+                app.show_error(format!("cannot start a shell: {error}"));
+            }
+        });
     }
 
     pub fn new_workspace_now(&mut self, name: String) {
-        let machine = self.active_machine();
+        self.new_workspace_on(self.active_machine(), name);
+    }
+
+    pub fn new_workspace_on(&mut self, machine: Option<String>, name: String) {
         let source = self.view.focused_pane(&self.machines);
-        let space_key = self.view.space.clone();
+        let space_key = self
+            .view
+            .space
+            .clone()
+            .filter(|_| self.active_machine() == machine);
         let folder = self
             .new_cwd(source.as_deref(), space_key.as_deref(), machine.as_deref())
             .unwrap_or_default();
@@ -208,33 +197,22 @@ impl App {
             return;
         };
         let (space, tab, pane) = fresh_ids(&doc);
-        let edit = new_space_edit(&space, &name, &folder, &tab, &pane, PLACEHOLDER);
-        let size = self.predicted_size(machine.as_deref(), &edit, &tab, &pane);
         let spawn = Spawn {
-            machine: machine.clone(),
+            machine,
             space: space.clone(),
             tab: tab.clone(),
             cwd: Some(folder.clone()).filter(|f| !f.is_empty()),
-            size,
+            size: (0, 0),
             argv: self.shell_argv(),
             keep: true,
         };
-        self.launch(spawn, move |app, result| match result {
-            Ok(address) => {
-                let edit = new_space_edit(&space, &name, &folder, &tab, &pane, &address);
-                let space_key = qualify(&space, machine.as_deref());
-                let tab_key = qualify(&tab, machine.as_deref());
-                app.view.show_tab(&space_key, &tab_key);
-                app.landed(
-                    machine.as_deref(),
-                    &address,
-                    edit,
-                    qualify(&pane, machine.as_deref()),
-                );
-                app.view.mode = crate::view::Mode::Terminal;
-            }
-            Err(error) => app.show_error(format!("cannot start a shell: {error}")),
-        });
+        self.view.mode = crate::view::Mode::Terminal;
+        self.open_pane(
+            spawn,
+            &pane.clone(),
+            move |address| new_space_edit(&space, &name, &folder, &tab, &pane, address),
+            false,
+        );
     }
 
     pub fn new_tab_now(&mut self, name: String) {
@@ -256,31 +234,21 @@ impl App {
         let pane = doc.fresh_id(Prefix::Pane);
         let source = self.view.focused_pane(&self.machines);
         let cwd = self.new_cwd(source.as_deref(), Some(&space_key), machine.as_deref());
-        let edit = new_tab_edit(&space_id, &tab, &name, &pane, PLACEHOLDER);
-        let size = self.predicted_size(machine.as_deref(), &edit, &tab, &pane);
         let spawn = Spawn {
-            machine: machine.clone(),
+            machine,
             space: space_id.clone(),
             tab: tab.clone(),
             cwd,
-            size,
+            size: (0, 0),
             argv: self.shell_argv(),
             keep: true,
         };
-        self.launch(spawn, move |app, result| match result {
-            Ok(address) => {
-                let edit = new_tab_edit(&space_id, &tab, &name, &pane, &address);
-                let tab_key = qualify(&tab, machine.as_deref());
-                app.view.show_tab(&space_key, &tab_key);
-                app.landed(
-                    machine.as_deref(),
-                    &address,
-                    edit,
-                    qualify(&pane, machine.as_deref()),
-                );
-            }
-            Err(error) => app.show_error(format!("cannot start a shell: {error}")),
-        });
+        self.open_pane(
+            spawn,
+            &pane.clone(),
+            move |address| new_tab_edit(&space_id, &tab, &name, &pane, address),
+            false,
+        );
     }
 
     pub fn split_now(&mut self, axis: Axis, argv: Option<Vec<String>>, zoom: bool) {
@@ -306,42 +274,28 @@ impl App {
             .unwrap_or_default();
         let pane = doc.fresh_id(Prefix::Pane);
         let cwd = self.new_cwd(Some(&target_key), Some(&space_key), machine.as_deref());
-        let edit = split_edit(&target_id, holds.as_deref(), axis, &pane, PLACEHOLDER);
-        let size = if zoom {
-            let surface = self.regions.surface;
-            (surface.width, surface.height)
-        } else {
-            self.predicted_size(machine.as_deref(), &edit, &tab_id, &pane)
-        };
         let temporary = argv.is_some();
         let spawn = Spawn {
-            machine: machine.clone(),
+            machine,
             space: space_id,
-            tab: tab_id.clone(),
+            tab: tab_id,
             cwd,
-            size,
+            size: (0, 0),
             argv: argv.unwrap_or_else(|| self.shell_argv()),
             keep: !temporary,
         };
-        self.launch(spawn, move |app, result| match result {
-            Ok(address) => {
-                let edit = split_edit(&target_id, holds.as_deref(), axis, &pane, &address);
-                let tab_key = qualify(&tab_id, machine.as_deref());
-                app.landed(
-                    machine.as_deref(),
-                    &address,
-                    edit,
-                    qualify(&pane, machine.as_deref()),
-                );
-                if zoom {
-                    app.view.zoomed.insert(tab_key);
-                }
-            }
-            Err(error) => app.show_error(format!("cannot start a shell: {error}")),
-        });
+        self.open_pane(
+            spawn,
+            &pane.clone(),
+            move |address| split_edit(&target_id, holds.as_deref(), axis, &pane, address),
+            zoom,
+        );
     }
 
     pub fn kill(&mut self, address: String) {
+        if is_pending(&address) {
+            return;
+        }
         let Some(client) = self.client() else {
             return;
         };

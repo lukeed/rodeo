@@ -27,12 +27,18 @@ pub enum Written {
     Failed(String),
 }
 
+struct Entry {
+    edit: Edit,
+    held: Option<u64>,
+}
+
 pub struct Slot {
     state: State,
     base: Value,
     version: u64,
     doc: Document,
-    queue: Vec<Edit>,
+    queue: Vec<Entry>,
+    holds: u64,
     sent: Option<(usize, Value)>,
     reading: bool,
     stale: bool,
@@ -49,6 +55,7 @@ impl Default for Slot {
             version: 0,
             doc: Document::default(),
             queue: Vec::new(),
+            holds: 0,
             sent: None,
             reading: false,
             stale: true,
@@ -104,6 +111,36 @@ impl Slot {
     }
 
     pub fn edit(&mut self, edit: Edit) -> Result<bool, String> {
+        self.push(edit, None)
+    }
+
+    pub fn hold(&mut self, edit: Edit) -> Result<Option<u64>, String> {
+        let id = self.holds + 1;
+        if !self.push(edit, Some(id))? {
+            return Ok(None);
+        }
+        self.holds = id;
+        Ok(Some(id))
+    }
+
+    pub fn is_held(&self, id: u64) -> bool {
+        self.queue.iter().any(|entry| entry.held == Some(id))
+    }
+
+    pub fn settle(&mut self, id: u64, edit: Option<Edit>) {
+        let Some(at) = self.queue.iter().position(|entry| entry.held == Some(id)) else {
+            return;
+        };
+        match edit {
+            Some(edit) => self.queue[at] = Entry { edit, held: None },
+            None => {
+                self.queue.remove(at);
+            }
+        }
+        self.rebase();
+    }
+
+    fn push(&mut self, edit: Edit, held: Option<u64>) -> Result<bool, String> {
         match &self.state {
             State::Ready => {}
             State::Loading => return Err("the layout is still loading".into()),
@@ -116,8 +153,15 @@ impl Slot {
         if self.doc == before {
             return Ok(false);
         }
-        self.queue.push(edit);
+        self.queue.push(Entry { edit, held });
         Ok(true)
+    }
+
+    fn ready(&self) -> usize {
+        self.queue
+            .iter()
+            .take_while(|entry| entry.held.is_none())
+            .count()
     }
 
     pub fn reset(&mut self) {
@@ -148,12 +192,16 @@ impl Slot {
             self.reading = true;
             return Some(Command::Read);
         }
-        if self.queue.is_empty() || !self.is_ready() {
+        let ready = self.ready();
+        if ready == 0 || !self.is_ready() {
             return None;
         }
-        let queue = self.queue.clone();
+        let edits: Vec<Edit> = self.queue[..ready]
+            .iter()
+            .map(|entry| entry.edit.clone())
+            .collect();
         let planned = doc::plan(&self.base, self.version, |doc| {
-            for edit in &queue {
+            for edit in &edits {
                 let _ = edit(doc);
             }
             Ok::<(), Infallible>(())
@@ -161,14 +209,14 @@ impl Slot {
         match planned {
             Ok(planned) => {
                 if let Some(write) = planned.write {
-                    self.sent = Some((queue.len(), write.value.clone()));
+                    self.sent = Some((ready, write.value.clone()));
                     Some(Command::Write {
                         value: write.value,
                         version: write.version,
                     })
                 } else {
-                    self.queue.clear();
-                    self.doc = planned.doc;
+                    self.queue.drain(..ready);
+                    self.rebase();
                     None
                 }
             }
@@ -180,7 +228,7 @@ impl Slot {
             }
             Err(error) => {
                 self.errors.push(error.to_string());
-                self.queue.clear();
+                self.queue.drain(..ready);
                 self.rebase();
                 None
             }
@@ -235,8 +283,8 @@ impl Slot {
     fn rebase(&mut self) {
         match Document::parse(&self.base) {
             Ok(mut doc) => {
-                for edit in &self.queue {
-                    let _ = edit(&mut doc);
+                for entry in &self.queue {
+                    let _ = (entry.edit)(&mut doc);
                 }
                 self.doc = doc;
                 self.state = State::Ready;
@@ -360,5 +408,68 @@ mod tests {
         assert_eq!(slot.take_errors(), ["boom"]);
         assert_eq!(slot.doc().spaces.len(), 0);
         assert_eq!(slot.command(), Some(Command::Read));
+    }
+
+    fn spaces(slot: &Slot) -> Vec<String> {
+        slot.doc().spaces.iter().map(|s| s.id.clone()).collect()
+    }
+
+    fn written(command: Option<Command>) -> Vec<String> {
+        let Some(Command::Write { value, .. }) = command else {
+            panic!("expected a write, got {command:?}");
+        };
+        value["spaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["id"].as_str().unwrap().to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn held_edits_show_at_once_and_write_once_settled() {
+        let mut slot = loaded(Value::Null, 0);
+        let held = slot.hold(space("a")).unwrap().expect("a hold");
+        assert_eq!(spaces(&slot), ["a"]);
+        assert_eq!(slot.command(), None, "a held edit is never written");
+        assert!(slot.edit(space("b")).unwrap());
+        assert_eq!(slot.command(), None, "later edits keep their order");
+        assert!(!slot.is_settled());
+        slot.settle(held, Some(space("c")));
+        assert!(!slot.is_held(held));
+        assert_eq!(spaces(&slot), ["c", "b"]);
+        assert_eq!(written(slot.command()), ["c", "b"]);
+        slot.write_done(Written::Ok(1));
+        assert!(slot.is_settled());
+    }
+
+    #[test]
+    fn edits_before_a_hold_are_written_alone() {
+        let mut slot = loaded(Value::Null, 0);
+        slot.edit(space("a")).unwrap();
+        let held = slot.hold(space("b")).unwrap().expect("a hold");
+        assert_eq!(written(slot.command()), ["a"]);
+        slot.write_done(Written::Ok(1));
+        assert_eq!(spaces(&slot), ["a", "b"]);
+        assert_eq!(slot.command(), None);
+        slot.settle(held, None);
+        assert_eq!(spaces(&slot), ["a"]);
+        assert!(slot.is_settled());
+    }
+
+    #[test]
+    fn held_edits_survive_a_conflict() {
+        let mut slot = loaded(Value::Null, 0);
+        let held = slot.hold(space("mine")).unwrap().expect("a hold");
+        slot.doc_event(3);
+        assert_eq!(slot.command(), Some(Command::Read));
+        let theirs = json!({"spaces": [{"id": "theirs", "name": "", "folder": "/t", "tabs": []}]});
+        slot.read_done(Ok((theirs, 3)));
+        assert_eq!(spaces(&slot), ["theirs", "mine"]);
+        slot.settle(held, Some(space("mine")));
+        let Some(Command::Write { version, .. }) = slot.command() else {
+            panic!("expected a write");
+        };
+        assert_eq!(version, 3);
     }
 }

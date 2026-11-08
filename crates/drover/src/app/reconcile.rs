@@ -144,6 +144,7 @@ impl App {
             .panes()
             .filter(|p| self.doc_ready(p.machine))
             .filter_map(|p| p.address())
+            .filter(|a| !crate::ids::is_pending(a))
             .filter(|a| self.terminals.get(a).is_none_or(hc::Terminal::is_finished))
             .filter(|a| !self.checking.contains(a))
             .filter(|a| {

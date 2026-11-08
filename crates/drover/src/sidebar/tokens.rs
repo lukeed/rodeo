@@ -42,6 +42,22 @@ impl Span {
     fn width(&self) -> usize {
         self.parts.iter().map(|(t, _)| t.width()).sum()
     }
+
+    fn fixed(&self) -> usize {
+        if self.kind == Kind::Text {
+            0
+        } else {
+            self.width()
+        }
+    }
+
+    fn flexible(&self) -> usize {
+        if self.kind == Kind::Text {
+            self.width()
+        } else {
+            0
+        }
+    }
 }
 
 fn separator(before: Kind, after: Kind) -> &'static str {
@@ -52,74 +68,62 @@ fn separator(before: Kind, after: Kind) -> &'static str {
     }
 }
 
-fn seps(spans: &[&Span]) -> usize {
-    spans
+fn separators(spans: &[Span], shown: &[usize]) -> usize {
+    shown
         .windows(2)
-        .map(|w| separator(w[0].kind, w[1].kind).width())
+        .map(|w| separator(spans[w[0]].kind, spans[w[1]].kind).width())
         .sum()
+}
+
+fn minimum(spans: &[Span], shown: &[usize]) -> usize {
+    shown
+        .iter()
+        .map(|&i| spans[i].fixed() + usize::from(spans[i].flexible() > 0))
+        .sum::<usize>()
+        + separators(spans, shown)
+}
+
+fn active(spans: &[Span], width: usize) -> Vec<usize> {
+    let all: Vec<usize> = (0..spans.len()).collect();
+    if minimum(spans, &all) <= width {
+        return all;
+    }
+    let mut keep: Vec<bool> = spans.iter().map(|s| s.flexible() == 0).collect();
+    for i in (0..spans.len()).rev() {
+        if spans[i].flexible() == 0 {
+            continue;
+        }
+        keep[i] = true;
+        let shown: Vec<usize> = (0..spans.len()).filter(|&j| keep[j]).collect();
+        if minimum(spans, &shown) > width {
+            keep[i] = false;
+        }
+    }
+    (0..spans.len()).filter(|&j| keep[j]).collect()
 }
 
 pub fn fit(spans: &[Span], width: u16, sep_style: Style) -> Vec<(String, Style)> {
     let width = usize::from(width);
-    let fixed: usize = spans
+    let shown = active(spans, width);
+    let fixed: usize = shown.iter().map(|&i| spans[i].fixed()).sum();
+    let mut budgets: Vec<usize> = spans
         .iter()
-        .filter(|s| s.kind != Kind::Text)
-        .map(Span::width)
-        .sum();
-    let minimum = |shown: &[&Span]| {
-        shown
-            .iter()
-            .map(|s| if s.kind == Kind::Text { 1 } else { s.width() })
-            .sum::<usize>()
-            + seps(shown)
-    };
-    let mut keep: Vec<bool> = vec![true; spans.len()];
-    let all: Vec<&Span> = spans.iter().collect();
-    if minimum(&all) > width {
-        for (i, span) in spans.iter().enumerate() {
-            keep[i] = span.kind != Kind::Text;
-        }
-        for i in (0..spans.len()).rev() {
-            if spans[i].kind != Kind::Text {
-                continue;
-            }
-            keep[i] = true;
-            let shown: Vec<&Span> = spans
-                .iter()
-                .zip(&keep)
-                .filter(|(_, k)| **k)
-                .map(|(s, _)| s)
-                .collect();
-            if minimum(&shown) > width {
-                keep[i] = false;
-            }
-        }
-    }
-    let shown: Vec<&Span> = spans
-        .iter()
-        .zip(&keep)
-        .filter(|(_, k)| **k)
-        .map(|(s, _)| s)
+        .enumerate()
+        .map(|(i, s)| usize::from(shown.contains(&i) && s.flexible() > 0))
         .collect();
-    let texts: Vec<usize> = shown
-        .iter()
-        .filter(|s| s.kind == Kind::Text)
-        .map(|s| s.width())
-        .collect();
-    let mut given: Vec<usize> = vec![1; texts.len()];
-    let shown_fixed: usize = shown
-        .iter()
-        .filter(|s| s.kind != Kind::Text)
-        .map(|s| s.width())
-        .sum();
-    let mut left = width.saturating_sub(shown_fixed.min(fixed) + seps(&shown) + given.len());
+    let mut left = width
+        .saturating_sub(separators(spans, &shown) + fixed)
+        .saturating_sub(budgets.iter().sum());
     while left > 0 {
         let mut grew = false;
-        for (g, full) in given.iter_mut().zip(&texts) {
-            if left > 0 && *g < *full {
-                *g += 1;
+        for (budget, span) in budgets.iter_mut().zip(spans) {
+            if *budget > 0 && *budget < span.flexible() {
+                *budget += 1;
                 left -= 1;
                 grew = true;
+                if left == 0 {
+                    break;
+                }
             }
         }
         if !grew {
@@ -127,21 +131,17 @@ pub fn fit(spans: &[Span], width: u16, sep_style: Style) -> Vec<(String, Style)>
         }
     }
     let mut out = Vec::new();
-    let mut texts = given.into_iter();
-    for (i, span) in shown.iter().enumerate() {
-        if i > 0 {
-            out.push((
-                separator(shown[i - 1].kind, span.kind).to_owned(),
-                sep_style,
-            ));
+    for (n, &i) in shown.iter().enumerate() {
+        if n > 0 {
+            let before = spans[shown[n - 1]].kind;
+            out.push((separator(before, spans[i].kind).to_owned(), sep_style));
         }
-        match span.kind {
+        match spans[i].kind {
             Kind::Text => {
-                let budget = texts.next().unwrap_or(1);
-                let (text, style) = &span.parts[0];
-                out.push((truncate(text, budget), *style));
+                let (text, style) = &spans[i].parts[0];
+                out.push((truncate(text, budgets[i]), *style));
             }
-            _ => out.extend(span.parts.iter().cloned()),
+            Kind::Icon | Kind::Git => out.extend(spans[i].parts.iter().cloned()),
         }
     }
     out
@@ -176,11 +176,24 @@ mod tests {
         ];
         assert_eq!(joined(&fit(&spans, 30, style)), "● workspace · tab");
         assert_eq!(joined(&fit(&spans, 12, style)), "● wor… · tab");
+        assert_eq!(joined(&fit(&spans, 7, style)), "● … · …");
+        assert_eq!(joined(&fit(&spans, 6, style)), "● tab");
+        assert_eq!(joined(&fit(&spans, 3, style)), "● …");
+        assert_eq!(joined(&fit(&spans, 2, style)), "●");
         let git = vec![
             Span::text("main", style),
             Span::git(vec![("↑2".into(), style)]),
         ];
         assert_eq!(joined(&fit(&git, 20, style)), "main ↑2");
-        assert_eq!(joined(&fit(&spans, 3, style)), "● …");
+        assert_eq!(joined(&fit(&git, 4, style)), "… ↑2");
+        assert_eq!(joined(&fit(&git, 3, style)), "↑2");
+    }
+
+    #[test]
+    fn spare_width_is_shared_round_robin() {
+        let style = Style::new();
+        let spans = vec![Span::text("aaaaaa", style), Span::text("bbbbbb", style)];
+        assert_eq!(joined(&fit(&spans, 11, style)), "aaa… · bbb…");
+        assert_eq!(joined(&fit(&spans, 15, style)), "aaaaaa · bbbbbb");
     }
 }

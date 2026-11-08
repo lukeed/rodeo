@@ -94,11 +94,25 @@ impl Scanner {
             out: Vec::new(),
             from: 0,
         };
-        for (i, &byte) in bytes.iter().enumerate() {
+        let mut i = 0;
+        while i < bytes.len() {
+            let quiet = match self.state {
+                State::Ground => memchr::memchr3(ESC, CAN, SUB, &bytes[i..]),
+                State::Text { esc: false, .. } => {
+                    skip(&bytes[i..], |b| matches!(b, ESC | CAN | SUB | BEL))
+                }
+                _ => Some(0),
+            };
+            let Some(quiet) = quiet else {
+                break;
+            };
+            i += quiet;
+            let byte = bytes[i];
             match self.state {
                 State::Text { osc, esc } => self.text(byte, i, osc, esc, &mut ops),
                 _ => self.idle(byte, i, &mut ops),
             }
+            i += 1;
         }
         if self.holding {
             self.held.extend_from_slice(&bytes[ops.from..]);
@@ -277,4 +291,8 @@ impl Scanner {
             body: pending.body,
         })
     }
+}
+
+fn skip(bytes: &[u8], stop: impl Fn(u8) -> bool) -> Option<usize> {
+    bytes.iter().position(|&b| stop(b))
 }

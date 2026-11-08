@@ -25,7 +25,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Pane manual name | hc | Stored in the block's `title` field. The app parses and keeps `title`, so it survives app writes. |
 | Mod blocks (`{mod}`) | match | Files: a text folder tree. Other mods: a placeholder with the mod name. |
 | Split tree | hc | Doc `row` (side by side) and `column` (stacked) with `size.weight`. Split and remove follow the app's tree rules. |
-| Zoom, focus, active workspace, active tab | match | Private to each drover client, as in the app. Never in the doc. |
+| Zoom, focus, active workspace, active tab | match | Private to each drover client, as in the app. Never in the doc. Saved on quit beside the client preferences and restored on the next start, as Herdr's server keeps them. |
 | Agent | hc | A terminal with an hc status (OSC 7501 reports). Kind from `status.app`. |
 | Agent state blocked / working / done / idle / unknown | hc | From `status.state` and `turn` against the shared `herdr.seen` label, as the app computes it. `error` shows as blocked. `status: null` is not an agent. Agents that do not report OSC 7501 show no state (Herdr detected them from the screen). |
 | Seen tracking | hc | `herdr.seen=<turn>` label, raised only while a person looks at the pane, once per turn. Shared with the app. |
@@ -104,7 +104,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Element | Status | Notes |
 |---|---|---|
 | Desktop layout: sidebar left, tab bar top or bottom, pane surface | match | |
-| Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, single pane, mobile switcher | match | |
+| Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, the full pane split below it, mobile switcher | match | |
 | Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. |
 | Expanded sidebar: spaces section, agents section, section split, footer with `menu` button | match | |
 | Compact collapsed sidebar (4-column status rail), hidden mode | match | |
@@ -128,7 +128,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Agent notification toasts | match | |
 | Endpoint notices and lifecycle banner | hc | From machine states in `machine.list` and the events stream. |
 | Unavailable state ("Select a connected machine") | hc | When hc is not reachable or a machine's doc cannot be read. |
-| Kitty graphics | match | Pass-through to the host terminal with pane offset and clipping. |
+| Kitty graphics | match | Pass-through to the host terminal with pane offset and clipping. Toasts and banners cut the image around them. An open overlay hides all images. |
 
 ## Overlays
 
@@ -167,8 +167,8 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 |---|---|---|
 | Outer window title (`ui.window_title` tokens) | match | Drawn by drover. `{hostname}` is the focused space's machine. |
 | Pane terminal titles | hc | hc `title` event. |
-| Toast delivery `off`, `herdr`, `terminal`, `system` | match | Fired on agent state changes from hc events. |
-| Sound per state and per agent | match | |
+| Toast delivery `off`, `herdr`, `terminal`, `system` | match | Fired on agent state changes from hc events. `system`: `terminal-notifier`, then `osascript` on macOS; `notify-send`, then `gdbus` on Linux. A system notification click does not focus the pane (Herdr does that on Windows only). |
+| Sound per state and per agent | match | Players: `afplay` on macOS; `paplay`, `pw-play`, `aplay` (built-in sounds only), `ffplay`, `mpg123`, `mpv` on Linux. The built-in sounds are short chimes that drover makes itself, not Herdr's mp3 files. `DROVER_DISABLE_SOUND` or `HERDR_DISABLE_SOUND` turns playback off. |
 | Bell pass-through | match | Only for attached panes; BEL is in the attach stream only. |
 | Host light/dark detection and `theme.auto_switch` | match | |
 
@@ -196,7 +196,7 @@ drover reads `~/.config/drover/config.toml` with Herdr's schema. On first start 
 | `experimental.allow_nested` | match | Checks `HC_TERMINAL_ID` instead of `HERDR_ENV`. |
 | `experimental.pane_history` | hc | hc keeps screens. Accepted, ignored. |
 | `experimental.reveal_hidden_cursor_for_cjk_ime`, `cjk_ime_agents`, `cjk_ime_cursor_shape` | match | |
-| `experimental.switch_ascii_input_source_in_prefix` | match | macOS only. |
+| `experimental.switch_ascii_input_source_in_prefix` | dropped | Accepted, ignored. Herdr calls macOS Carbon input source APIs (TIS) over FFI and pumps the main run loop. drover denies `unsafe_code`, and the switch cannot be tested on the Linux build host. |
 
 ## CLI
 

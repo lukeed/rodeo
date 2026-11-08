@@ -282,8 +282,7 @@ fn draw_tab(buf: &mut Buffer, p: &config::Palette, tab: &TabRow, rect: Rect) {
     };
     buf.set_style(rect, style);
     let text = label(tab);
-    let full = tab_width(tab);
-    let left = (full - width(&text)) / 2;
+    let left = rect.width.saturating_sub(width(&text)) / 2;
     if left < rect.width {
         buf.set_stringn(
             rect.x + left,
@@ -308,18 +307,26 @@ fn max_scroll(widths: &[u16], room: u16) -> usize {
 }
 
 fn reveal(widths: &[u16], focused: usize, room: u16) -> usize {
-    let w = widths.get(focused).copied().unwrap_or(0);
-    let mut budget = room.saturating_sub(w) / 2;
-    let mut first = focused;
-    while first > 0 {
-        let prev = widths[first - 1] + 1;
-        if prev > budget {
-            break;
+    let Some(&own) = widths.get(focused) else {
+        return 0;
+    };
+    let mut best = (u16::MAX, focused);
+    for first in 0..=focused {
+        let before: u16 = widths[first..focused]
+            .iter()
+            .fold(0u16, |sum, w| sum.saturating_add(w + 1));
+        if before >= room {
+            continue;
         }
-        budget -= prev;
-        first -= 1;
+        let center = before
+            .saturating_mul(2)
+            .saturating_add(own.min(room - before));
+        let distance = center.abs_diff(room);
+        if distance <= best.0 {
+            best = (distance, first);
+        }
     }
-    first
+    best.1
 }
 
 #[cfg(test)]
@@ -332,6 +339,29 @@ mod tests {
         assert_eq!(max_scroll(&widths, 26), 3);
         assert_eq!(reveal(&widths, 5, 26), 4);
         assert_eq!(reveal(&widths, 0, 26), 0);
+        let mixed = [8, 8, 17, 17, 17, 17, 17, 17];
+        assert_eq!(reveal(&mixed, 4, 85), 2);
         assert_eq!(max_scroll(&widths, 100), 0);
+    }
+
+    #[test]
+    fn a_partial_tab_centers_its_label_in_the_cells_left() {
+        let tab = TabRow {
+            key: "tb1".into(),
+            label: "longer-name-6".into(),
+            custom: true,
+            zoomed: false,
+            focused: false,
+            state: None,
+        };
+        let mut buf = Buffer::empty(Rect::new(0, 0, 16, 1));
+        draw_tab(
+            &mut buf,
+            &config::Config::default().palette(None),
+            &tab,
+            Rect::new(0, 0, 15, 1),
+        );
+        let text: String = (0..16).map(|x| buf[(x, 0)].symbol().to_owned()).collect();
+        assert_eq!(text, " longer-name-6  ");
     }
 }

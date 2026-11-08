@@ -1,9 +1,12 @@
 use crate::agents::{self, State};
-use crate::machines::{LOCAL_LABEL, SpaceRef, TabRef};
-use crate::model::{AgentRow, MachineRow, PaneRow, Snapshot, SpaceRow, TabRow};
+use crate::machines::{LOCAL_LABEL, Machine, SpaceRef, TabRef};
+use crate::model::{
+    AgentRow, MachineRow, MachineStatus, PaneRow, Snapshot, SpaceRow, TabRow, Worktree,
+};
+use crate::sync::State as SlotState;
 use crate::view::Mode;
 
-use super::App;
+use super::{App, ConnState};
 
 impl App {
     pub fn agent_state(&self, address: &str) -> Option<State> {
@@ -20,12 +23,27 @@ impl App {
         let mut panes = Vec::new();
         let mut agents = Vec::new();
         for (index, space) in self.machines.spaces().into_iter().enumerate() {
-            let row = self.space_row(index, space);
+            let row = self.space_row(index, space, false);
             for tab in space.tabs() {
                 self.pane_rows(tab, &mut panes);
                 self.agent_rows(&row, tab, &mut agents);
             }
             spaces.push(row);
+        }
+        let mut stale_spaces = Vec::new();
+        let mut stale_agents = Vec::new();
+        for machine in self.machines.iter().filter(|m| is_stale(m)) {
+            for (index, space) in machine.slot.doc().spaces.iter().enumerate() {
+                let space = SpaceRef {
+                    machine: machine.key(),
+                    space,
+                };
+                let row = self.space_row(index, space, true);
+                for tab in space.tabs() {
+                    self.agent_rows(&row, tab, &mut stale_agents);
+                }
+                stale_spaces.push(row);
+            }
         }
         Snapshot {
             machines: self.machine_rows(),
@@ -33,6 +51,8 @@ impl App {
             tabs: self.tab_rows(),
             panes,
             agents,
+            stale_spaces,
+            stale_agents,
             active_space: self.view.space.clone(),
             active_tab: self.view.active_tab(&self.machines),
             focused_pane: self.view.focused_pane(&self.machines),
@@ -50,54 +70,106 @@ impl App {
         }
     }
 
+    pub fn active_machine_row(&self) -> Option<MachineRow> {
+        self.machine_rows().into_iter().find(|m| m.active)
+    }
+
     fn machine_rows(&self) -> Vec<MachineRow> {
         let active = self.active_machine();
         self.machines
             .iter()
-            .map(|m| MachineRow {
-                name: m.name.clone(),
-                label: m.label().to_owned(),
-                state: if m.is_local() {
-                    self.conn.label().to_owned()
-                } else {
-                    m.state_word().to_owned()
-                },
-                connected: if m.is_local() {
-                    self.conn.is_online()
-                } else {
-                    m.is_connected()
-                },
-                active: m.name == active,
+            .map(|m| {
+                let (status, auth, why) = self.machine_status(m);
+                MachineRow {
+                    name: m.name.clone(),
+                    label: m.label().to_owned(),
+                    state: if m.is_local() {
+                        self.conn.label().to_owned()
+                    } else {
+                        m.state_word().to_owned()
+                    },
+                    connected: if m.is_local() {
+                        self.conn.is_online()
+                    } else {
+                        m.is_connected()
+                    },
+                    active: m.name == active,
+                    status,
+                    auth,
+                    why,
+                }
             })
             .collect()
     }
 
-    fn selected_space(&self) -> Option<String> {
-        let navigating = (self.view.mode == Mode::Navigate)
-            .then(|| self.view.nav.clone())
-            .flatten();
-        navigating.or_else(|| self.view.highlight.as_ref().map(|(key, _)| key.clone()))
+    fn machine_status(&self, machine: &Machine) -> (MachineStatus, bool, Option<String>) {
+        if machine.is_local() {
+            let status = match self.conn.state {
+                ConnState::Connecting => MachineStatus::Connecting,
+                ConnState::Online => MachineStatus::Online,
+                ConnState::Down => MachineStatus::Reconnecting,
+            };
+            return (status, false, self.conn.error.clone());
+        }
+        let why = machine.info.as_ref().and_then(|i| i.why.clone());
+        match machine.state_word() {
+            "connected" => match machine.slot.state() {
+                SlotState::Undecodable(error) | SlotState::Unreadable(error) => {
+                    (MachineStatus::Attention, false, Some(error.clone()))
+                }
+                _ => (MachineStatus::Online, false, None),
+            },
+            "connecting" => (MachineStatus::Connecting, false, why),
+            "unreachable" => (MachineStatus::Reconnecting, false, why),
+            "needs_login" => (MachineStatus::Attention, true, why),
+            "needs_update" => (MachineStatus::Attention, false, why),
+            _ => (MachineStatus::Disabled, false, why),
+        }
     }
 
-    fn space_row(&self, index: usize, space: SpaceRef<'_>) -> SpaceRow {
+    fn selected_space(&self) -> Option<String> {
+        (self.view.mode == Mode::Navigate)
+            .then(|| self.view.nav.clone())
+            .flatten()
+    }
+
+    fn space_row(&self, index: usize, space: SpaceRef<'_>, stale: bool) -> SpaceRow {
         let key = space.key();
         let addresses: Vec<String> = space.tabs().flat_map(|t| t.addresses()).collect();
         let git = self.git.get(&key);
         let selected = self.selected_space();
+        let worktree = git.and_then(|g| {
+            let common = g.common.as_deref()?;
+            Some(Worktree {
+                key: space
+                    .machine
+                    .map_or_else(|| common.to_owned(), |m| format!("{m}:{common}")),
+                linked: g.linked,
+            })
+        });
+        let name = if stale {
+            space
+                .space
+                .display_name(git.and_then(|g| g.toplevel.as_deref()), &self.home())
+        } else {
+            self.space_name(&key, &self.home())
+        };
         SpaceRow {
-            name: self.space_name(&key, &self.home()),
+            name,
             machine: space.machine.map(str::to_owned),
             machine_label: space.machine.unwrap_or(LOCAL_LABEL).to_owned(),
             number: index + 1,
             custom: !space.space.name.is_empty(),
             folder: space.space.folder.clone(),
             state: self.rollup(&addresses),
-            focused: self.view.space.as_deref() == Some(key.as_str()),
-            selected: selected.as_deref() == Some(key.as_str()),
+            focused: !stale && self.view.space.as_deref() == Some(key.as_str()),
+            selected: !stale && selected.as_deref() == Some(key.as_str()),
             branch: git.and_then(|g| g.branch.clone()),
             ahead: git.map_or(0, |g| g.ahead),
             behind: git.map_or(0, |g| g.behind),
             tabs: space.space.tabs.len(),
+            worktree,
+            stale,
             key,
         }
     }
@@ -134,7 +206,9 @@ impl App {
                 terminal_title_stripped: agents::strip_activity(&title).to_owned(),
                 terminal_title: title,
                 changed_ms: terminal.status_ms.unwrap_or(0),
-                focused: focused.as_deref() == Some(pane.key().as_str()),
+                focused: !space.stale && focused.as_deref() == Some(pane.key().as_str()),
+                stale: space.stale,
+                labels: terminal.labels.clone(),
                 address,
             });
         }
@@ -142,11 +216,35 @@ impl App {
 
     fn pane_rows(&self, tab: TabRef<'_>, out: &mut Vec<PaneRow>) {
         let focused = self.view.focused_pane(&self.machines);
+        let count = tab.panes().count();
         for pane in tab.panes() {
             let key = pane.key();
             let address = pane.address();
             let terminal = address.as_deref().and_then(|a| self.terminals.get(a));
+            let status = terminal.and_then(|t| t.status.as_ref());
             out.push(PaneRow {
+                tab_label: tab.name(),
+                tab_custom: !tab.tab.name.is_empty(),
+                tab_panes: count,
+                cwd: terminal
+                    .map(|t| {
+                        t.foreground
+                            .as_ref()
+                            .map(|f| f.cwd.clone())
+                            .filter(|cwd| !cwd.is_empty())
+                            .unwrap_or_else(|| t.cwd.clone())
+                    })
+                    .unwrap_or_default(),
+                agent: terminal.and_then(agents::label).filter(|a| !a.is_empty()),
+                agent_title: status
+                    .map(|s| s.title.clone())
+                    .filter(|t| !t.is_empty())
+                    .or_else(|| {
+                        terminal
+                            .map(|t| agents::strip_activity(&t.title).to_owned())
+                            .filter(|t| !t.is_empty())
+                    }),
+                right_click: terminal.and_then(|t| t.label("herdr.right-click")) == Some("program"),
                 address: address.clone(),
                 space: pane.space_key(),
                 tab: tab.key(),
@@ -188,4 +286,10 @@ impl App {
             })
             .collect()
     }
+}
+
+fn is_stale(machine: &Machine) -> bool {
+    !machine.is_local()
+        && machine.slot.version() > 0
+        && !(machine.is_connected() && machine.slot.is_ready())
 }

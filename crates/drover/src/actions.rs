@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use config::{Action, CommandKind};
 use doc::{Axis, Direction, Document, RESIZE_STEP};
@@ -7,8 +7,7 @@ use hc::ExecParams;
 
 use crate::app::{App, NoticeDot};
 use crate::ids::{local, qualify};
-use crate::machines::SpaceRef;
-use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, MenuTarget, Rename, RenameTarget};
+use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, Rename, RenameTarget};
 use crate::sync::Edit;
 use crate::view::{CopyState, Mode};
 
@@ -110,14 +109,6 @@ impl App {
         self.overlay_opened();
     }
 
-    pub fn context_menu(&mut self, target: MenuTarget) {
-        self.open_overlay(&Kind::ContextMenu(target));
-    }
-
-    pub fn global_menu(&mut self) {
-        self.open_overlay(&Kind::GlobalMenu);
-    }
-
     fn target_space(&self) -> Option<String> {
         match self.view.mode {
             Mode::Navigate => self.view.nav.clone().or_else(|| self.view.space.clone()),
@@ -169,9 +160,12 @@ impl App {
     }
 
     fn ask_close_tab(&mut self) {
-        let Some(tab) = self.view.active_tab(&self.machines) else {
-            return;
-        };
+        if let Some(tab) = self.view.active_tab(&self.machines) {
+            self.request_close_tab(tab);
+        }
+    }
+
+    pub fn request_close_tab(&mut self, tab: String) {
         let last = self
             .machines
             .tab(&tab)
@@ -184,9 +178,12 @@ impl App {
     }
 
     fn ask_close_pane(&mut self) {
-        let Some(pane) = self.view.focused_pane(&self.machines) else {
-            return;
-        };
+        if let Some(pane) = self.view.focused_pane(&self.machines) {
+            self.request_close_pane(pane);
+        }
+    }
+
+    pub fn request_close_pane(&mut self, pane: String) {
         let last = self
             .machines
             .pane(&pane)
@@ -198,7 +195,7 @@ impl App {
         }
     }
 
-    fn ask_close(&mut self, target: CloseTarget) {
+    pub fn ask_close(&mut self, target: CloseTarget) {
         if !self.config.ui.confirm_close {
             self.close(&target);
             return;
@@ -283,7 +280,7 @@ impl App {
     }
 
     fn step_nav(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
+        let keys = self.space_order();
         if keys.is_empty() {
             return;
         }
@@ -319,7 +316,6 @@ impl App {
         }
         let before = self.view.focused_pane(&self.machines);
         self.view.show_space(key);
-        self.view.highlight = Some((key.to_owned(), Instant::now()));
         self.after_focus_change(before);
     }
 
@@ -367,7 +363,7 @@ impl App {
     }
 
     fn step_space(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
+        let keys = self.space_order();
         let Some(next) = step(&keys, self.view.space.as_deref(), forward) else {
             return;
         };
@@ -375,7 +371,7 @@ impl App {
     }
 
     fn switch_workspace(&mut self, index: usize) {
-        let key = self.machines.spaces().get(index).map(SpaceRef::key);
+        let key = self.space_order().get(index).cloned();
         if let Some(key) = key {
             self.focus_space(&key);
         }
@@ -412,8 +408,7 @@ impl App {
     }
 
     fn open_notification_target(&mut self) {
-        if let Some(target) = self.notice.as_ref().and_then(|n| n.target.clone()) {
-            self.notice = None;
+        if let Some(target) = self.take_notice().and_then(|n| n.target) {
             self.focus_pane(&target);
         }
     }
@@ -682,7 +677,7 @@ impl App {
         }
     }
 
-    fn toggle_zoom(&mut self) {
+    pub fn toggle_zoom(&mut self) {
         let Some(tab) = self.view.active_tab(&self.machines) else {
             return;
         };

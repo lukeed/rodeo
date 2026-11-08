@@ -15,6 +15,16 @@ pub fn split(key: &str) -> (Option<&str>, &str) {
     }
 }
 
+const PENDING: &str = "pending:";
+
+pub fn pending(pane: &str) -> String {
+    format!("{PENDING}{pane}")
+}
+
+pub fn is_pending(address: &str) -> bool {
+    split(address).1.starts_with(PENDING)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -28,5 +38,13 @@ mod tests {
         assert_eq!(local("t1", None), "t1");
         assert_eq!(split("mac/sp1"), (Some("mac"), "sp1"));
         assert_eq!(split("sp1"), (None, "sp1"));
+    }
+
+    #[test]
+    fn pending_addresses_are_never_hc_addresses() {
+        assert!(is_pending(&pending("p3")));
+        assert!(is_pending(&qualify(&pending("p3"), Some("mac"))));
+        assert!(!is_pending("t3"));
+        assert!(!is_pending("mac/t3"));
     }
 }

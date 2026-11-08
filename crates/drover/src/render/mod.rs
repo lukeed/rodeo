@@ -1,4 +1,5 @@
-mod mobile;
+mod lifecycle;
+pub mod mobile;
 mod modebar;
 mod mods;
 mod panes;
@@ -38,20 +39,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     if let Some(header) = regions.header {
         mobile::header(app, &snapshot, buf, header);
     }
-    let ctx = sidebar::Ctx {
-        palette: &app.palette,
-        config: &app.config,
-        snapshot: &snapshot,
-        split: app.prefs.section_split(),
-        scroll: app.view.sidebar_scroll,
-        agent_scroll: app.view.agent_scroll,
-        reveal: app.view.reveal_space,
-    };
-    sidebar::render(buf, regions.sidebar, &ctx, &mut hits.sidebar);
-    if hits.sidebar.area.is_some() {
-        app.view.sidebar_scroll = hits.sidebar.scroll;
-        app.view.reveal_space = false;
-    }
+    hits.sidebar = sidebar::draw(app, &snapshot, buf, regions.sidebar);
     if let Some(tab_bar) = regions.tab_bar {
         tabs::render(app, &snapshot, buf, tab_bar, &mut hits);
     }
@@ -70,6 +58,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         modebar::render(app, buf, &mut hits);
     }
     toast::render(app, buf, area, &mut hits);
+    if app.switcher_open() {
+        hits.switcher = crate::switcher::render(app, &snapshot, buf, area);
+    }
     if !app.config.ui.mouse_capture {
         hits.clear_chrome();
     }
@@ -92,7 +83,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         app.view.overlay = Some(open);
     }
     place_cursor(app, frame, cursor);
+    let covers = std::mem::take(&mut hits.covers);
     app.hits = hits;
+    app.compose_graphics(&covers);
 }
 
 fn place_cursor(app: &mut App, frame: &mut Frame, cursor: Option<Cursor>) {

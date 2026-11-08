@@ -1,6 +1,7 @@
 mod copy;
 mod keys;
 mod mouse;
+mod sidebar;
 
 use crossterm::event::Event;
 use ratatui::layout::Rect;
@@ -110,9 +111,12 @@ impl App {
             Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
             Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),
             Request::Worktree(op) => self.worktree_op(op),
+            Request::Menu { target, pick } => self.menu_pick(target, pick),
+            Request::Preview(theme) => self.preview_theme(theme.as_deref()),
             Request::Settings(edit) => match edit.write(&self.config_path) {
                 Ok(()) => self.reload_config(),
                 Err(error) => {
+                    self.preview_theme(None);
                     self.show_error(format!("cannot save the {}: {error}", edit.description()));
                 }
             },

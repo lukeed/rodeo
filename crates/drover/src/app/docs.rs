@@ -31,6 +31,33 @@ impl App {
         Ok(changed)
     }
 
+    pub fn hold_edit(&mut self, machine: Option<&str>, edit: Edit) -> Option<u64> {
+        let held = self
+            .machines
+            .get_mut(machine)
+            .ok_or_else(|| format!("{} is not connected", machine.unwrap_or("Local")))
+            .and_then(|m| m.slot.hold(edit));
+        match held {
+            Ok(Some(id)) => {
+                self.after_docs();
+                Some(id)
+            }
+            Ok(None) => None,
+            Err(error) => {
+                self.show_error(error);
+                None
+            }
+        }
+    }
+
+    pub fn settle_edit(&mut self, machine: Option<&str>, id: u64, edit: Option<Edit>) {
+        if let Some(entry) = self.machines.get_mut(machine) {
+            entry.slot.settle(id, edit);
+        }
+        self.pump(machine);
+        self.after_docs();
+    }
+
     pub(super) fn retry_docs(&mut self) {
         let mut retry = Vec::new();
         for machine in self.machines.iter_mut() {
@@ -120,6 +147,7 @@ impl App {
     }
 
     pub fn after_docs(&mut self) {
+        self.resume_view();
         self.view.fix(&self.machines);
         if let Some(pane) = self.view.want_focus.clone()
             && self.machines.pane(&pane).is_some()

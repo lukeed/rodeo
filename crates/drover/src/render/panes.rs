@@ -151,8 +151,11 @@ pub fn selection_style(app: &App) -> Style {
     let Some((r, g, b)) = base else {
         return Style::reset().add_modifier(Modifier::REVERSED);
     };
-    let luminance = (0.2126 * f32::from(r) + 0.7152 * f32::from(g) + 0.0722 * f32::from(b)) / 255.0;
-    let toward = if luminance < 0.5 { 255.0 } else { 0.0 };
+    let toward = if luminance((r, g, b)) < 0.5 {
+        255.0
+    } else {
+        0.0
+    };
     let mix = |c: u8| {
         let c = f32::from(c);
         #[allow(
@@ -164,7 +167,17 @@ pub fn selection_style(app: &App) -> Style {
         mixed
     };
     let (r, g, b) = (mix(r), mix(g), mix(b));
-    let lum = |c: u8| {
+    let l = luminance((r, g, b));
+    let fg = if (l + 0.05) / 0.05 > 1.05 / (l + 0.05) {
+        Color::Rgb(0, 0, 0)
+    } else {
+        Color::Rgb(255, 255, 255)
+    };
+    Style::reset().fg(fg).bg(Color::Rgb(r, g, b))
+}
+
+fn luminance((r, g, b): (u8, u8, u8)) -> f32 {
+    let channel = |c: u8| {
         let c = f32::from(c) / 255.0;
         if c <= 0.039_28 {
             c / 12.92
@@ -172,13 +185,7 @@ pub fn selection_style(app: &App) -> Style {
             ((c + 0.055) / 1.055).powf(2.4)
         }
     };
-    let l = 0.2126 * lum(r) + 0.7152 * lum(g) + 0.0722 * lum(b);
-    let fg = if (l + 0.05) / 0.05 >= 1.05 / (l + 0.05) {
-        Color::Black
-    } else {
-        Color::White
-    };
-    Style::reset().fg(fg).bg(Color::Rgb(r, g, b))
+    0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 }
 
 fn terminal(
@@ -260,12 +267,14 @@ fn terminal(
         && app.view.overlay.is_none()
         && app.view.host_focused
         && !term.is_scrolled_back();
-    rendered.cursor.filter(|_| visible).map(|c| Cursor {
+    let drawn = rendered.cursor.map(|c| Cursor {
         x: c.x,
         y: c.y,
         shape: c.shape,
         blinking: c.blinking,
-    })
+    });
+    app.ime_cursor(address, pane.content, drawn)
+        .filter(|_| visible)
 }
 
 fn scrollbar(app: &App, buf: &mut Buffer, gutter: Rect, bar: vt::Scrollbar, focused: bool) {
