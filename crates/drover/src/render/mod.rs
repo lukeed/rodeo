@@ -1,3 +1,4 @@
+mod lifecycle;
 mod mobile;
 mod modebar;
 mod mods;

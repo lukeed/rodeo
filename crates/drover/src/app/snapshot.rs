@@ -70,6 +70,10 @@ impl App {
         }
     }
 
+    pub fn active_machine_row(&self) -> Option<MachineRow> {
+        self.machine_rows().into_iter().find(|m| m.active)
+    }
+
     fn machine_rows(&self) -> Vec<MachineRow> {
         let active = self.active_machine();
         self.machines
