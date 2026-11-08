@@ -8,7 +8,7 @@ use hc::ExecParams;
 use crate::app::{App, NoticeDot};
 use crate::ids::{local, qualify};
 use crate::machines::SpaceRef;
-use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, MenuTarget, Rename, RenameTarget};
+use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, Rename, RenameTarget};
 use crate::sync::Edit;
 use crate::view::{CopyState, Mode};
 
@@ -109,14 +109,6 @@ impl App {
         self.view.overlay = Some(opened);
     }
 
-    pub fn context_menu(&mut self, target: MenuTarget) {
-        self.open_overlay(&Kind::ContextMenu(target));
-    }
-
-    pub fn global_menu(&mut self) {
-        self.open_overlay(&Kind::GlobalMenu);
-    }
-
     pub fn edit_scrollback(&mut self) {
         tracing::info!("edit_scrollback is not available yet");
     }
@@ -176,9 +168,12 @@ impl App {
     }
 
     fn ask_close_tab(&mut self) {
-        let Some(tab) = self.view.active_tab(&self.machines) else {
-            return;
-        };
+        if let Some(tab) = self.view.active_tab(&self.machines) {
+            self.request_close_tab(tab);
+        }
+    }
+
+    pub fn request_close_tab(&mut self, tab: String) {
         let last = self
             .machines
             .tab(&tab)
@@ -191,9 +186,12 @@ impl App {
     }
 
     fn ask_close_pane(&mut self) {
-        let Some(pane) = self.view.focused_pane(&self.machines) else {
-            return;
-        };
+        if let Some(pane) = self.view.focused_pane(&self.machines) {
+            self.request_close_pane(pane);
+        }
+    }
+
+    pub fn request_close_pane(&mut self, pane: String) {
         let last = self
             .machines
             .pane(&pane)
@@ -205,7 +203,7 @@ impl App {
         }
     }
 
-    fn ask_close(&mut self, target: CloseTarget) {
+    pub fn ask_close(&mut self, target: CloseTarget) {
         if !self.config.ui.confirm_close {
             self.close(&target);
             return;
@@ -688,7 +686,7 @@ impl App {
         }
     }
 
-    fn toggle_zoom(&mut self) {
+    pub fn toggle_zoom(&mut self) {
         let Some(tab) = self.view.active_tab(&self.machines) else {
             return;
         };

@@ -1,7 +1,13 @@
 mod confirm;
+pub mod context;
 mod field;
 pub mod frame;
+pub mod goto;
+pub mod help;
+pub mod menu;
 mod rename;
+pub mod scroll;
+pub mod settings;
 
 use config::{Config, Keymap, Palette};
 use crossterm::event::{KeyEvent, MouseEvent};
@@ -31,11 +37,19 @@ pub enum Focus {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Request {
     Action(config::Action),
-    Rename { target: RenameTarget, text: String },
+    Rename {
+        target: RenameTarget,
+        text: String,
+    },
     Close(CloseTarget),
     Navigate,
     Focus(Focus),
     Settings(config::Edit),
+    Preview(Option<String>),
+    Menu {
+        target: MenuTarget,
+        pick: context::Pick,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,4 +107,4 @@ pub fn open(kind: &Kind, ctx: &Ctx<'_>) -> Option<Box<dyn Overlay>> {
     OPENERS.iter().find_map(|opener| opener(kind, ctx))
 }
 
-const OPENERS: &[Opener] = &[];
+const OPENERS: &[Opener] = &[help::open, goto::open, settings::open];

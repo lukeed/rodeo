@@ -141,11 +141,35 @@ impl App {
 
     fn pane_rows(&self, tab: TabRef<'_>, out: &mut Vec<PaneRow>) {
         let focused = self.view.focused_pane(&self.machines);
+        let count = tab.panes().count();
         for pane in tab.panes() {
             let key = pane.key();
             let address = pane.address();
             let terminal = address.as_deref().and_then(|a| self.terminals.get(a));
+            let status = terminal.and_then(|t| t.status.as_ref());
             out.push(PaneRow {
+                tab_label: tab.name(),
+                tab_custom: !tab.tab.name.is_empty(),
+                tab_panes: count,
+                cwd: terminal
+                    .map(|t| {
+                        t.foreground
+                            .as_ref()
+                            .map(|f| f.cwd.clone())
+                            .filter(|cwd| !cwd.is_empty())
+                            .unwrap_or_else(|| t.cwd.clone())
+                    })
+                    .unwrap_or_default(),
+                agent: terminal.and_then(agents::label).filter(|a| !a.is_empty()),
+                agent_title: status
+                    .map(|s| s.title.clone())
+                    .filter(|t| !t.is_empty())
+                    .or_else(|| {
+                        terminal
+                            .map(|t| agents::strip_activity(&t.title).to_owned())
+                            .filter(|t| !t.is_empty())
+                    }),
+                right_click: terminal.and_then(|t| t.label("herdr.right-click")) == Some("program"),
                 address: address.clone(),
                 space: pane.space_key(),
                 tab: tab.key(),

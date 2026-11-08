@@ -51,6 +51,13 @@ pub struct PaneRow {
     pub module: Option<String>,
     pub state: Option<State>,
     pub focused: bool,
+    pub tab_label: String,
+    pub tab_custom: bool,
+    pub tab_panes: usize,
+    pub cwd: String,
+    pub agent: Option<String>,
+    pub agent_title: Option<String>,
+    pub right_click: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

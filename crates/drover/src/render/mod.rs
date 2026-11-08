@@ -1,4 +1,4 @@
-mod mobile;
+pub mod mobile;
 mod modebar;
 mod mods;
 mod panes;
@@ -65,6 +65,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         modebar::render(app, buf, &mut hits);
     }
     toast::render(app, buf, area, &mut hits);
+    if app.switcher_open() {
+        hits.switcher = crate::switcher::render(app, &snapshot, buf, area);
+    }
     if !app.config.ui.mouse_capture {
         hits.clear_chrome();
     }
