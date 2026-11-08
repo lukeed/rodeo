@@ -136,6 +136,7 @@ impl App {
         pane: &str,
         make: impl Fn(&str) -> Edit + 'static,
         zoom: bool,
+        done: impl FnOnce(&mut App, bool) + 'static,
     ) {
         let machine = spawn.machine.clone();
         let placeholder = pending(pane);
@@ -163,9 +164,11 @@ impl App {
                 if app.machines.pane_of_address(&qualified).is_none() {
                     app.kill(qualified);
                 }
+                done(app, true);
             }
             Err(error) => {
                 app.settle_edit(machine.as_deref(), held, None);
+                done(app, false);
                 app.show_error(format!("cannot start a shell: {error}"));
             }
         });
@@ -212,6 +215,53 @@ impl App {
             &pane.clone(),
             move |address| new_space_edit(&space, &name, &folder, &tab, &pane, address),
             false,
+            |_, _| {},
+        );
+    }
+
+    pub fn replace_last(&mut self, machine: Option<String>, close: Edit, terminals: Vec<String>) {
+        let Some(doc) = self
+            .machines
+            .get(machine.as_deref())
+            .map(|m| m.slot.doc().clone())
+        else {
+            return;
+        };
+        let (space, tab, pane) = fresh_ids(&doc);
+        let folder = self
+            .new_cwd(None, None, machine.as_deref())
+            .unwrap_or_default();
+        let spawn = Spawn {
+            machine: machine.clone(),
+            space: space.clone(),
+            tab: tab.clone(),
+            cwd: Some(folder.clone()).filter(|f| !f.is_empty()),
+            size: (0, 0),
+            argv: self.shell_argv(),
+            keep: true,
+        };
+        self.view.mode = crate::view::Mode::Terminal;
+        let closing = close.clone();
+        self.open_pane(
+            spawn,
+            &pane.clone(),
+            move |address| {
+                let close = closing.clone();
+                let add = new_space_edit(&space, "", &folder, &tab, &pane, address);
+                Rc::new(move |doc: &mut Document| {
+                    let _ = close(doc);
+                    add(doc)
+                })
+            },
+            false,
+            move |app, started| {
+                if !started {
+                    app.edit(machine.as_deref(), close);
+                }
+                for address in terminals {
+                    app.kill(address);
+                }
+            },
         );
     }
 
@@ -248,6 +298,7 @@ impl App {
             &pane.clone(),
             move |address| new_tab_edit(&space_id, &tab, &name, &pane, address),
             false,
+            |_, _| {},
         );
     }
 
@@ -289,6 +340,7 @@ impl App {
             &pane.clone(),
             move |address| split_edit(&target_id, holds.as_deref(), axis, &pane, address),
             zoom,
+            |_, _| {},
         );
     }
 

@@ -32,6 +32,15 @@ async fn group_of_two(h: &mut Harness) -> (String, String) {
     )
 }
 
+async fn fresh_after(h: &mut Harness, closed: &[String]) {
+    let doc = h
+        .until_stored("one fresh space", |d| {
+            d.spaces.len() == 1 && !closed.contains(&d.spaces[0].id)
+        })
+        .await;
+    assert_eq!(doc.addresses().len(), 1);
+}
+
 fn menu_labels(h: &Harness) -> Vec<String> {
     let overlay = h.app().view.overlay.as_ref().expect("a menu");
     let any: &dyn std::any::Any = overlay.as_ref();
@@ -46,6 +55,7 @@ fn group_menus_offer_group_items_and_close_the_group() {
     run(|| async {
         let mut h = Harness::start().await;
         let (parent, child) = group_of_two(&mut h).await;
+        let closed = [parent.clone(), child.clone()];
         let space = drover::overlay::MenuTarget::Space;
         h.app_mut().context_menu(space(child), (5, 5));
         assert_eq!(
@@ -85,8 +95,7 @@ fn group_menus_offer_group_items_and_close_the_group() {
         })
         .await;
         h.press(KeyCode::Enter, KeyModifiers::NONE).await;
-        h.until_stored("no spaces left", |d| d.spaces.is_empty())
-            .await;
+        fresh_after(&mut h, &closed).await;
     });
 }
 
@@ -94,11 +103,10 @@ fn group_menus_offer_group_items_and_close_the_group() {
 fn close_workspace_on_a_parent_closes_its_group() {
     run(|| async {
         let mut h = Harness::with_config("[ui]\nconfirm_close = false\n").await;
-        let (parent, _) = group_of_two(&mut h).await;
+        let (parent, child) = group_of_two(&mut h).await;
         h.app_mut().focus_space(&parent);
         h.prefix_char('D').await;
-        h.until_stored("no spaces left", |d| d.spaces.is_empty())
-            .await;
+        fresh_after(&mut h, &[parent, child]).await;
     });
 }
 

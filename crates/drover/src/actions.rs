@@ -227,59 +227,95 @@ impl App {
     }
 
     pub fn close(&mut self, target: &CloseTarget) {
-        let (machine, terminals, edit): (Option<String>, Vec<String>, Edit) = match target {
-            CloseTarget::Group { space } => {
-                for member in self.group_members(space) {
-                    self.close(&CloseTarget::Workspace { space: member });
+        let mut plans: Vec<(Option<String>, Vec<String>, Vec<Edit>)> = Vec::new();
+        for (machine, terminals, edit) in self.closing(target) {
+            match plans.iter_mut().find(|(m, _, _)| *m == machine) {
+                Some((_, all, edits)) => {
+                    all.extend(terminals);
+                    edits.push(edit);
                 }
-                return;
+                None => plans.push((machine, terminals, vec![edit])),
             }
+        }
+        for (machine, terminals, edits) in plans {
+            let edit: Edit = match <[Edit; 1]>::try_from(edits) {
+                Ok([edit]) => edit,
+                Err(edits) => Rc::new(move |doc: &mut Document| {
+                    for edit in &edits {
+                        let _ = edit(doc);
+                    }
+                    Ok(())
+                }),
+            };
+            if self.empties(machine.as_deref(), &edit) {
+                self.replace_last(machine, edit, terminals);
+            } else if self.edit(machine.as_deref(), edit) {
+                for address in terminals {
+                    self.kill(address);
+                }
+                if self.machines.spaces().is_empty() {
+                    self.view.mode = Mode::Navigate;
+                }
+            }
+        }
+    }
+
+    fn closing(&self, target: &CloseTarget) -> Vec<(Option<String>, Vec<String>, Edit)> {
+        match target {
+            CloseTarget::Group { space } => self
+                .group_members(space)
+                .into_iter()
+                .flat_map(|member| self.closing(&CloseTarget::Workspace { space: member }))
+                .collect(),
             CloseTarget::Workspace { space } => {
                 let Some(found) = self.machines.space(space) else {
-                    return;
+                    return Vec::new();
                 };
                 let id = found.space.id.clone();
                 let terminals = found.tabs().flat_map(|t| t.addresses()).collect();
-                (
+                vec![(
                     found.machine.map(str::to_owned),
                     terminals,
                     Rc::new(move |doc: &mut Document| doc.close_space(&id).map(|_| ())),
-                )
+                )]
             }
             CloseTarget::Tab { tab } => {
                 let Some(found) = self.machines.tab(tab) else {
-                    return;
+                    return Vec::new();
                 };
                 let id = found.tab.id.clone();
-                (
+                vec![(
                     found.machine.map(str::to_owned),
                     found.addresses(),
                     Rc::new(move |doc: &mut Document| doc.close_tab(&id).map(|_| ())),
-                )
+                )]
             }
             CloseTarget::Pane { pane } => {
                 let Some(found) = self.machines.pane(pane) else {
-                    return;
+                    return Vec::new();
                 };
                 if !found.node.closable() {
-                    return;
+                    return Vec::new();
                 }
                 let id = found.node.id.clone();
-                (
+                vec![(
                     found.machine.map(str::to_owned),
                     found.address().into_iter().collect(),
                     Rc::new(move |doc: &mut Document| doc.close_pane(&id).map(|_| ())),
-                )
-            }
-        };
-        if self.edit(machine.as_deref(), edit) {
-            for address in terminals {
-                self.kill(address);
-            }
-            if self.machines.spaces().is_empty() {
-                self.view.mode = Mode::Navigate;
+                )]
             }
         }
+    }
+
+    fn empties(&self, machine: Option<&str>, edit: &Edit) -> bool {
+        let Some(entry) = self.machines.get(machine).filter(|m| m.slot.is_ready()) else {
+            return false;
+        };
+        let mut doc = entry.slot.doc().clone();
+        if edit(&mut doc).is_err() || !doc.spaces.is_empty() {
+            return false;
+        }
+        self.machines.spaces().iter().all(|s| s.machine == machine)
     }
 
     fn enter_navigate(&mut self) {

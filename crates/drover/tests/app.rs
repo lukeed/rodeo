@@ -151,9 +151,13 @@ fn closing_panes_tabs_and_workspaces() {
             h.screen().contains("Close workspace?")
         })
         .await;
+        let old = h.doc().spaces[0].id.clone();
         h.press(KeyCode::Enter, KeyModifiers::NONE).await;
-        h.until_stored("no spaces", |d| d.spaces.is_empty()).await;
-        assert_eq!(h.app().view.mode, Mode::Navigate);
+        h.until_stored("a fresh space", |d| {
+            d.spaces.len() == 1 && d.spaces[0].id != old
+        })
+        .await;
+        assert_eq!(h.app().view.mode, Mode::Terminal);
     });
 }
 
@@ -172,8 +176,12 @@ fn closing_without_confirm_and_closing_tabs() {
         h.prefix_char('X').await;
         h.until_stored("one tab", |d| d.spaces[0].tabs.len() == 1)
             .await;
+        let old = h.doc().spaces[0].id.clone();
         h.prefix_char('x').await;
-        h.until_stored("no spaces", |d| d.spaces.is_empty()).await;
+        h.until_stored("a fresh space", |d| {
+            d.spaces.len() == 1 && d.spaces[0].id != old
+        })
+        .await;
         assert!(h.app().view.overlay.is_none());
     });
 }

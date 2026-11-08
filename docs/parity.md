@@ -21,6 +21,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Workspace | hc | A `herdr-app` doc space. Order: local machine first, then machines by name; doc order inside a machine. |
 | Workspace label | hc | Space `name`, else the app's rule: git top-level folder name of its first terminal, else that terminal's live folder, else `folder`; `~` for home. |
 | Tab | hc | A doc tab. Label: `name`, else its 1-based number. |
+| Last workspace closed | match | When a user closes the last workspace in this client (its last tab or pane too, or its group), one doc write removes it and adds a fresh workspace with a new shell, as Herdr does (folder: `terminal.new_cwd` with no source pane, so `follow` gives home). When the doc becomes empty through another client or the app, or because the last shell exits (every client sees the exit), drover adds nothing: it shows the empty spaces list, and `new` or `prefix+shift+n` starts a workspace. |
 | Pane | hc | A doc `block` with `{terminal}` content. The terminal is an hc terminal with `herdr.space`, `herdr.tab`, `herdr.seen=0` labels and `keep: true`. |
 | Pane manual name | hc | Stored in the block's `title` field. The app parses and keeps `title`, so it survives app writes. |
 | Mod blocks (`{mod}`) | match | Files: a text folder tree. Other mods: a placeholder with the mod name. |
