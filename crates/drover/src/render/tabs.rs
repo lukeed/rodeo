@@ -82,6 +82,43 @@ pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect, 
         fitting(app, snapshot, buf, content, &widths, hits);
     }
     app.view.reveal_tab = false;
+    drop_indicator(app, buf, hits);
+}
+
+fn drop_indicator(app: &App, buf: &mut Buffer, hits: &Hits) {
+    let Some(crate::view::Drag::Press {
+        target: crate::view::Press::Tab(dragged),
+        at,
+        now,
+    }) = &app.view.drag
+    else {
+        return;
+    };
+    if at.0.abs_diff(now.0).max(at.1.abs_diff(now.1)) < 1 {
+        return;
+    }
+    let Some((rect, key)) = hits
+        .tabs
+        .tabs
+        .iter()
+        .find(|(r, _)| crate::hits::inside(*r, now.0, now.1))
+    else {
+        return;
+    };
+    if key == dragged {
+        return;
+    }
+    let row = hits.tabs.row.unwrap_or(*rect);
+    let x = if now.0 >= at.0 {
+        rect.right()
+    } else {
+        rect.x.saturating_sub(1).max(row.x)
+    };
+    if buf.area.contains((x, rect.y).into()) {
+        buf[(x, rect.y)]
+            .set_symbol("│")
+            .set_style(Style::new().fg(app.palette.accent).bg(app.palette.panel_bg));
+    }
 }
 
 fn status_area(app: &App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) -> u16 {

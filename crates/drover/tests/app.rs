@@ -748,3 +748,40 @@ fn two_clients_share_one_layout_without_duplicates() {
         );
     });
 }
+
+#[test]
+fn dragging_a_tab_reorders_the_doc() {
+    run(|| async {
+        let mut h = Harness::with_config("[ui]\nprompt_new_tab_name = false\n").await;
+        h.ready().await;
+        h.prefix_char('c').await;
+        h.until("two tabs", |h| h.app().hits.tabs.tabs.len() == 2)
+            .await;
+        let doc = h
+            .until_stored("two tabs stored", |d| d.spaces[0].tabs.len() == 2)
+            .await;
+        let (first, second) = (
+            doc.spaces[0].tabs[0].id.clone(),
+            doc.spaces[0].tabs[1].id.clone(),
+        );
+        let (a, _) = h.app().hits.tabs.tabs[0];
+        let (b, _) = h.app().hits.tabs.tabs[1];
+        h.mouse(MouseEventKind::Down(MouseButton::Left), b.x + 1, b.y)
+            .await;
+        h.mouse(MouseEventKind::Drag(MouseButton::Left), a.x + 1, a.y)
+            .await;
+        h.until("the drop indicator", |h| {
+            h.screen()
+                .lines()
+                .next()
+                .is_some_and(|l| l.contains('│') && l.matches('│').count() >= 2)
+        })
+        .await;
+        h.mouse(MouseEventKind::Up(MouseButton::Left), a.x + 1, a.y)
+            .await;
+        let doc = h
+            .until_stored("reordered tabs", |d| d.spaces[0].tabs[0].id == second)
+            .await;
+        assert_eq!(doc.spaces[0].tabs[1].id, first);
+    });
+}

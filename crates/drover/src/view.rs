@@ -65,6 +65,7 @@ pub enum Drag {
     Press {
         target: Press,
         at: (u16, u16),
+        now: (u16, u16),
     },
 }
 

@@ -262,6 +262,7 @@ impl App {
             self.view.drag = Some(Drag::Press {
                 target: Press::Space(space.clone()),
                 at: (x, y),
+                now: (x, y),
             });
             return true;
         }
@@ -289,6 +290,7 @@ impl App {
             self.view.drag = Some(Drag::Press {
                 target: Press::Tab(tab),
                 at: (x, y),
+                now: (x, y),
             });
             return true;
         }
@@ -471,7 +473,10 @@ impl App {
                     self.view.drag = None;
                 }
             }
-            Drag::Press { target, at } => {
+            Drag::Press { target, at, .. } => {
+                if let Some(Drag::Press { now, .. }) = self.view.drag.as_mut() {
+                    *now = (x, y);
+                }
                 if up {
                     self.view.drag = None;
                     self.release_press(target, at, x, y);
