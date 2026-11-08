@@ -45,8 +45,13 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         split: app.prefs.section_split(),
         scroll: app.view.sidebar_scroll,
         agent_scroll: app.view.agent_scroll,
+        reveal: app.view.reveal_space,
     };
     sidebar::render(buf, regions.sidebar, &ctx, &mut hits.sidebar);
+    if hits.sidebar.area.is_some() {
+        app.view.sidebar_scroll = hits.sidebar.scroll;
+        app.view.reveal_space = false;
+    }
     if let Some(tab_bar) = regions.tab_bar {
         tabs::render(app, &snapshot, buf, tab_bar, &mut hits);
     }

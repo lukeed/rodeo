@@ -317,6 +317,7 @@ impl App {
             (Some(i), false) => i - 1,
         };
         self.view.nav = Some(keys[next].clone());
+        self.view.reveal_space = true;
     }
 
     pub fn focus_space(&mut self, key: &str) {

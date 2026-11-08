@@ -106,6 +106,7 @@ pub struct View {
     pub click: Option<Click>,
     pub overlay: Option<Box<dyn Overlay>>,
     pub sidebar_scroll: usize,
+    pub reveal_space: bool,
     pub agent_scroll: usize,
     pub want_focus: Option<String>,
 }
@@ -130,6 +131,7 @@ impl Default for View {
             click: None,
             overlay: None,
             sidebar_scroll: 0,
+            reveal_space: true,
             agent_scroll: 0,
             want_focus: None,
         }
@@ -218,6 +220,7 @@ impl View {
     pub fn show_space(&mut self, space: &str) {
         self.space = Some(space.to_owned());
         self.reveal_tab = true;
+        self.reveal_space = true;
     }
 
     pub fn show_tab(&mut self, space: &str, tab: &str) {

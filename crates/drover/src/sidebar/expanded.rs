@@ -163,30 +163,24 @@ fn render_spaces(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
         + gap * u16::try_from(heights.len().saturating_sub(1)).unwrap_or(0);
     let overflow = total > body.height && body.width > 1;
     let width = if overflow { body.width - 1 } else { body.width };
-    let focused = ctx
+    let target = ctx
         .snapshot
         .spaces
         .iter()
-        .position(|s| s.focused)
-        .unwrap_or(0);
-    let mut first = ctx.scroll.min(entries.len().saturating_sub(1));
-    if overflow {
-        while first > focused {
-            first -= 1;
-        }
-        loop {
-            let used: u16 = heights[first..=focused.max(first)]
-                .iter()
-                .map(|h| h + gap)
-                .sum();
-            if used <= body.height + gap || first >= focused {
-                break;
-            }
-            first += 1;
-        }
+        .position(|s| s.selected)
+        .or_else(|| ctx.snapshot.spaces.iter().position(|s| s.focused));
+    let first = if overflow {
+        scroll_first(
+            &heights,
+            gap,
+            body.height,
+            ctx.scroll,
+            target.filter(|_| ctx.reveal),
+        )
     } else {
-        first = 0;
-    }
+        0
+    };
+    hits.scroll = first;
     let mut y = body.y;
     for (i, (space, lines)) in entries.iter().enumerate().skip(first) {
         let height = heights[i];
@@ -377,5 +371,45 @@ fn render_agents(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits, d
         }
         hits.agents.push((rect, agent.pane.clone()));
         y += height + gap;
+    }
+}
+
+pub fn scroll_first(
+    heights: &[u16],
+    gap: u16,
+    room: u16,
+    scroll: usize,
+    reveal: Option<usize>,
+) -> usize {
+    let span = |from: usize, to: usize| -> u16 {
+        heights[from..=to].iter().sum::<u16>() + gap * u16::try_from(to - from).unwrap_or(0)
+    };
+    let last = heights.len().saturating_sub(1);
+    let mut most = last;
+    while most > 0 && span(most - 1, last) <= room {
+        most -= 1;
+    }
+    let mut first = scroll.min(most);
+    if let Some(target) = reveal.filter(|t| *t <= last) {
+        first = first.min(target);
+        while first < target && span(first, target) > room {
+            first += 1;
+        }
+    }
+    first
+}
+
+#[cfg(test)]
+mod tests {
+    use super::scroll_first;
+
+    #[test]
+    fn the_list_scrolls_to_reveal_and_clamps() {
+        let heights = [1; 20];
+        assert_eq!(scroll_first(&heights, 0, 5, 0, Some(19)), 15);
+        assert_eq!(scroll_first(&heights, 0, 5, 15, Some(2)), 2);
+        assert_eq!(scroll_first(&heights, 0, 5, 40, None), 15);
+        assert_eq!(scroll_first(&heights, 0, 5, 7, None), 7);
+        assert_eq!(scroll_first(&[2, 2, 2], 1, 5, 0, Some(2)), 1);
     }
 }

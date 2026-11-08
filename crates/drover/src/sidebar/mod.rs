@@ -27,6 +27,7 @@ pub struct Hits {
     pub agents_body: Option<Rect>,
     pub group_toggles: Vec<(Rect, String)>,
     pub machines: Vec<(Rect, Option<String>)>,
+    pub scroll: usize,
 }
 
 impl Hits {
@@ -34,6 +35,7 @@ impl Hits {
         *self = Self {
             area: self.area,
             toggle: self.toggle,
+            scroll: self.scroll,
             ..Self::default()
         };
     }
@@ -46,6 +48,7 @@ pub struct Ctx<'a> {
     pub split: f32,
     pub scroll: usize,
     pub agent_scroll: usize,
+    pub reveal: bool,
 }
 
 impl Ctx<'_> {
