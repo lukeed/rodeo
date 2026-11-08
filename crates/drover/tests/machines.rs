@@ -128,7 +128,12 @@ fn a_second_core_shows_as_a_machine() {
         .await;
         h.until("the remote space", |h| {
             h.screen();
-            h.app().hits.sidebar.spaces.iter().any(|s| s.key == "box/rs1")
+            h.app()
+                .hits
+                .sidebar
+                .spaces
+                .iter()
+                .any(|s| s.key == "box/rs1")
         })
         .await;
         let row = h

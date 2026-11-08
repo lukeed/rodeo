@@ -275,6 +275,12 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
             for row in &mut copy.machines {
                 row.active = row.name == machine;
             }
+            for space in &mut copy.spaces {
+                space.focused = false;
+            }
+            for agent in &mut copy.agents {
+                agent.focused = false;
+            }
             shown = copy;
             &shown
         }
@@ -313,6 +319,35 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
         app.view.reveal_space = false;
     }
     hits
+}
+
+impl App {
+    pub fn space_order(&self) -> Vec<String> {
+        let snapshot = self.snapshot();
+        let mobile = self.regions.mobile;
+        if snapshot.collapsed && !mobile {
+            return snapshot.spaces.iter().map(|s| s.key.clone()).collect();
+        }
+        let groups: HashSet<String> = if mobile {
+            HashSet::new()
+        } else {
+            self.prefs.collapsed_groups.iter().cloned().collect()
+        };
+        let mut order = Vec::new();
+        for machine in &snapshot.machines {
+            let spaces: Vec<&SpaceRow> = snapshot
+                .spaces
+                .iter()
+                .filter(|s| s.machine == machine.name)
+                .collect();
+            order.extend(
+                entries(&spaces, &groups)
+                    .into_iter()
+                    .map(|e| spaces[e.index].key.clone()),
+            );
+        }
+        order
+    }
 }
 
 pub fn picked(app: &App, snapshot: &Snapshot) -> Option<(Option<String>, Option<String>)> {

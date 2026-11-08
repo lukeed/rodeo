@@ -548,3 +548,23 @@ fn a_lost_core_shows_the_lifecycle_banner() {
     assert_eq!(buf[(x - 1, y)].bg, app.palette.surface0);
     assert_eq!(line(&buf, 0, 26), " machines                │");
 }
+
+#[test]
+fn workspace_steps_follow_the_sidebar_order() {
+    let mut app = app();
+    app.git.clear();
+    app.git
+        .insert("s1".into(), git("/w/wt", "feat", true, 0, 0));
+    app.git
+        .insert("s3".into(), git("/w/repo", "main", false, 0, 0));
+    assert_eq!(app.space_order(), ["s3", "s1", "s2"]);
+    app.focus_space("s3");
+    app.run_action(config::Action::NextWorkspace);
+    assert_eq!(app.view.space.as_deref(), Some("s1"));
+    app.run_action(config::Action::NextWorkspace);
+    assert_eq!(app.view.space.as_deref(), Some("s2"));
+    app.prefs.collapsed_groups.push("/w/repo/.git".into());
+    assert_eq!(app.space_order(), ["s3", "s2"]);
+    app.prefs.sidebar_collapsed = Some(true);
+    assert_eq!(app.space_order(), ["s1", "s2", "s3"]);
+}
