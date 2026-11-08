@@ -147,6 +147,7 @@ impl App {
     }
 
     pub fn after_docs(&mut self) {
+        self.resume_view();
         self.view.fix(&self.machines);
         if let Some(pane) = self.view.want_focus.clone()
             && self.machines.pane(&pane).is_some()

@@ -1,7 +1,12 @@
 mod common;
 
-use common::{Harness, run};
+use std::time::{Duration, Instant};
+
+use common::{Harness, Sink, run};
 use crossterm::event::{KeyCode, KeyModifiers};
+use drover::app::{HostInfo, Options};
+use drover::runtime::Runner;
+use ratatui::backend::TestBackend;
 use ratatui::style::Color;
 
 #[test]
@@ -49,5 +54,52 @@ fn a_smaller_host_keeps_the_prompt_without_scrollback() {
         assert_eq!(bar.total, bar.len, "{bar:?}");
         let screen = h.screen();
         assert!(!screen.contains('▕'), "{screen}");
+    });
+}
+
+#[test]
+fn a_restart_keeps_the_focused_pane_and_zoom() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        h.prefix_char('v').await;
+        h.until_stored("two panes", |d| d.addresses().len() == 2)
+            .await;
+        let focused = h.focused().expect("the new pane");
+        h.prefix_char('z').await;
+        h.app_mut().shutdown();
+        let options = Options {
+            env: h.core.env().clone(),
+            config_path: h.config_path.clone(),
+            prefs_path: h
+                .core
+                .root()
+                .join("state")
+                .join("drover")
+                .join("prefs.json"),
+            loaded: config::Config::load(&h.config_path),
+            host: HostInfo {
+                cell_px: (8, 16),
+                ..HostInfo::default()
+            },
+            caller: None,
+            notes: Vec::new(),
+            hostname: "testhost".into(),
+        };
+        let mut again = Runner::new(
+            options,
+            TestBackend::new(120, 40),
+            Box::new(Sink::default()),
+        )
+        .expect("a runner");
+        let started = Instant::now();
+        while !again.app.machines.local().slot.is_ready() {
+            assert!(started.elapsed() < common::WITHIN, "the doc never loaded");
+            let _ = tokio::time::timeout(Duration::from_millis(100), again.step()).await;
+        }
+        let app = &again.app;
+        assert_eq!(app.view.focused_pane(&app.machines), Some(focused));
+        let tab = app.view.active_tab(&app.machines).expect("a tab");
+        assert!(app.view.is_zoomed(&tab));
     });
 }

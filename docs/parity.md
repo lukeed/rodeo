@@ -25,7 +25,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Pane manual name | hc | Stored in the block's `title` field. The app parses and keeps `title`, so it survives app writes. |
 | Mod blocks (`{mod}`) | match | Files: a text folder tree. Other mods: a placeholder with the mod name. |
 | Split tree | hc | Doc `row` (side by side) and `column` (stacked) with `size.weight`. Split and remove follow the app's tree rules. |
-| Zoom, focus, active workspace, active tab | match | Private to each drover client, as in the app. Never in the doc. |
+| Zoom, focus, active workspace, active tab | match | Private to each drover client, as in the app. Never in the doc. Saved on quit beside the client preferences and restored on the next start, as Herdr's server keeps them. |
 | Agent | hc | A terminal with an hc status (OSC 7501 reports). Kind from `status.app`. |
 | Agent state blocked / working / done / idle / unknown | hc | From `status.state` and `turn` against the shared `herdr.seen` label, as the app computes it. `error` shows as blocked. `status: null` is not an agent. Agents that do not report OSC 7501 show no state (Herdr detected them from the screen). |
 | Seen tracking | hc | `herdr.seen=<turn>` label, raised only while a person looks at the pane, once per turn. Shared with the app. |

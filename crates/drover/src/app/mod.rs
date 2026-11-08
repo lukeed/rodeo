@@ -4,6 +4,7 @@ mod docs;
 mod extras;
 mod notify;
 mod reconcile;
+mod resume;
 mod snapshot;
 mod spawn;
 
@@ -144,6 +145,7 @@ pub struct App {
     title: Option<String>,
     cursor_shape: Option<vt::CursorShape>,
     mouse_captured: Option<bool>,
+    resume: Option<resume::Resume>,
 }
 
 const FEEDBACK: Duration = Duration::from_secs(2);
@@ -154,6 +156,7 @@ impl App {
         let config = options.loaded.config;
         let build = config.keymap();
         let prefs = Preferences::load(&options.prefs_path);
+        let resume = resume::Resume::load(&resume::Resume::path(&options.prefs_path));
         let palette = config.palette(None);
         let mut app = Self {
             env: options.env,
@@ -199,6 +202,7 @@ impl App {
             title: None,
             cursor_shape: None,
             mouse_captured: None,
+            resume,
             config,
         };
         for note in options.notes {
@@ -446,6 +450,7 @@ impl App {
     }
 
     pub fn shutdown(&mut self) {
+        self.save_view();
         for pane in self.panes.iter_mut() {
             pane.detach();
         }
