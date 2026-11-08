@@ -93,6 +93,7 @@ where
         while self.step().await {}
         self.app.shutdown();
         self.flush();
+        self.app.end_popup().await;
     }
 
     pub fn draw(&mut self) {

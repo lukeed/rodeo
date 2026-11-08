@@ -239,3 +239,79 @@ fn ctrl_hover_underlines_links_and_ctrl_click_opens_them() {
         h.pump().await;
     });
 }
+
+const LONG_POPUP: &str = r#"
+[[keys.command]]
+key = "prefix+y"
+type = "popup"
+command = "printf 'long-popup\n'; sleep 600"
+"#;
+
+async fn ended(h: &Harness, address: &str) -> bool {
+    h.outside
+        .get(address)
+        .await
+        .map_or(true, |t| t.is_finished())
+}
+
+#[test]
+fn quitting_ends_an_open_popup() {
+    run(|| async {
+        let mut h = Harness::with_config(LONG_POPUP).await;
+        h.ready().await;
+        h.prefix_char('y').await;
+        h.until("the popup", |h| h.screen().contains("long-popup"))
+            .await;
+        let address = h.app().paste_target().expect("the popup terminal");
+        let record = h.outside.get(&address).await.expect("the popup record");
+        let owner = format!("testhost:{}", std::process::id());
+        assert_eq!(record.label(drover::popup::OWNER), Some(owner.as_str()));
+        let _ = h.runner.sender().send(drover::app::Msg::Quit);
+        tokio::time::timeout(common::WITHIN, h.runner.run())
+            .await
+            .expect("drover quits");
+        assert!(ended(&h, &address).await, "the popup outlived drover");
+    });
+}
+
+async fn stray(h: &Harness, owner: &str) -> String {
+    let params = hc::RunParams {
+        argv: vec!["sleep".into(), "600".into()],
+        labels: [
+            (drover::popup::LABEL.to_owned(), "1".to_owned()),
+            (drover::popup::OWNER.to_owned(), owner.to_owned()),
+        ]
+        .into(),
+        rm: true,
+        ..hc::RunParams::default()
+    };
+    h.outside.run(&params).await.expect("a stray popup").address
+}
+
+#[test]
+fn a_new_client_ends_popups_whose_owner_is_gone() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let mut child = std::process::Command::new("true").spawn().expect("true");
+        let gone = child.id();
+        child.wait().expect("true exits");
+        let dead = stray(&h, &format!("testhost:{gone}")).await;
+        let live = stray(&h, &format!("testhost:{}", std::process::id())).await;
+        let elsewhere = stray(&h, &format!("otherhost:{gone}")).await;
+        let mut other = h.second();
+        let started = std::time::Instant::now();
+        while !ended(&h, &dead).await {
+            assert!(
+                started.elapsed() < common::WITHIN,
+                "the orphan popup still runs"
+            );
+            h.both(&mut other).await;
+        }
+        for _ in 0..10 {
+            h.both(&mut other).await;
+        }
+        assert!(!ended(&h, &live).await, "a live owner keeps its popup");
+        assert!(!ended(&h, &elsewhere).await, "another host keeps its popup");
+    });
+}

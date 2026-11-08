@@ -126,6 +126,7 @@ impl App {
         self.pump_all();
         self.sync_panes();
         self.reconcile();
+        self.sweep_popups();
     }
 
     pub(super) fn notice_event(&mut self, notice: Notice) {

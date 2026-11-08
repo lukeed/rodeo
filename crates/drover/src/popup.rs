@@ -18,6 +18,8 @@ use crate::render::Cursor;
 use crate::view::Mode;
 
 pub const LABEL: &str = "drover.popup";
+pub const OWNER: &str = "drover.owner";
+const QUIT_WAIT: Duration = Duration::from_secs(2);
 const MAKE_TEMP: &str = r#"umask 077
 f=$(mktemp "${TMPDIR:-/tmp}/drover-scrollback.XXXXXX") || exit 1
 cat > "$f" || exit 1
@@ -265,7 +267,10 @@ impl App {
             cwd: spec.cwd,
             on: spec.machine.clone(),
             env: spec.env,
-            labels: BTreeMap::from([(LABEL.to_owned(), "1".to_owned())]),
+            labels: BTreeMap::from([
+                (LABEL.to_owned(), "1".to_owned()),
+                (OWNER.to_owned(), self.popup_owner()),
+            ]),
             rm: true,
             ..RunParams::default()
         };
@@ -283,6 +288,44 @@ impl App {
                 }
             }
         });
+    }
+
+    fn popup_owner(&self) -> String {
+        format!("{}:{}", self.hostname, std::process::id())
+    }
+
+    pub fn sweep_popups(&mut self) {
+        let strays: Vec<String> = self
+            .terminals
+            .iter()
+            .filter(|t| t.is_live() && t.label(LABEL).is_some())
+            .filter(|t| {
+                t.label(OWNER)
+                    .and_then(|owner| owner.rsplit_once(':'))
+                    .is_some_and(|(host, pid)| {
+                        host == self.hostname && pid.parse().is_ok_and(|pid| !running(pid))
+                    })
+            })
+            .map(|t| t.address.clone())
+            .collect();
+        for address in strays {
+            tracing::info!(%address, "ending a popup left by a gone drover");
+            self.kill(address);
+        }
+    }
+
+    pub async fn end_popup(&mut self) {
+        let (Some(address), Some(client)) =
+            (self.popup.as_ref().and_then(Popup::address), self.client())
+        else {
+            return;
+        };
+        if let Ok(Err(error)) = tokio::time::timeout(QUIT_WAIT, client.kill(&address)).await
+            && !error.is_not_found()
+            && !error.is_finished()
+        {
+            tracing::warn!(%address, %error, "cannot end the popup");
+        }
     }
 
     fn popup_started(&mut self, seq: u64, address: String, size: (u16, u16)) {
@@ -488,6 +531,15 @@ impl App {
         }
         true
     }
+}
+
+fn running(pid: i32) -> bool {
+    rustix::process::Pid::from_raw(pid).is_some_and(|pid| {
+        matches!(
+            rustix::process::test_kill_process(pid),
+            Ok(()) | Err(rustix::io::Errno::PERM)
+        )
+    })
 }
 
 pub fn render(app: &mut App, buf: &mut Buffer) -> Option<Cursor> {

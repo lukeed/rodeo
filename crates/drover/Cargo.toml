@@ -14,7 +14,7 @@ doc = { package = "drover-doc", path = "../doc" }
 futures-util = "0.3.34"
 hc = { package = "drover-hc", path = "../hc" }
 ratatui = "0.30"
-rustix = { version = "1.1.6", features = ["event", "stdio", "system", "termios"] }
+rustix = { version = "1.1.6", features = ["event", "process", "stdio", "system", "termios"] }
 serde_json = "1"
 terminput = "0.5.16"
 terminput-crossterm = "0.4.12"
