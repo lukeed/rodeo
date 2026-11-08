@@ -8,6 +8,7 @@ pub mod hits;
 pub mod host;
 pub mod host_input;
 pub mod ids;
+pub mod ime;
 pub mod input;
 pub mod layout;
 pub mod logging;

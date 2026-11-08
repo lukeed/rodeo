@@ -259,12 +259,14 @@ fn terminal(
         && app.view.overlay.is_none()
         && app.view.host_focused
         && !term.is_scrolled_back();
-    rendered.cursor.filter(|_| visible).map(|c| Cursor {
+    let drawn = rendered.cursor.map(|c| Cursor {
         x: c.x,
         y: c.y,
         shape: c.shape,
         blinking: c.blinking,
-    })
+    });
+    app.ime_cursor(address, pane.content, drawn)
+        .filter(|_| visible)
 }
 
 fn scrollbar(app: &App, buf: &mut Buffer, gutter: Rect, bar: vt::Scrollbar, focused: bool) {
