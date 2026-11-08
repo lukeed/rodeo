@@ -313,14 +313,6 @@ impl App {
         if self.error.as_ref().is_some_and(|(_, until)| *until <= now) {
             self.error = None;
         }
-        if self
-            .view
-            .highlight
-            .as_ref()
-            .is_some_and(|(_, at)| now.duration_since(*at) > Duration::from_secs(1))
-        {
-            self.view.highlight = None;
-        }
         if let Some(selection) = &self.view.selection
             && selection.clear_at.is_some_and(|at| at <= now)
         {

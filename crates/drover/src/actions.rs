@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use config::{Action, CommandKind};
 use doc::{Axis, Direction, Document, RESIZE_STEP};
@@ -326,7 +326,6 @@ impl App {
         }
         let before = self.view.focused_pane(&self.machines);
         self.view.show_space(key);
-        self.view.highlight = Some((key.to_owned(), Instant::now()));
         self.after_focus_change(before);
     }
 

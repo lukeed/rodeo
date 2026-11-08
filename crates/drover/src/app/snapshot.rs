@@ -73,10 +73,9 @@ impl App {
     }
 
     fn selected_space(&self) -> Option<String> {
-        let navigating = (self.view.mode == Mode::Navigate)
+        (self.view.mode == Mode::Navigate)
             .then(|| self.view.nav.clone())
-            .flatten();
-        navigating.or_else(|| self.view.highlight.as_ref().map(|(key, _)| key.clone()))
+            .flatten()
     }
 
     fn space_row(&self, index: usize, space: SpaceRef<'_>) -> SpaceRow {
