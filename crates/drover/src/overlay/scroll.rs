@@ -52,7 +52,7 @@ impl Bar {
         (row >= thumb.top && row < thumb.top + thumb.len).then(|| row - thumb.top)
     }
 
-    fn from_top(&self, top: usize, scroll: usize) -> usize {
+    fn at_top(&self, top: usize, scroll: usize) -> usize {
         let len = self.thumb(scroll).map_or(1, |t| usize::from(t.len));
         let room = usize::from(self.track.height).saturating_sub(len);
         if self.max == 0 || room == 0 {
@@ -68,11 +68,11 @@ impl Bar {
 
     pub fn jump(&self, scroll: usize, row: u16) -> usize {
         let half = self.thumb(scroll).map_or(0, |t| usize::from(t.len) / 2);
-        self.from_top(self.offset(row).saturating_sub(half), scroll)
+        self.at_top(self.offset(row).saturating_sub(half), scroll)
     }
 
     pub fn drag(&self, scroll: usize, row: u16, grab: u16) -> usize {
-        self.from_top(self.offset(row).saturating_sub(usize::from(grab)), scroll)
+        self.at_top(self.offset(row).saturating_sub(usize::from(grab)), scroll)
     }
 
     pub fn render(

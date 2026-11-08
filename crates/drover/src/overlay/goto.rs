@@ -362,9 +362,50 @@ impl Goto {
         self.selected = None;
     }
 
-    #[allow(clippy::too_many_lines, reason = "one row has many parts")]
+    fn trailer(
+        buf: &mut Buffer,
+        rect: Rect,
+        row: &Row,
+        chosen: bool,
+        style: Style,
+        label: u16,
+        ctx: &Ctx<'_>,
+    ) {
+        let p = ctx.palette;
+        let machine = match &row.target {
+            Target::Machine(Some(name)) => ctx
+                .snapshot
+                .machines
+                .iter()
+                .find(|m| m.name.as_deref() == Some(name.as_str())),
+            _ => None,
+        };
+        if let Some(machine) = machine {
+            let (glyph, color) = signal(machine, p);
+            let look = if chosen {
+                style
+            } else {
+                let look = Style::new().fg(color).bg(p.panel_bg);
+                if row.stale {
+                    look.add_modifier(Modifier::DIM)
+                } else {
+                    look
+                }
+            };
+            right(buf, rect, &glyph, look);
+        } else if row.status.is_none() && !row.meta.is_empty() {
+            let used = label.min(rect.width) + 1;
+            let meta = Rect::new(
+                rect.x + used.min(rect.width),
+                rect.y,
+                rect.width.saturating_sub(used),
+                1,
+            );
+            right(buf, meta, &row.meta, style);
+        }
+    }
+
     fn draw_row(
-        &self,
         buf: &mut Buffer,
         rect: Rect,
         rows: &[Row],
@@ -460,37 +501,7 @@ impl Goto {
                 text(buf, rect.right() - 11, rect.y, 11, word, meta);
             }
         }
-        let machine = match &row.target {
-            Target::Machine(Some(name)) => ctx
-                .snapshot
-                .machines
-                .iter()
-                .find(|m| m.name.as_deref() == Some(name.as_str())),
-            _ => None,
-        };
-        if let Some(machine) = machine {
-            let (glyph, color) = signal(machine, p);
-            let look = if chosen {
-                style
-            } else {
-                let look = Style::new().fg(color).bg(p.panel_bg);
-                if row.stale {
-                    look.add_modifier(Modifier::DIM)
-                } else {
-                    look
-                }
-            };
-            right(buf, rect, &glyph, look);
-        } else if row.status.is_none() && !row.meta.is_empty() {
-            let used = width(&label).min(rect.width) + 1;
-            let meta = Rect::new(
-                rect.x + used.min(rect.width),
-                rect.y,
-                rect.width.saturating_sub(used),
-                1,
-            );
-            right(buf, meta, &row.meta, style);
-        }
+        Self::trailer(buf, rect, row, chosen, style, width(&label), ctx);
     }
 }
 
@@ -532,144 +543,9 @@ impl Overlay for Goto {
             Style::new().fg(p.accent).bg(p.panel_bg),
         );
         let rows = self.rows(ctx.snapshot);
-        let search = if self.searching {
-            " / ".to_owned()
-        } else if let Some(filter) = self.filter {
-            format!(" / {}", filter.text())
-        } else if self.query.text().is_empty() {
-            " / search agents and terminals".to_owned()
-        } else {
-            format!(" / {}", self.query.text())
-        };
-        let terminals = rows.iter().filter(|r| r.is_pane()).count();
-        let count = format!(
-            "{terminals} {}",
-            if terminals == 1 {
-                "terminal"
-            } else {
-                "terminals"
-            }
-        );
-        let count_width = width(&count);
-        let fg = if self.searching { p.text } else { p.overlay0 };
-        text(
-            buf,
-            inner.x,
-            inner.y,
-            inner.width.saturating_sub(count_width + 1),
-            &search,
-            Style::new().fg(fg).bg(p.panel_bg),
-        );
-        let cursor = self
-            .searching
-            .then(|| {
-                self.query.render(
-                    Rect::new(
-                        inner.x + 3,
-                        inner.y,
-                        inner.width.saturating_sub(4 + count_width),
-                        1,
-                    ),
-                    buf,
-                    Style::new().fg(p.text).bg(p.panel_bg),
-                )
-            })
-            .flatten();
-        right(
-            buf,
-            Rect::new(inner.x, inner.y, inner.width, 1),
-            &count,
-            Style::new().fg(p.overlay0).bg(p.panel_bg),
-        );
-        self.search = Rect::new(inner.x, inner.y, inner.width, 1);
-        text(
-            buf,
-            inner.x,
-            inner.y + 1,
-            inner.width,
-            &"─".repeat(usize::from(inner.width)),
-            Style::new().fg(p.surface1).bg(p.panel_bg),
-        );
-        let body = Rect::new(
-            inner.x,
-            inner.y + 2,
-            inner.width,
-            inner.height.saturating_sub(5),
-        );
-        let height = usize::from(body.height);
-        let selected = self.index(&rows).unwrap_or(0);
-        let max = rows.len().saturating_sub(height);
-        let scroll = self
-            .scroll
-            .max(selected.saturating_sub(height.saturating_sub(1)))
-            .min(selected)
-            .min(max);
-        self.bar = (max > 0 && body.width > 1).then(|| {
-            Bar::new(
-                Rect::new(body.right() - 1, body.y, 1, body.height),
-                max,
-                height,
-            )
-        });
-        let row_width = body.width - u16::from(self.bar.is_some());
-        if rows.is_empty() {
-            text(
-                buf,
-                body.x,
-                body.y,
-                body.width,
-                " No matching agents or terminals",
-                Style::new().fg(p.overlay0).bg(p.panel_bg),
-            );
-        }
-        self.hits.clear();
-        for index in (scroll..rows.len()).take(height) {
-            let y = body.y + u16::try_from(index - scroll).unwrap_or(0);
-            let rect = Rect::new(body.x, y, row_width, 1);
-            self.hits.push((rect, rows[index].target.clone()));
-            self.draw_row(buf, rect, &rows, index, selected, ctx);
-        }
-        if let Some(bar) = &self.bar {
-            bar.render(
-                buf,
-                scroll,
-                ("▕", p.overlay0),
-                ("▐", p.overlay1),
-                p.panel_bg,
-            );
-        }
-        self.shown = scroll;
-        if let Some(row) = rows.get(selected) {
-            text(
-                buf,
-                inner.x,
-                inner.bottom() - 3,
-                inner.width,
-                &format!(" {}", row.detail),
-                Style::new().fg(p.subtext0).bg(p.panel_bg),
-            );
-            text(
-                buf,
-                inner.x,
-                inner.bottom() - 2,
-                inner.width,
-                &format!(" {}", row.meta),
-                Style::new().fg(p.overlay0).bg(p.panel_bg),
-            );
-        }
-        let footer = if self.searching {
-            " search type · move ↑↓/ctrl+n/p · open enter · back esc"
-        } else {
-            " ↑↓/j/k rows · ←→ workspace · / search · a/b/w/i/d filter · enter open · esc close"
-        };
-        text(
-            buf,
-            inner.x,
-            inner.bottom() - 1,
-            inner.width,
-            footer,
-            Style::new().fg(p.overlay0).bg(p.panel_bg),
-        );
+        let cursor = self.header(buf, inner, &rows, p);
+        let selected = self.body(buf, inner, &rows, ctx);
+        self.footer(buf, inner, rows.get(selected), p);
         cursor
     }
 
@@ -751,12 +627,10 @@ impl Overlay for Goto {
             MouseEventKind::Up(MouseButton::Left) => self.grab = None,
             MouseEventKind::Down(MouseButton::Left) => {
                 if let Some(bar) = self.bar.filter(|b| b.track.contains(at)) {
-                    match bar.grab(self.shown, event.row) {
-                        Some(grab) => self.grab = Some(grab),
-                        None => {
-                            let scroll = bar.jump(self.shown, event.row);
-                            self.scroll_to(ctx.snapshot, scroll, bar.viewport);
-                        }
+                    self.grab = bar.grab(self.shown, event.row);
+                    if self.grab.is_none() {
+                        let scroll = bar.jump(self.shown, event.row);
+                        self.scroll_to(ctx.snapshot, scroll, bar.viewport);
                     }
                 } else if self.search.contains(at) {
                     self.searching = true;
@@ -784,6 +658,162 @@ impl Overlay for Goto {
 }
 
 impl Goto {
+    fn header(
+        &mut self,
+        buf: &mut Buffer,
+        inner: Rect,
+        rows: &[Row],
+        p: &Palette,
+    ) -> Option<(u16, u16)> {
+        let search = if self.searching {
+            " / ".to_owned()
+        } else if let Some(filter) = self.filter {
+            format!(" / {}", filter.text())
+        } else if self.query.text().is_empty() {
+            " / search agents and terminals".to_owned()
+        } else {
+            format!(" / {}", self.query.text())
+        };
+        let terminals = rows.iter().filter(|r| r.is_pane()).count();
+        let count = format!(
+            "{terminals} {}",
+            if terminals == 1 {
+                "terminal"
+            } else {
+                "terminals"
+            }
+        );
+        let count_width = width(&count);
+        let fg = if self.searching { p.text } else { p.overlay0 };
+        text(
+            buf,
+            inner.x,
+            inner.y,
+            inner.width.saturating_sub(count_width + 1),
+            &search,
+            Style::new().fg(fg).bg(p.panel_bg),
+        );
+        let cursor = self
+            .searching
+            .then(|| {
+                self.query.render(
+                    Rect::new(
+                        inner.x + 3,
+                        inner.y,
+                        inner.width.saturating_sub(4 + count_width),
+                        1,
+                    ),
+                    buf,
+                    Style::new().fg(p.text).bg(p.panel_bg),
+                )
+            })
+            .flatten();
+        right(
+            buf,
+            Rect::new(inner.x, inner.y, inner.width, 1),
+            &count,
+            Style::new().fg(p.overlay0).bg(p.panel_bg),
+        );
+        self.search = Rect::new(inner.x, inner.y, inner.width, 1);
+        text(
+            buf,
+            inner.x,
+            inner.y + 1,
+            inner.width,
+            &"─".repeat(usize::from(inner.width)),
+            Style::new().fg(p.surface1).bg(p.panel_bg),
+        );
+        cursor
+    }
+
+    fn body(&mut self, buf: &mut Buffer, inner: Rect, rows: &[Row], ctx: &Ctx<'_>) -> usize {
+        let p = ctx.palette;
+        let body = Rect::new(
+            inner.x,
+            inner.y + 2,
+            inner.width,
+            inner.height.saturating_sub(5),
+        );
+        let height = usize::from(body.height);
+        let selected = self.index(rows).unwrap_or(0);
+        let max = rows.len().saturating_sub(height);
+        let scroll = self
+            .scroll
+            .max(selected.saturating_sub(height.saturating_sub(1)))
+            .min(selected)
+            .min(max);
+        self.bar = (max > 0 && body.width > 1).then(|| {
+            Bar::new(
+                Rect::new(body.right() - 1, body.y, 1, body.height),
+                max,
+                height,
+            )
+        });
+        let row_width = body.width - u16::from(self.bar.is_some());
+        if rows.is_empty() {
+            text(
+                buf,
+                body.x,
+                body.y,
+                body.width,
+                " No matching agents or terminals",
+                Style::new().fg(p.overlay0).bg(p.panel_bg),
+            );
+        }
+        self.hits.clear();
+        for index in (scroll..rows.len()).take(height) {
+            let y = body.y + u16::try_from(index - scroll).unwrap_or(0);
+            let rect = Rect::new(body.x, y, row_width, 1);
+            self.hits.push((rect, rows[index].target.clone()));
+            Self::draw_row(buf, rect, rows, index, selected, ctx);
+        }
+        if let Some(bar) = &self.bar {
+            bar.render(
+                buf,
+                scroll,
+                ("▕", p.overlay0),
+                ("▐", p.overlay1),
+                p.panel_bg,
+            );
+        }
+        self.shown = scroll;
+        selected
+    }
+
+    fn footer(&self, buf: &mut Buffer, inner: Rect, row: Option<&Row>, p: &Palette) {
+        if let Some(row) = row {
+            text(
+                buf,
+                inner.x,
+                inner.bottom() - 3,
+                inner.width,
+                &format!(" {}", row.detail),
+                Style::new().fg(p.subtext0).bg(p.panel_bg),
+            );
+            text(
+                buf,
+                inner.x,
+                inner.bottom() - 2,
+                inner.width,
+                &format!(" {}", row.meta),
+                Style::new().fg(p.overlay0).bg(p.panel_bg),
+            );
+        }
+        let footer = if self.searching {
+            " search type · move ↑↓/ctrl+n/p · open enter · back esc"
+        } else {
+            " ↑↓/j/k rows · ←→ workspace · / search · a/b/w/i/d filter · enter open · esc close"
+        };
+        text(
+            buf,
+            inner.x,
+            inner.bottom() - 1,
+            inner.width,
+            footer,
+            Style::new().fg(p.overlay0).bg(p.panel_bg),
+        );
+    }
+
     fn last(&mut self, snapshot: &Snapshot) {
         self.selected = self.rows(snapshot).pop().map(|r| r.target);
     }
@@ -882,8 +912,8 @@ mod tests {
             labels(&rows(&snap, "", Some(State::Blocked))),
             ["web", "fixing tests"]
         );
-        assert!(rows(&snap, "", Some(State::Done)).is_empty());
-        assert!(rows(&snap, "nothing here", None).is_empty());
+        assert_eq!(rows(&snap, "", Some(State::Done)), Vec::<Row>::new());
+        assert_eq!(rows(&snap, "nothing here", None), Vec::<Row>::new());
     }
 
     #[test]

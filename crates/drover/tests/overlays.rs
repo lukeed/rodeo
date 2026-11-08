@@ -137,7 +137,7 @@ fn settings_preview_themes_and_write_choices() {
     run(|| async {
         let mut h = Harness::start().await;
         h.ready().await;
-        let original = h.app().palette.clone();
+        let original = h.app().palette;
         h.prefix_char('s').await;
         h.until("the settings", |h| h.screen().contains("catppuccin ✓"))
             .await;

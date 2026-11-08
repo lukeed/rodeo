@@ -11,7 +11,7 @@ use super::frame::{button, contrast, panel, popup, text};
 use super::scroll::Bar;
 use super::{Ctx, Kind, Outcome, Overlay, TextField};
 
-const PAGE: usize = 8;
+const PAGE: isize = 8;
 const WHEEL: usize = 3;
 
 #[derive(Default)]
@@ -120,6 +120,41 @@ impl Help {
         self.scroll = 0;
     }
 
+    fn body(&mut self, buf: &mut Buffer, body: Rect, ctx: &Ctx<'_>) {
+        let p = ctx.palette;
+        let groups = filter_help(ctx.keymap.help_groups(), self.query.text());
+        let lines = lines(&groups, p);
+        let viewport = usize::from(body.height.max(1));
+        let overflow = wrapped(&lines, body.width) > viewport;
+        let area = if overflow {
+            Rect::new(body.x, body.y, body.width - 1, body.height)
+        } else {
+            body
+        };
+        self.max = wrapped(&lines, area.width).saturating_sub(viewport);
+        self.scroll = self.scroll.min(self.max);
+        Paragraph::new(lines.into_iter().map(|(_, l)| l).collect::<Vec<_>>())
+            .wrap(Wrap { trim: false })
+            .scroll((u16::try_from(self.scroll).unwrap_or(u16::MAX), 0))
+            .render(area, buf);
+        self.bar = overflow.then(|| {
+            Bar::new(
+                Rect::new(body.right() - 1, body.y, 1, body.height),
+                self.max,
+                viewport,
+            )
+        });
+        if let Some(bar) = &self.bar {
+            bar.render(
+                buf,
+                self.scroll,
+                ("▐", p.overlay0),
+                ("▐", p.overlay1),
+                p.panel_bg,
+            );
+        }
+    }
+
     fn search_key(&mut self, key: &KeyEvent) -> Outcome {
         let before = self.query.text().to_owned();
         if self.query.key(key) {
@@ -136,8 +171,8 @@ impl Help {
             KeyCode::Down => self.step(1),
             KeyCode::Char('p') if ctrl => self.step(-1),
             KeyCode::Char('n') if ctrl => self.step(1),
-            KeyCode::PageUp => self.step(-(PAGE as isize)),
-            KeyCode::PageDown => self.step(PAGE as isize),
+            KeyCode::PageUp => self.step(-PAGE),
+            KeyCode::PageDown => self.step(PAGE),
             _ => {}
         }
         Outcome::Stay
@@ -207,37 +242,7 @@ impl Overlay for Help {
             inner.width,
             inner.height.saturating_sub(5),
         );
-        let groups = filter_help(ctx.keymap.help_groups(), self.query.text());
-        let lines = lines(&groups, p);
-        let viewport = usize::from(body.height.max(1));
-        let overflow = wrapped(&lines, body.width) > viewport;
-        let area = if overflow {
-            Rect::new(body.x, body.y, body.width - 1, body.height)
-        } else {
-            body
-        };
-        self.max = wrapped(&lines, area.width).saturating_sub(viewport);
-        self.scroll = self.scroll.min(self.max);
-        Paragraph::new(lines.into_iter().map(|(_, l)| l).collect::<Vec<_>>())
-            .wrap(Wrap { trim: false })
-            .scroll((u16::try_from(self.scroll).unwrap_or(u16::MAX), 0))
-            .render(area, buf);
-        self.bar = overflow.then(|| {
-            Bar::new(
-                Rect::new(body.right() - 1, body.y, 1, body.height),
-                self.max,
-                viewport,
-            )
-        });
-        if let Some(bar) = &self.bar {
-            bar.render(
-                buf,
-                self.scroll,
-                ("▐", p.overlay0),
-                ("▐", p.overlay1),
-                p.panel_bg,
-            );
-        }
+        self.body(buf, body, ctx);
         let footer = if self.searching {
             " edit ←→/home/end · kill ^u/^k · yank ^y · scroll ↑↓ · back esc"
         } else {
@@ -264,8 +269,8 @@ impl Overlay for Help {
             KeyCode::End => self.scroll = self.max,
             KeyCode::Up => self.step(-1),
             KeyCode::Down => self.step(1),
-            KeyCode::PageUp => self.step(-(PAGE as isize)),
-            KeyCode::PageDown => self.step(PAGE as isize),
+            KeyCode::PageUp => self.step(-PAGE),
+            KeyCode::PageDown => self.step(PAGE),
             _ => match typed(key) {
                 Some('k') => self.step(-1),
                 Some('j') => self.step(1),

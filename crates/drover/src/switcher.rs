@@ -133,14 +133,15 @@ fn stale(ctx: &Ctx<'_>, machine: Option<&str>) -> Option<&'static str> {
         .machines
         .iter()
         .find(|m| m.name.as_deref() == machine)?;
-    (!row.connected)
-        .then(|| machine_word(&row.state).1)
-        .map(|s| match s {
-            "connecting" => "connecting",
-            "reconnecting" => "reconnecting",
-            "disabled" => "disabled",
-            _ => "attention",
-        })
+    if row.connected {
+        return None;
+    }
+    Some(match row.state.as_str() {
+        "connecting" => "connecting",
+        "reconnecting" => "reconnecting",
+        "disabled" => "disabled",
+        _ => "attention",
+    })
 }
 
 fn agents(ctx: &Ctx<'_>, items: &mut Vec<Item>) {
@@ -242,20 +243,20 @@ fn spaces(ctx: &Ctx<'_>, items: &mut Vec<Item>) {
         } else {
             p.panel_bg
         };
-        let stale = stale(ctx, space.machine.as_deref());
-        let dim = if stale.is_some() {
+        let offline = stale(ctx, space.machine.as_deref());
+        let dim = if offline.is_some() {
             Modifier::DIM
         } else {
             Modifier::empty()
         };
         let state = space.state.unwrap_or(State::Unknown);
-        let (fg, icon) = if stale.is_some() {
+        let (fg, icon) = if offline.is_some() {
             (p.overlay0, p.overlay0)
         } else {
             (p.text, state.color(p))
         };
         let tab = ctx.tabs.get(&space.key).map_or("tab 1", String::as_str);
-        let stale_detail = stale.map(|s| format!(" · {s}")).unwrap_or_default();
+        let stale_detail = offline.map(|s| format!(" · {s}")).unwrap_or_default();
         let branch = space.branch.as_deref().unwrap_or("shell");
         items.push(Item {
             lines: vec![
@@ -414,6 +415,48 @@ fn tab_statuses(app: &App) -> HashMap<String, String> {
         .collect()
 }
 
+fn reveal(items: &[Item], nav: Option<&str>, scroll: usize, height: usize, max: usize) -> usize {
+    let mut start = 0;
+    for item in items {
+        let end = start + item.lines.len();
+        if matches!(&item.target, Some(Target::Space(key)) if nav == Some(key.as_str())) {
+            if start < scroll {
+                return start;
+            }
+            if end > scroll + height {
+                return (end - height).min(max);
+            }
+            return scroll;
+        }
+        start = end;
+    }
+    scroll
+}
+
+fn draw(buf: &mut Buffer, content: Rect, items: Vec<Item>, scroll: usize, hits: &mut Hits) {
+    let height = usize::from(content.height);
+    let mut row = 0;
+    for item in items {
+        let (from, to) = (row, row + item.lines.len());
+        row = to;
+        let (shown_from, shown_to) = (from.max(scroll), to.min(scroll + height));
+        if shown_from >= shown_to {
+            continue;
+        }
+        let y = content.y + u16::try_from(shown_from - scroll).unwrap_or(0);
+        let h = u16::try_from(shown_to - shown_from).unwrap_or(0);
+        let rect = Rect::new(content.x, y, content.width, h);
+        buf.set_style(rect, Style::new().bg(item.bg));
+        for line in shown_from..shown_to {
+            let y = content.y + u16::try_from(line - scroll).unwrap_or(0);
+            buf.set_line(content.x, y, &item.lines[line - from], content.width);
+        }
+        if let Some(target) = item.target {
+            hits.targets.push((rect, target));
+        }
+    }
+}
+
 pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) -> Hits {
     let p = &app.palette;
     let mut hits = Hits::default();
@@ -468,20 +511,7 @@ pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) 
     let max = total.saturating_sub(height);
     let mut scroll = app.view.switcher_scroll.min(max);
     if app.view.reveal_space {
-        let mut start = 0;
-        for item in &items {
-            let end = start + item.lines.len();
-            if matches!(&item.target, Some(Target::Space(key)) if nav.as_deref() == Some(key.as_str()))
-            {
-                if start < scroll {
-                    scroll = start;
-                } else if end > scroll + height {
-                    scroll = (end - height).min(max);
-                }
-                break;
-            }
-            start = end;
-        }
+        scroll = reveal(&items, nav.as_deref(), scroll, height, max);
         app.view.reveal_space = false;
     }
     app.view.switcher_scroll = scroll;
@@ -489,11 +519,6 @@ pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) 
     if max > 0 {
         let track = Rect::new(viewport.x, viewport.y, 1, viewport.height);
         let bar = Bar::new(track, max, height);
-        for y in track.top()..track.bottom() {
-            buf[(track.x, y)]
-                .set_symbol("│")
-                .set_style(Style::new().fg(p.surface_dim).bg(p.panel_bg));
-        }
         bar.render(
             buf,
             scroll,
@@ -511,26 +536,7 @@ pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) 
         viewport.width - 1,
         viewport.height,
     );
-    let mut row = 0;
-    for item in items {
-        let (from, to) = (row, row + item.lines.len());
-        row = to;
-        let (shown_from, shown_to) = (from.max(scroll), to.min(scroll + height));
-        if shown_from >= shown_to {
-            continue;
-        }
-        let y = content.y + u16::try_from(shown_from - scroll).unwrap_or(0);
-        let h = u16::try_from(shown_to - shown_from).unwrap_or(0);
-        let rect = Rect::new(content.x, y, content.width, h);
-        buf.set_style(rect, Style::new().bg(item.bg));
-        for line in shown_from..shown_to {
-            let y = content.y + u16::try_from(line - scroll).unwrap_or(0);
-            buf.set_line(content.x, y, &item.lines[line - from], content.width);
-        }
-        if let Some(target) = item.target {
-            hits.targets.push((rect, target));
-        }
-    }
+    draw(buf, content, items, scroll, &mut hits);
     hits
 }
 
