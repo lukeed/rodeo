@@ -90,7 +90,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         app.view.overlay = Some(open);
     }
     place_cursor(app, frame, cursor);
+    let covers = std::mem::take(&mut hits.covers);
     app.hits = hits;
+    app.compose_graphics(&covers);
 }
 
 fn place_cursor(app: &mut App, frame: &mut Frame, cursor: Option<Cursor>) {

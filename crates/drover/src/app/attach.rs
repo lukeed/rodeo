@@ -20,7 +20,11 @@ impl App {
     pub fn vt_options(&self) -> vt::Options {
         vt::Options {
             scrollback_bytes: self.config.advanced.scrollback_limit_bytes,
-            ..vt::Options::default()
+            image_bytes: if self.config.kitty_graphics() {
+                vt::Options::default().image_bytes
+            } else {
+                0
+            },
         }
     }
 
