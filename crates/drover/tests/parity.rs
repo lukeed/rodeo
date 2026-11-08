@@ -2,6 +2,7 @@ mod common;
 
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers};
+use ratatui::style::Color;
 
 #[test]
 fn opening_a_space_from_navigate_mode_leaves_no_selection() {
@@ -17,6 +18,16 @@ fn opening_a_space_from_navigate_mode_leaves_no_selection() {
         let spaces = h.app().snapshot().spaces;
         assert!(spaces[0].focused);
         assert!(spaces.iter().all(|s| !s.selected), "{spaces:?}");
+    });
+}
+
+#[test]
+fn selections_use_true_colors_like_herdr() {
+    run(|| async {
+        let h = Harness::start().await;
+        let style = drover::render::selection_style(h.app());
+        assert_eq!(style.fg, Some(Color::Rgb(255, 255, 255)));
+        assert_eq!(style.bg, Some(Color::Rgb(89, 89, 98)));
     });
 }
 
