@@ -114,7 +114,11 @@ impl App {
             return true;
         }
         if hits.new_workspace.is_some_and(|r| inside(r, x, y)) {
-            self.run_action(Action::NewWorkspace);
+            let snapshot = self.snapshot();
+            match sidebar::picked(self, &snapshot) {
+                Some((machine, _)) => self.new_workspace_on(machine, String::new()),
+                None => self.run_action(Action::NewWorkspace),
+            }
             return true;
         }
         if hits.menu.is_some_and(|r| inside(r, x, y)) {
@@ -167,7 +171,11 @@ impl App {
         let Some(machine) = snapshot.machines.iter().find(|m| m.name == hit.name) else {
             return;
         };
-        if on_toggle || machine.active {
+        let active = match sidebar::picked(self, &snapshot) {
+            Some((picked, _)) => picked == machine.name,
+            None => machine.active,
+        };
+        if on_toggle || active {
             let folded = &mut self.view.sidebar.collapsed_machines;
             if !folded.remove(&machine.name) {
                 folded.insert(machine.name.clone());
@@ -190,8 +198,11 @@ impl App {
             .iter()
             .find(|s| s.machine == machine.name)
             .map(|s| s.key.clone());
-        if let Some(key) = remembered.or(first) {
-            self.focus_space(&key);
+        match remembered.or(first) {
+            Some(key) => self.focus_space(&key),
+            None => {
+                self.view.sidebar.picked = Some((machine.name.clone(), self.view.space.clone()));
+            }
         }
     }
 

@@ -190,9 +190,16 @@ impl App {
     }
 
     pub fn new_workspace_now(&mut self, name: String) {
-        let machine = self.active_machine();
+        self.new_workspace_on(self.active_machine(), name);
+    }
+
+    pub fn new_workspace_on(&mut self, machine: Option<String>, name: String) {
         let source = self.view.focused_pane(&self.machines);
-        let space_key = self.view.space.clone();
+        let space_key = self
+            .view
+            .space
+            .clone()
+            .filter(|_| self.active_machine() == machine);
         let folder = self
             .new_cwd(source.as_deref(), space_key.as_deref(), machine.as_deref())
             .unwrap_or_default();

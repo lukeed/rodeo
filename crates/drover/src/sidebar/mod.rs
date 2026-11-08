@@ -30,6 +30,7 @@ pub struct State {
     pub collapsed_machines: HashSet<Option<String>>,
     pub hover: Option<Option<String>>,
     pub last: HashMap<Option<String>, String>,
+    pub picked: Option<(Option<String>, Option<String>)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -265,6 +266,20 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
             .last
             .insert(row.machine.clone(), space.clone());
     }
+    let picked = picked(app, snapshot);
+    app.view.sidebar.picked.clone_from(&picked);
+    let shown;
+    let snapshot = match picked {
+        Some((machine, _)) => {
+            let mut copy = snapshot.clone();
+            for row in &mut copy.machines {
+                row.active = row.name == machine;
+            }
+            shown = copy;
+            &shown
+        }
+        None => snapshot,
+    };
     let groups: HashSet<String> = app.prefs.collapsed_groups.iter().cloned().collect();
     let press = match &app.view.drag {
         Some(crate::view::Drag::Press {
@@ -298,6 +313,16 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
         app.view.reveal_space = false;
     }
     hits
+}
+
+pub fn picked(app: &App, snapshot: &Snapshot) -> Option<(Option<String>, Option<String>)> {
+    let (machine, space) = app.view.sidebar.picked.clone()?;
+    let empty = !snapshot.spaces.iter().any(|s| s.machine == machine);
+    let online = snapshot
+        .machines
+        .iter()
+        .any(|m| m.name == machine && m.status == MachineStatus::Online);
+    (empty && online && space == app.view.space).then_some((machine, space))
 }
 
 pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
