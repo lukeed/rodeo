@@ -218,7 +218,7 @@ impl App {
                     machine,
                     cwd,
                     env,
-                    title: "scrollback".to_owned(),
+                    title: String::new(),
                     width: Some(PopupSize::Percent(100)),
                     height: Some(PopupSize::Percent(100)),
                 });

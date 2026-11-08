@@ -921,12 +921,10 @@ fn status(
 }
 
 fn right(buf: &mut Buffer, rect: Rect, label: &str, style: Style) {
-    let width = u16::try_from(label.width()).unwrap_or(u16::MAX);
-    if width >= rect.width {
-        return;
-    }
-    let x = rect.right() - width - 1;
-    text(buf, x, rect.y, width, label, style);
+    let width = u16::try_from(label.width())
+        .unwrap_or(u16::MAX)
+        .min(rect.width);
+    text(buf, rect.right() - width, rect.y, width, label, style);
 }
 
 impl Overlay for Worktree {
