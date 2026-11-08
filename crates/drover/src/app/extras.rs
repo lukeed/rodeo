@@ -12,7 +12,11 @@ use crate::machines::SpaceRef;
 const GIT_EVERY: Duration = Duration::from_secs(10);
 const FILES_EVERY: Duration = Duration::from_secs(5);
 const GIT_SCRIPT: &str = r#"cd "$1" 2>/dev/null || exit 1
-git rev-parse --show-toplevel --abbrev-ref HEAD 2>/dev/null || exit 1
+top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 1
+printf '%s\n' "$top"
+git symbolic-ref --short -q HEAD 2>/dev/null || echo
+(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P) || echo
+(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P) || echo
 git rev-list --left-right --count 'HEAD...@{upstream}' 2>/dev/null || true"#;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -20,6 +24,8 @@ pub struct Git {
     pub cwd: String,
     pub toplevel: Option<String>,
     pub branch: Option<String>,
+    pub common: Option<String>,
+    pub linked: bool,
     pub ahead: u32,
     pub behind: u32,
     pub at: Option<Instant>,
@@ -46,13 +52,12 @@ pub struct Status {
 
 fn parse_git(cwd: &str, out: &str) -> Git {
     let mut lines = out.lines();
-    let toplevel = lines.next().map(str::to_owned).filter(|l| !l.is_empty());
-    let branch = lines
-        .next()
-        .map(str::to_owned)
-        .filter(|l| !l.is_empty() && l != "HEAD");
-    let (ahead, behind) = lines
-        .next()
+    let mut next = || lines.next().map(str::to_owned).filter(|l| !l.is_empty());
+    let toplevel = next();
+    let branch = next().filter(|b| b != "HEAD");
+    let common = next();
+    let dir = next();
+    let (ahead, behind) = next()
         .and_then(|l| {
             let mut parts = l.split_whitespace();
             Some((parts.next()?.parse().ok()?, parts.next()?.parse().ok()?))
@@ -62,6 +67,8 @@ fn parse_git(cwd: &str, out: &str) -> Git {
         cwd: cwd.to_owned(),
         toplevel,
         branch,
+        linked: common.is_some() && dir.is_some() && common != dir,
+        common,
         ahead,
         behind,
         at: Some(Instant::now()),
@@ -113,8 +120,13 @@ impl App {
     }
 
     fn refresh_git(&mut self) {
+        let kept: Vec<String> = self
+            .machines
+            .iter()
+            .flat_map(|m| m.slot.doc().spaces.iter().map(|s| qualify(&s.id, m.key())))
+            .collect();
+        self.git.retain(|key, _| kept.contains(key));
         let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
-        self.git.retain(|key, _| keys.contains(key));
         for key in keys {
             let Some((machine, cwd)) = self.space_cwd(&key) else {
                 continue;
@@ -344,12 +356,17 @@ mod tests {
 
     #[test]
     fn git_output_parses_branch_and_counts() {
-        let git = parse_git("/w", "/w/repo\nmain\n2\t1\n");
+        let git = parse_git("/w", "/w/repo\nmain\n/w/repo/.git\n/w/repo/.git\n2\t1\n");
         assert_eq!(git.toplevel.as_deref(), Some("/w/repo"));
         assert_eq!(git.branch.as_deref(), Some("main"));
+        assert_eq!(git.common.as_deref(), Some("/w/repo/.git"));
+        assert!(!git.linked);
         assert_eq!((git.ahead, git.behind), (2, 1));
-        let detached = parse_git("/w", "/w/repo\nHEAD\n");
+        let detached = parse_git("/w", "/w/repo\n\n/w/repo/.git\n/w/repo/.git\n");
         assert_eq!(detached.branch, None);
+        assert_eq!((detached.ahead, detached.behind), (0, 0));
+        let linked = parse_git("/w", "/w/x\nfeat\n/w/repo/.git\n/w/repo/.git/worktrees/x\n");
+        assert!(linked.linked);
     }
 
     #[test]

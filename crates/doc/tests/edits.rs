@@ -202,6 +202,45 @@ fn tabs_move_to_an_index() {
     assert_eq!(d.move_tab("z", 0), Err(Error::NoTab("z".into())));
 }
 
+fn five_spaces() -> Document {
+    doc(json!({"spaces": [
+        space("a", json!([tab("ta", json!([term("pa", "t1")]))])),
+        space("b", json!([tab("tb", json!([term("pb", "t2")]))])),
+        space("c", json!([tab("tc", json!([term("pc", "t3")]))])),
+        space("d", json!([tab("td", json!([term("pd", "t4")]))])),
+        space("e", json!([tab("te", json!([term("pe", "t5")]))])),
+    ]}))
+}
+
+fn space_order(d: &Document) -> Vec<&str> {
+    d.spaces.iter().map(|s| s.id.as_str()).collect()
+}
+
+#[test]
+fn spaces_move_as_a_block_before_another() {
+    let ids = |list: &[&str]| list.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+    let mut d = five_spaces();
+    d.move_spaces(&ids(&["c", "a", "d"]), Some("e")).unwrap();
+    assert_eq!(space_order(&d), ["b", "c", "a", "d", "e"]);
+    d.move_spaces(&ids(&["e"]), Some("b")).unwrap();
+    assert_eq!(space_order(&d), ["e", "b", "c", "a", "d"]);
+    d.move_spaces(&ids(&["e"]), None).unwrap();
+    assert_eq!(space_order(&d), ["b", "c", "a", "d", "e"]);
+    assert_eq!(
+        d.move_spaces(&ids(&["z"]), None),
+        Err(Error::NoSpace("z".into()))
+    );
+    assert_eq!(
+        d.move_spaces(&ids(&["a", "a"]), None),
+        Err(Error::NoSpace("a".into()))
+    );
+    assert_eq!(
+        d.move_spaces(&ids(&["a"]), Some("a")),
+        Err(Error::NoSpace("a".into()))
+    );
+    assert_eq!(space_order(&d), ["b", "c", "a", "d", "e"]);
+}
+
 #[test]
 fn tabs_step_with_wrap() {
     let mut d = three_tabs();

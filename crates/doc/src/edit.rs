@@ -202,6 +202,33 @@ impl Document {
         self.move_tab(id, to)
     }
 
+    pub fn move_spaces(&mut self, ids: &[String], before: Option<&str>) -> Result<(), Error> {
+        for (i, id) in ids.iter().enumerate() {
+            if self.space(id).is_none() || ids[..i].contains(id) {
+                return Err(Error::NoSpace(id.clone()));
+            }
+        }
+        if let Some(before) = before
+            && (self.space(before).is_none() || ids.iter().any(|id| id == before))
+        {
+            return Err(Error::NoSpace(before.to_owned()));
+        }
+        let mut moved: Vec<Space> = ids
+            .iter()
+            .filter_map(|id| {
+                let at = self.spaces.iter().position(|s| &s.id == id)?;
+                Some(self.spaces.remove(at))
+            })
+            .collect();
+        let at = before
+            .and_then(|b| self.spaces.iter().position(|s| s.id == b))
+            .unwrap_or(self.spaces.len());
+        let tail = self.spaces.split_off(at);
+        self.spaces.append(&mut moved);
+        self.spaces.extend(tail);
+        Ok(())
+    }
+
     pub fn split_pane(
         &mut self,
         target: &str,

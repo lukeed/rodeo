@@ -98,7 +98,7 @@ fn tab_and_workspace_menus_rename() {
         h.mouse(MouseEventKind::Down(MouseButton::Left), 0, 39)
             .await;
         assert_eq!(kind(&h), None, "a click outside closes the menu");
-        let (rect, _) = h.app().hits.sidebar.spaces[0].clone();
+        let rect = h.app().hits.sidebar.spaces[0].rect;
         h.mouse(MouseEventKind::Down(MouseButton::Right), rect.x + 1, rect.y)
             .await;
         assert!(h.screen().contains("Close"));

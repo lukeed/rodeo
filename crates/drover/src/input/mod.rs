@@ -1,6 +1,7 @@
 mod copy;
 mod keys;
 mod mouse;
+mod sidebar;
 
 use crossterm::event::Event;
 use ratatui::layout::Rect;

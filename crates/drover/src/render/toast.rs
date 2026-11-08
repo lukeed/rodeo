@@ -9,7 +9,9 @@ use crate::overlay::frame::{contrast, panel};
 use crate::text::{truncate, width};
 
 pub fn render(app: &App, buf: &mut Buffer, area: Rect, hits: &mut Hits) {
-    let (offset, banner) = banner(app, buf, area);
+    let (config, banner) = banner(app, buf, area);
+    let header = app.regions.header.map_or(0, |h| h.height);
+    let offset = config + super::lifecycle::render(app, buf, area, config + header);
     let card = app
         .notice
         .as_ref()

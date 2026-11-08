@@ -67,6 +67,7 @@ pub enum Drag {
         at: (u16, u16),
         now: (u16, u16),
     },
+    Sidebar(crate::sidebar::Drag),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,6 +111,7 @@ pub struct View {
     pub agent_scroll: usize,
     pub switcher_scroll: usize,
     pub want_focus: Option<String>,
+    pub sidebar: crate::sidebar::State,
 }
 
 impl Default for View {
@@ -136,6 +138,7 @@ impl Default for View {
             agent_scroll: 0,
             switcher_scroll: 0,
             want_focus: None,
+            sidebar: crate::sidebar::State::default(),
         }
     }
 }
