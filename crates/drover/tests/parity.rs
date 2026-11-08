@@ -19,3 +19,24 @@ fn opening_a_space_from_navigate_mode_leaves_no_selection() {
         assert!(spaces.iter().all(|s| !s.selected), "{spaces:?}");
     });
 }
+
+#[test]
+fn a_smaller_host_keeps_the_prompt_without_scrollback() {
+    run(|| async {
+        let mut h = Harness::sized(120, 36, "").await;
+        h.ready().await;
+        let address = h.focused_address().expect("a pane");
+        h.send(crossterm::event::Event::Resize(60, 30));
+        h.pump().await;
+        let bar = h
+            .app()
+            .panes
+            .get(&address)
+            .expect("the pane")
+            .term
+            .scrollbar();
+        assert_eq!(bar.total, bar.len, "{bar:?}");
+        let screen = h.screen();
+        assert!(!screen.contains('▕'), "{screen}");
+    });
+}
