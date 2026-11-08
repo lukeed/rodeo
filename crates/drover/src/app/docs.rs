@@ -128,6 +128,10 @@ impl App {
             self.focus_pane(&pane);
         }
         self.ensure_first_space();
+        let empty = self.machines.local().slot.is_ready() && self.machines.spaces().is_empty();
+        if empty && self.view.mode == crate::view::Mode::Terminal {
+            self.view.mode = crate::view::Mode::Navigate;
+        }
         self.sync_panes();
         self.relayout();
         self.dirty = true;
