@@ -419,8 +419,7 @@ impl App {
     }
 
     fn open_notification_target(&mut self) {
-        if let Some(target) = self.notice.as_ref().and_then(|n| n.target.clone()) {
-            self.notice = None;
+        if let Some(target) = self.take_notice().and_then(|n| n.target) {
             self.focus_pane(&target);
         }
     }

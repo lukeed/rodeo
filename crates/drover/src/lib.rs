@@ -15,6 +15,8 @@ pub mod panes;
 pub mod render;
 pub mod runtime;
 pub mod sidebar;
+pub mod sound;
 pub mod sync;
+pub mod system_notify;
 pub mod text;
 pub mod view;

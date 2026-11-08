@@ -25,6 +25,7 @@ use crate::view::View;
 
 pub use conn::{Conn, State as ConnState};
 pub use extras::{Files, Git, Listing, strip_controls};
+pub use notify::{Notices, Sent};
 pub use spawn::Spawn;
 
 pub type Apply = Box<dyn FnOnce(&mut App)>;
@@ -124,6 +125,7 @@ pub struct App {
     pub out: Vec<u8>,
     pub feedback: Option<Feedback>,
     pub notice: Option<Notice>,
+    pub notices: Notices,
     pub error: Option<(String, Instant)>,
     pub git: HashMap<String, Git>,
     pub files: Files,
@@ -155,6 +157,7 @@ impl App {
         let build = config.keymap();
         let prefs = Preferences::load(&options.prefs_path);
         let palette = config.palette(None);
+        let notices = Notices::new(&options.env);
         let mut app = Self {
             env: options.env,
             config_path: options.config_path,
@@ -179,6 +182,7 @@ impl App {
             out: Vec::new(),
             feedback: None,
             notice: None,
+            notices,
             error: None,
             git: HashMap::new(),
             files: Files::default(),
@@ -308,7 +312,7 @@ impl App {
             self.feedback = None;
         }
         if self.notice.as_ref().is_some_and(|n| n.until <= now) {
-            self.notice = None;
+            self.next_notice();
         }
         if self.error.as_ref().is_some_and(|(_, until)| *until <= now) {
             self.error = None;

@@ -98,7 +98,7 @@ impl App {
         if let Some(toast) = self.hits.toast
             && inside(toast, x, y)
         {
-            if let Some(target) = self.notice.take().and_then(|n| n.target) {
+            if let Some(target) = self.take_notice().and_then(|n| n.target) {
                 self.focus_pane(&target);
             }
             return;
