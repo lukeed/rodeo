@@ -104,7 +104,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Element | Status | Notes |
 |---|---|---|
 | Desktop layout: sidebar left, tab bar top or bottom, pane surface | match | |
-| Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, single pane, mobile switcher | match | |
+| Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, the full pane split below it, mobile switcher | match | |
 | Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. |
 | Expanded sidebar: spaces section, agents section, section split, footer with `menu` button | match | |
 | Compact collapsed sidebar (4-column status rail), hidden mode | match | |

@@ -37,6 +37,21 @@ fn selections_use_true_colors_like_herdr() {
 }
 
 #[test]
+fn the_mobile_layout_shows_every_pane_of_the_tab() {
+    run(|| async {
+        let mut h = Harness::sized(60, 20, "").await;
+        h.ready().await;
+        h.prefix_char('v').await;
+        h.until("two panes side by side", |h| {
+            h.screen();
+            h.app().hits.panes.len() == 2
+        })
+        .await;
+        assert!(h.app().regions.mobile);
+    });
+}
+
+#[test]
 fn a_smaller_host_keeps_the_prompt_without_scrollback() {
     run(|| async {
         let mut h = Harness::sized(120, 36, "").await;

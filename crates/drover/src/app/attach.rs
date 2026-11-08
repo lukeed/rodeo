@@ -370,7 +370,7 @@ impl App {
                 let focused = self.view.focused_in(&self.machines, &key);
                 let zoom = focused
                     .as_deref()
-                    .filter(|_| space_regions.mobile || self.view.is_zoomed(&key))
+                    .filter(|_| self.view.is_zoomed(&key))
                     .map(|p| local(p, space.machine).to_owned());
                 let gutter = |id: &str| {
                     tab.tab
