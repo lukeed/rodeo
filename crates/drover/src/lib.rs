@@ -6,6 +6,7 @@ pub mod backend;
 pub mod cli;
 pub mod clipboard;
 pub mod graphics;
+pub mod groups;
 pub mod hits;
 pub mod host;
 pub mod host_input;

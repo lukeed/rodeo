@@ -156,7 +156,7 @@ impl App {
         let Some(space) = self.target_space() else {
             return;
         };
-        self.ask_close(CloseTarget::Workspace { space });
+        self.ask_close(self.close_space_target(space));
     }
 
     fn ask_close_tab(&mut self) {
@@ -201,23 +201,39 @@ impl App {
             return;
         }
         let space = match &target {
-            CloseTarget::Workspace { space } => Some(space.clone()),
+            CloseTarget::Workspace { space } | CloseTarget::Group { space } => Some(space.clone()),
             CloseTarget::Tab { tab } => self.machines.tab(tab).map(|t| t.space_key()),
             CloseTarget::Pane { pane } => self.machines.pane(pane).map(|p| p.space_key()),
         };
         let Some(space) = space else {
             return;
         };
-        let panes = self
-            .machines
-            .space(&space)
-            .map_or(0, |s| s.tabs().map(|t| t.panes().count()).sum());
+        let members = match &target {
+            CloseTarget::Group { .. } => self.group_members(&space),
+            _ => vec![space.clone()],
+        };
+        let panes = members
+            .iter()
+            .filter_map(|m| self.machines.space(m))
+            .map(|s| s.tabs().map(|t| t.panes().count()).sum::<usize>())
+            .sum();
         let name = self.space_name(&space, &self.home());
-        self.set_overlay(Box::new(ConfirmClose::new(target, &name, panes)));
+        let confirm = if members.len() > 1 {
+            ConfirmClose::group(target, &name, members.len(), panes)
+        } else {
+            ConfirmClose::new(target, &name, panes)
+        };
+        self.set_overlay(Box::new(confirm));
     }
 
     pub fn close(&mut self, target: &CloseTarget) {
         let (machine, terminals, edit): (Option<String>, Vec<String>, Edit) = match target {
+            CloseTarget::Group { space } => {
+                for member in self.group_members(space) {
+                    self.close(&CloseTarget::Workspace { space: member });
+                }
+                return;
+            }
             CloseTarget::Workspace { space } => {
                 let Some(found) = self.machines.space(space) else {
                     return;

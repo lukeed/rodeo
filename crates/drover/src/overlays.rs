@@ -5,11 +5,9 @@ use doc::{Axis, Document};
 
 use crate::app::App;
 use crate::ids::local;
-use crate::overlay::context::{
-    ContextMenu, Pick, SpaceFlags, pane_flags, pane_items, space_items, tab_items,
-};
+use crate::overlay::context::{ContextMenu, Pick, pane_flags, pane_items, space_items, tab_items};
 use crate::overlay::menu::GlobalMenu;
-use crate::overlay::{CloseTarget, MenuTarget, Rename, RenameTarget};
+use crate::overlay::{MenuTarget, Rename, RenameTarget};
 
 pub const RIGHT_CLICK: &str = "herdr.right-click";
 
@@ -25,10 +23,10 @@ impl App {
                 let Some(row) = snapshot.space(space) else {
                     return;
                 };
-                space_items(SpaceFlags {
-                    git: row.branch.is_some(),
-                    ..SpaceFlags::default()
-                })
+                let collapsed = &self.prefs.collapsed_groups;
+                space_items(
+                    crate::groups::space_flags(&snapshot, &row.key, collapsed).unwrap_or_default(),
+                )
             }
             MenuTarget::Tab(_) if !mobile => tab_items(),
             MenuTarget::Pane(pane) => {
@@ -83,7 +81,13 @@ impl App {
                 return;
             }
             Pick::Close => {
-                self.ask_close(CloseTarget::Workspace { space });
+                self.ask_close(self.close_space_target(space));
+                return;
+            }
+            Pick::ToggleGroup => {
+                if let Some(key) = self.group_key(&space) {
+                    self.toggle_group(&key);
+                }
                 return;
             }
             Pick::NewWorktree => Action::NewWorktree,

@@ -7,6 +7,101 @@ use crossterm::event::{KeyCode, KeyModifiers};
 
 const KEYS: &str = "[keys]\nopen_worktree = \"prefix+u\"\nremove_worktree = \"prefix+y\"\n";
 
+async fn group_of_two(h: &mut Harness) -> (String, String) {
+    h.ready().await;
+    let repo = make_repo(h);
+    cd(h, &repo).await;
+    let checkout = h.core.root().join("wt-a");
+    let path = checkout.display().to_string();
+    git(h, &repo, &["worktree", "add", "-q", "-b", "a", &path]);
+    h.app_mut().new_space_in(None, path, String::new());
+    h.until("a parent and a linked child", |h| {
+        let snapshot = h.app().snapshot();
+        let linked: Vec<bool> = snapshot
+            .spaces
+            .iter()
+            .filter_map(|s| s.worktree.as_ref().map(|w| w.linked))
+            .collect();
+        linked == [false, true]
+    })
+    .await;
+    let snapshot = h.app().snapshot();
+    (
+        snapshot.spaces[0].key.clone(),
+        snapshot.spaces[1].key.clone(),
+    )
+}
+
+fn menu_labels(h: &Harness) -> Vec<String> {
+    let overlay = h.app().view.overlay.as_ref().expect("a menu");
+    let any: &dyn std::any::Any = overlay.as_ref();
+    any.downcast_ref::<drover::overlay::context::ContextMenu>()
+        .expect("a context menu")
+        .labels()
+        .to_vec()
+}
+
+#[test]
+fn group_menus_offer_group_items_and_close_the_group() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        let (parent, child) = group_of_two(&mut h).await;
+        let space = drover::overlay::MenuTarget::Space;
+        h.app_mut().context_menu(space(child), (5, 5));
+        assert_eq!(
+            menu_labels(&h),
+            ["Rename", "Close", "Delete worktree checkout..."]
+        );
+        h.press(KeyCode::Esc, KeyModifiers::NONE).await;
+        h.app_mut().context_menu(space(parent.clone()), (5, 5));
+        assert_eq!(
+            menu_labels(&h),
+            [
+                "Rename",
+                "Close group",
+                "New worktree",
+                "Open worktree...",
+                "Collapse"
+            ]
+        );
+        for _ in 0..4 {
+            h.press(KeyCode::Down, KeyModifiers::NONE).await;
+        }
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        assert!(
+            h.app()
+                .prefs
+                .collapsed_groups
+                .iter()
+                .any(|g| g.ends_with("/repo/.git"))
+        );
+        h.app_mut().context_menu(space(parent), (5, 5));
+        assert_eq!(menu_labels(&h)[4], "Expand");
+        h.press(KeyCode::Down, KeyModifiers::NONE).await;
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        h.until("the group confirmation", |h| {
+            let screen = h.screen();
+            screen.contains("Close worktree group?") && screen.contains("2 workspaces, 2 panes")
+        })
+        .await;
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        h.until_stored("no spaces left", |d| d.spaces.is_empty())
+            .await;
+    });
+}
+
+#[test]
+fn close_workspace_on_a_parent_closes_its_group() {
+    run(|| async {
+        let mut h = Harness::with_config("[ui]\nconfirm_close = false\n").await;
+        let (parent, _) = group_of_two(&mut h).await;
+        h.app_mut().focus_space(&parent);
+        h.prefix_char('D').await;
+        h.until_stored("no spaces left", |d| d.spaces.is_empty())
+            .await;
+    });
+}
+
 fn git(h: &Harness, dir: &Path, args: &[&str]) -> String {
     let out = h
         .core

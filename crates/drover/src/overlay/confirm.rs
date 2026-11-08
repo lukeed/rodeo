@@ -9,6 +9,7 @@ use super::{Ctx, Kind, Outcome, Overlay, Request};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CloseTarget {
     Workspace { space: String },
+    Group { space: String },
     Tab { tab: String },
     Pane { pane: String },
 }
@@ -31,6 +32,20 @@ impl ConfirmClose {
             target,
             title: "Close workspace?".to_owned(),
             detail: format!("{workspace} — {scope}"),
+            confirm: Rect::default(),
+        }
+    }
+
+    pub fn group(target: CloseTarget, workspace: &str, workspaces: usize, panes: usize) -> Self {
+        let panes = if panes == 1 {
+            "1 pane".to_owned()
+        } else {
+            format!("{panes} panes")
+        };
+        Self {
+            target,
+            title: "Close worktree group?".to_owned(),
+            detail: format!("{workspace} — {workspaces} workspaces, {panes}"),
             confirm: Rect::default(),
         }
     }

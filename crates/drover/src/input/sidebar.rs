@@ -156,7 +156,7 @@ impl App {
         true
     }
 
-    fn toggle_group(&mut self, key: &str) {
+    pub(crate) fn toggle_group(&mut self, key: &str) {
         let groups = &mut self.prefs.collapsed_groups;
         if let Some(at) = groups.iter().position(|g| g == key) {
             groups.remove(at);
