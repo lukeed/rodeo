@@ -114,7 +114,13 @@ fn closing_panes_tabs_and_workspaces() {
         let mut h = Harness::start().await;
         h.ready().await;
         h.prefix_char('v').await;
-        h.until("two panes", |h| h.tab_panes().len() == 2).await;
+        h.until("two attached panes", |h| {
+            h.tab_panes().len() == 2
+                && h.focused_address()
+                    .and_then(|a| h.app().panes.get(&a))
+                    .is_some_and(|p| p.link == drover::panes::Link::Attached)
+        })
+        .await;
         let doomed = h.focused_address().expect("the new pane");
         h.prefix_char('x').await;
         h.until("one pane left", |h| h.tab_panes().len() == 1).await;

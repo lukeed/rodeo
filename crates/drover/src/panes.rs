@@ -18,8 +18,11 @@ impl Link {
     }
 }
 
+const QUEUE_LIMIT: usize = 1 << 20;
+
 pub struct Pane {
     pub address: String,
+    queued: Vec<u8>,
     pub term: Terminal,
     pub writer: Option<hc::AttachWriter>,
     pub link: Link,
@@ -36,6 +39,7 @@ impl Pane {
     pub fn new(address: String, size: (u16, u16), options: vt::Options) -> Result<Self, vt::Error> {
         Ok(Self {
             address,
+            queued: Vec::new(),
             term: Terminal::new(size.0.max(1), size.1.max(1), options)?,
             writer: None,
             link: Link::Idle,
@@ -53,11 +57,39 @@ impl Pane {
         if bytes.is_empty() {
             return;
         }
-        if let Some(writer) = &self.writer
-            && let Err(error) = writer.input(bytes.to_vec())
-        {
-            tracing::debug!(address = %self.address, %error, "input dropped");
+        match &self.writer {
+            Some(writer) => {
+                if let Err(error) = writer.input(bytes.to_vec()) {
+                    tracing::debug!(address = %self.address, %error, "input dropped");
+                }
+            }
+            None if matches!(self.link, Link::Idle | Link::Attaching)
+                && self.queued.len() + bytes.len() <= QUEUE_LIMIT =>
+            {
+                self.queued.extend_from_slice(bytes);
+            }
+            None => tracing::debug!(address = %self.address, "input dropped: not attached"),
         }
+    }
+
+    pub fn queued(&self) -> &[u8] {
+        &self.queued
+    }
+
+    pub fn connect(&mut self, writer: hc::AttachWriter) {
+        let queued = std::mem::take(&mut self.queued);
+        if !queued.is_empty()
+            && let Err(error) = writer.input(queued)
+        {
+            tracing::debug!(address = %self.address, %error, "queued input dropped");
+        }
+        self.writer = Some(writer);
+        self.link = Link::Attached;
+    }
+
+    pub fn end(&mut self, link: Link) {
+        self.queued.clear();
+        self.link = link;
     }
 
     pub fn reply(&mut self) {
@@ -129,6 +161,16 @@ impl Panes {
 
     pub fn insert(&mut self, pane: Pane) {
         self.map.insert(pane.address.clone(), pane);
+    }
+
+    pub fn rename(&mut self, from: &str, to: &str) {
+        if self.map.contains_key(to) {
+            return;
+        }
+        if let Some(mut pane) = self.map.remove(from) {
+            to.clone_into(&mut pane.address);
+            self.map.insert(to.to_owned(), pane);
+        }
     }
 
     pub fn remove(&mut self, address: &str) -> Option<Pane> {

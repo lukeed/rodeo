@@ -7,7 +7,7 @@ use doc::{Cell, Document};
 use hc::{AttachOptions, Output};
 
 use super::{App, Msg};
-use crate::ids::{local, split};
+use crate::ids::{is_pending, local, split};
 use crate::layout::{self, Chrome, SidebarWidth};
 use crate::panes::{Link, Pane};
 use crate::sync::Edit;
@@ -94,7 +94,7 @@ impl App {
         let idle: Vec<String> = self
             .panes
             .iter()
-            .filter(|p| p.link == Link::Idle)
+            .filter(|p| p.link == Link::Idle && !is_pending(&p.address))
             .map(|p| p.address.clone())
             .collect();
         for address in idle {
@@ -102,13 +102,13 @@ impl App {
                 Some(t) if t.is_finished() => {
                     let reason = t.reason.clone().unwrap_or_else(|| "finished".into());
                     if let Some(pane) = self.panes.get_mut(&address) {
-                        pane.link = Link::Ended(reason);
+                        pane.end(Link::Ended(reason));
                     }
                 }
                 Some(t) if t.is_lost() => {
                     let reason = t.reason.clone().unwrap_or_default();
                     if let Some(pane) = self.panes.get_mut(&address) {
-                        pane.link = Link::Lost(reason);
+                        pane.end(Link::Lost(reason));
                     }
                 }
                 _ => self.attach(&address),
@@ -228,8 +228,7 @@ impl App {
         }
         match result {
             Ok(writer) => {
-                pane.writer = Some(writer);
-                pane.link = Link::Attached;
+                pane.connect(writer);
                 pane.led = shown_size;
                 pane.reply();
                 pane.lead();
@@ -237,13 +236,13 @@ impl App {
             }
             Err(error) => {
                 tracing::debug!(%address, %error, "attach failed");
-                pane.link = if error.is_not_found() || error.is_finished() {
+                pane.end(if error.is_not_found() || error.is_finished() {
                     Link::Ended(error.kind().unwrap_or("finished").to_owned())
                 } else if error.is_unavailable() {
                     Link::Lost(error.to_string())
                 } else {
                     Link::Failed(error.to_string())
-                };
+                });
                 self.reconcile();
             }
         }
@@ -274,10 +273,10 @@ impl App {
                 }
                 let reason = ending.reason.clone().unwrap_or_default();
                 if EXIT_REASONS.contains(&reason.as_str()) {
-                    pane.link = Link::Ended(reason);
+                    pane.end(Link::Ended(reason));
                     self.remove_terminal(address);
                 } else {
-                    pane.link = Link::Lost(reason);
+                    pane.end(Link::Lost(reason));
                 }
             }
             None => {
