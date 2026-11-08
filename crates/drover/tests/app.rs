@@ -607,7 +607,7 @@ fn agents_toast_and_get_marked_seen() {
             .await;
         let space = doc.spaces[0].id.clone();
         let tab = doc::fresh_id(doc::Prefix::Tab);
-        let script = r#"sleep 1; printf '\033]7501;state=working:app=claude-code\033\\'; sleep 0.5; printf '\033]7501;state=idle:app=claude-code\033\\'; sleep 60"#;
+        let script = r"sleep 1; printf '\033]7501;state=working:app=claude-code\033\\'; sleep 0.5; printf '\033]7501;state=idle:app=claude-code\033\\'; sleep 60";
         let agent = h
             .outside
             .run(&hc::RunParams {
@@ -653,5 +653,38 @@ fn agents_toast_and_get_marked_seen() {
         })
         .await;
         h.outside.kill(&agent.address).await.expect("kill");
+    });
+}
+
+#[test]
+fn mod_blocks_show_a_folder_tree_or_a_placeholder() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let (mut doc, version) = h.stored().await;
+        let first = doc.spaces[0].tabs[0].panes()[0].id.clone();
+        doc.split_pane(
+            &first,
+            doc::Axis::Row,
+            doc::Node::module("pfiles", "files", serde_json::Value::Null),
+        )
+        .expect("a files split");
+        doc.split_pane(
+            "pfiles",
+            doc::Axis::Column,
+            doc::Node::module("pchanges", "changes", serde_json::Value::Null),
+        )
+        .expect("a changes split");
+        h.outside
+            .doc_set(doc::NAME, &doc.to_value(), version, None)
+            .await
+            .expect("an outside write");
+        h.until("the folder tree", |h| {
+            let screen = h.screen();
+            screen.contains("├─ config/") && screen.contains("└─ state/")
+        })
+        .await;
+        h.until("the placeholder", |h| h.screen().contains("changes mod"))
+            .await;
     });
 }

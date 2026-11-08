@@ -63,8 +63,7 @@ fn datetime(format: &str) -> String {
     let Ok(items) = config::parse_datetime_format(format) else {
         return String::new();
     };
-    let now = config::time::OffsetDateTime::now_local()
-        .unwrap_or_else(|_| config::time::OffsetDateTime::now_utc());
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
     now.format(&items).unwrap_or_default()
 }
 

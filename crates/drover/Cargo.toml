@@ -15,7 +15,6 @@ futures-util = "0.3.34"
 hc = { package = "drover-hc", path = "../hc" }
 ratatui = "0.30"
 rustix = { version = "1.1.6", features = ["event", "stdio", "system", "termios"] }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 time = { version = "0.3", features = ["formatting", "local-offset"] }
 tokio = { version = "1.53.1", features = ["rt", "macros", "sync", "time", "signal"] }
@@ -27,7 +26,6 @@ vt = { package = "drover-vt", path = "../vt" }
 
 [dev-dependencies]
 hc = { package = "drover-hc", path = "../hc", features = ["testing"] }
-tempfile = "3"
 
 [lints]
 workspace = true
