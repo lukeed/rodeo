@@ -307,6 +307,33 @@ fn many() -> App {
 }
 
 #[test]
+fn the_agent_list_scrolls_too() {
+    let mut app = many();
+    app.terminals = hc::Terminals::new(
+        hc::Snapshot {
+            seq: 1,
+            terminals: (0..30)
+                .map(|i| agent(&format!("t{}", 100 + i), "working", &[]))
+                .collect(),
+        },
+        &hc::Filter::default(),
+    );
+    let buf = frame(&mut app);
+    let track = app.hits.sidebar.agents_bar.expect("an agent scrollbar");
+    assert_eq!(track, Rect::new(24, 18, 1, 12));
+    assert_eq!(line(&buf, 18, 26), " ● space 0              ▕│");
+    mouse(&mut app, MouseEventKind::ScrollDown, 5, 20);
+    let buf = frame(&mut app);
+    assert_eq!(app.view.agent_scroll, 1);
+    assert_eq!(line(&buf, 18, 26), " ● space 1              ▕│");
+    assert_eq!(buf[(24, 29)].symbol(), "«");
+    click(&mut app, 24, 28);
+    let _ = frame(&mut app);
+    assert_eq!(app.hits.sidebar.agents_metrics.max, 24);
+    assert_eq!(app.view.agent_scroll, 22);
+}
+
+#[test]
 fn long_lists_scroll_by_wheel_track_and_thumb() {
     let mut app = many();
     let buf = frame(&mut app);

@@ -249,52 +249,46 @@ impl App {
 
     pub(super) fn release_space(&mut self, space: &str, at: (u16, u16), x: u16, y: u16) {
         let moved = at.0.abs_diff(x).max(at.1.abs_diff(y)) >= 1;
-        if moved && self.drop_space(space, x, y) {
-            return;
-        }
-        let over = self
-            .hits
-            .sidebar
-            .space_at(x, y)
-            .is_some_and(|h| h.key == space);
-        if !moved || over {
-            self.focus_space(space);
-            if self.view.mode == Mode::Navigate {
-                self.view.mode = Mode::Terminal;
-                self.view.nav = None;
-            }
-        }
-    }
-
-    fn drop_space(&mut self, space: &str, x: u16, y: u16) -> bool {
-        let hits = &self.hits.sidebar;
-        let Some(before) = hits.drop_target(x, y).map(|slot| slot.before.clone()) else {
-            return false;
-        };
-        let active = hits.active.clone();
         let snapshot = self.snapshot();
+        let active = self.hits.sidebar.active.clone();
         let rows: Vec<&SpaceRow> = snapshot
             .spaces
             .iter()
             .filter(|s| s.machine == active)
             .collect();
-        let Some(index) = rows.iter().position(|s| s.key == space) else {
-            return false;
+        let index = rows
+            .iter()
+            .position(|s| s.key == space)
+            .filter(|&i| sidebar::draggable(rows[i], active.as_ref()));
+        if let Some(index) = index.filter(|_| moved) {
+            let block = sidebar::block(&rows, index);
+            self.drop_block(active.as_deref(), &block, x, y);
+            return;
+        }
+        self.focus_space(space);
+        if self.view.mode == Mode::Navigate {
+            self.view.mode = Mode::Terminal;
+            self.view.nav = None;
+        }
+    }
+
+    fn drop_block(&mut self, machine: Option<&str>, block: &[String], x: u16, y: u16) {
+        let Some(before) = self
+            .hits
+            .sidebar
+            .drop_target(x, y)
+            .map(|slot| slot.before.clone())
+        else {
+            return;
         };
-        if !sidebar::draggable(rows[index], active.as_ref()) {
-            return false;
-        }
-        let block = sidebar::block(&rows, index);
         if before.as_ref().is_some_and(|b| block.contains(b)) {
-            return true;
+            return;
         }
-        let machine = active.as_deref();
         let ids: Vec<String> = block.iter().map(|k| local(k, machine).to_owned()).collect();
         let before = before.map(|b| local(&b, machine).to_owned());
         self.edit(
             machine,
             Rc::new(move |doc: &mut Document| doc.move_spaces(&ids, before.as_deref())),
         );
-        true
     }
 }
