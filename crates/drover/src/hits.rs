@@ -39,6 +39,7 @@ pub struct Hits {
     pub tabs: TabHits,
     pub sidebar: crate::sidebar::Hits,
     pub toast: Option<Rect>,
+    pub switcher: crate::switcher::Hits,
     pub surface: Rect,
 }
 

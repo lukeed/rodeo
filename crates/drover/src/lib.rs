@@ -16,6 +16,7 @@ pub mod panes;
 pub mod render;
 pub mod runtime;
 pub mod sidebar;
+pub mod switcher;
 pub mod sync;
 pub mod text;
 pub mod view;

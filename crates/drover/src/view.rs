@@ -108,6 +108,7 @@ pub struct View {
     pub sidebar_scroll: usize,
     pub reveal_space: bool,
     pub agent_scroll: usize,
+    pub switcher_scroll: usize,
     pub want_focus: Option<String>,
 }
 
@@ -133,6 +134,7 @@ impl Default for View {
             sidebar_scroll: 0,
             reveal_space: true,
             agent_scroll: 0,
+            switcher_scroll: 0,
             want_focus: None,
         }
     }

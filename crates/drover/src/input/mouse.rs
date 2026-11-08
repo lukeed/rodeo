@@ -35,6 +35,9 @@ impl App {
             self.overlay_outcome(outcome);
             return;
         }
+        if self.switcher_mouse(&event) {
+            return;
+        }
         if self.view.drag.is_some()
             && matches!(
                 event.kind,
