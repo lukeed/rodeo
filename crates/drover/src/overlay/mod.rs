@@ -1,6 +1,7 @@
 mod confirm;
 mod field;
 pub mod frame;
+pub mod goto;
 pub mod help;
 mod rename;
 pub mod scroll;
@@ -95,4 +96,4 @@ pub fn open(kind: &Kind, ctx: &Ctx<'_>) -> Option<Box<dyn Overlay>> {
     OPENERS.iter().find_map(|opener| opener(kind, ctx))
 }
 
-const OPENERS: &[Opener] = &[help::open];
+const OPENERS: &[Opener] = &[help::open, goto::open];
