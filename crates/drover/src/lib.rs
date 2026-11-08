@@ -1,9 +1,11 @@
 pub mod actions;
 pub mod agents;
 pub mod app;
+pub mod appearance;
 pub mod cli;
 pub mod hits;
 pub mod host;
+pub mod host_input;
 pub mod ids;
 pub mod input;
 pub mod layout;

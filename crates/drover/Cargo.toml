@@ -16,6 +16,8 @@ hc = { package = "drover-hc", path = "../hc" }
 ratatui = "0.30"
 rustix = { version = "1.1.6", features = ["event", "stdio", "system", "termios"] }
 serde_json = "1"
+terminput = "0.5.16"
+terminput-crossterm = "0.4.12"
 time = { version = "0.3", features = ["formatting", "local-offset"] }
 tokio = { version = "1.53.1", features = ["rt", "macros", "sync", "time", "signal"] }
 tracing = "0.1"

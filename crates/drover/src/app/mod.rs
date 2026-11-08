@@ -63,6 +63,7 @@ pub struct HostInfo {
     pub fg: Option<Rgb>,
     pub bg: Option<Rgb>,
     pub cursor: Option<Rgb>,
+    pub scheme: Option<config::Appearance>,
     pub cell_px: (u32, u32),
 }
 
@@ -156,7 +157,7 @@ impl App {
         let config = options.loaded.config;
         let build = config.keymap();
         let prefs = Preferences::load(&options.prefs_path);
-        let palette = config.palette(None);
+        let palette = config.palette(options.host.appearance());
         let notices = Notices::new(&options.env);
         let mut app = Self {
             env: options.env,
@@ -362,7 +363,7 @@ impl App {
         if build.prefix_error.is_none() && !keys_kept {
             self.keymap = build.keymap;
         }
-        self.palette = self.config.palette(None);
+        self.palette = self.config.palette(self.host.appearance());
         self.diagnostics = reload.diagnostics;
         self.mouse_captured = None;
         let detail = match status {
