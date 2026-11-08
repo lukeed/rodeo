@@ -28,7 +28,8 @@ fn an_empty_doc_gets_a_space_with_a_running_shell() {
         let space = &doc.spaces[0];
         assert!(doc::is_id(&space.id, doc::Prefix::Space));
         assert_eq!(space.name, "");
-        assert!(space.folder.starts_with('/'));
+        let launched = std::env::current_dir().expect("a cwd");
+        assert_eq!(space.folder, launched.display().to_string());
         let tab = &space.tabs[0];
         assert_eq!(tab.root.id, tab.id);
         let address = tab.addresses()[0].clone();
@@ -38,6 +39,7 @@ fn an_empty_doc_gets_a_space_with_a_running_shell() {
         assert_eq!(terminal.label("herdr.space"), Some(space.id.as_str()));
         assert_eq!(terminal.label("herdr.tab"), Some(tab.id.as_str()));
         assert_eq!(terminal.label("herdr.seen"), Some("0"));
+        assert_eq!(terminal.cwd, space.folder);
         let screen = h.screen();
         assert!(screen.contains(" spaces"), "{screen}");
         assert!(screen.contains(" agents"), "{screen}");

@@ -171,7 +171,10 @@ impl App {
         }
         self.first_space = true;
         if self.machines.spaces().is_empty() {
-            self.new_workspace_now(String::new());
+            match super::spawn::launch_dir() {
+                Some(dir) => self.new_space_in(None, dir, String::new()),
+                None => self.new_workspace_now(String::new()),
+            }
         }
     }
 }
