@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use config::AgentPanelSort;
 
 use crate::agents::State;
@@ -10,6 +12,25 @@ pub struct MachineRow {
     pub state: String,
     pub connected: bool,
     pub active: bool,
+    pub status: MachineStatus,
+    pub auth: bool,
+    pub why: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum MachineStatus {
+    #[default]
+    Online,
+    Connecting,
+    Reconnecting,
+    Attention,
+    Disabled,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Worktree {
+    pub key: String,
+    pub linked: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -28,6 +49,8 @@ pub struct SpaceRow {
     pub ahead: u32,
     pub behind: u32,
     pub tabs: usize,
+    pub worktree: Option<Worktree>,
+    pub stale: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -69,6 +92,8 @@ pub struct AgentRow {
     pub terminal_title_stripped: String,
     pub changed_ms: u64,
     pub focused: bool,
+    pub stale: bool,
+    pub labels: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,6 +103,8 @@ pub struct Snapshot {
     pub tabs: Vec<TabRow>,
     pub panes: Vec<PaneRow>,
     pub agents: Vec<AgentRow>,
+    pub stale_spaces: Vec<SpaceRow>,
+    pub stale_agents: Vec<AgentRow>,
     pub active_space: Option<String>,
     pub active_tab: Option<String>,
     pub focused_pane: Option<String>,
@@ -96,6 +123,8 @@ impl Default for Snapshot {
             tabs: Vec::new(),
             panes: Vec::new(),
             agents: Vec::new(),
+            stale_spaces: Vec::new(),
+            stale_agents: Vec::new(),
             active_space: None,
             active_tab: None,
             focused_pane: None,

@@ -1,98 +1,124 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 
-use super::{Ctx, Hits};
+use super::{AgentHit, Ctx, Hits, SpaceHit, compact_sections, ordered_agents, put};
 use crate::agents::State;
 
 pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     let p = ctx.palette;
-    let content = Rect::new(area.x, area.y, area.width.saturating_sub(1), area.height);
-    let h = content.height;
-    let split = h >= 7;
-    let spaces_rows = if split {
-        h.div_ceil(2)
-    } else {
-        h.saturating_sub(1)
-    };
-    let indicators = ctx.config.ui.status_indicators;
-    for (i, space) in ctx.snapshot.spaces.iter().enumerate() {
-        let Ok(offset) = u16::try_from(i) else {
-            break;
-        };
-        if offset >= spaces_rows {
-            break;
-        }
-        let y = content.y + offset;
-        let row = Rect::new(content.x, y, content.width, 1);
-        let (fg, bg) = if space.selected {
-            let bg = if p.selection_bg == Color::Reset {
-                p.active_row_bg
-            } else {
-                p.selection_bg
-            };
-            (p.overlay1, Some(bg))
-        } else if space.focused {
-            (p.text, Some(p.active_row_bg))
-        } else {
-            (p.overlay0, None)
-        };
-        if let Some(bg) = bg {
-            buf.set_style(row, Style::new().bg(bg));
-        }
-        buf.set_stringn(row.x, y, format!("{:<2}", i + 1), 2, Style::new().fg(fg));
-        let state = space.state.unwrap_or(State::Unknown);
-        if content.width >= 3 {
-            buf.set_string(
-                row.x + 2,
-                y,
-                state.icon(indicators),
-                Style::new().fg(state.color(p)),
-            );
-        }
-        hits.spaces.push((row, space.key.clone()));
-    }
-    if split {
-        let divider = content.y + spaces_rows;
-        buf.set_stringn(
-            content.x,
+    let (top, divider, bottom) = compact_sections(area);
+    spaces(buf, top, ctx, hits);
+    if let Some(divider) = divider {
+        put(
+            buf,
+            top.x,
             divider,
-            "─".repeat(usize::from(content.width)),
-            usize::from(content.width),
+            top.width,
+            &"─".repeat(usize::from(top.width)),
             Style::new().fg(p.surface_dim),
         );
-        let last = content.bottom().saturating_sub(1);
-        for (i, agent) in ctx.snapshot.ordered_agents().into_iter().enumerate() {
-            let Ok(offset) = u16::try_from(i) else {
-                break;
-            };
-            let y = divider + 1 + offset;
-            if y >= last {
-                break;
-            }
-            let row = Rect::new(content.x, y, content.width, 1);
-            if agent.focused {
-                buf.set_style(row, Style::new().bg(p.active_row_bg));
-            }
-            let fg = if agent.focused { p.text } else { p.overlay0 };
-            buf.set_stringn(row.x, y, format!("{:<2}", i + 1), 2, Style::new().fg(fg));
-            if content.width >= 3 {
-                buf.set_string(
-                    row.x + 2,
-                    y,
-                    agent.state.icon(indicators),
-                    Style::new().fg(agent.state.color(p)),
-                );
-            }
-            hits.agents.push((row, agent.pane.clone()));
-        }
     }
-    let toggle = Rect::new(content.x + 1, area.bottom() - 1, 1, 1);
-    let style = if ctx.snapshot.menu_attention {
-        Style::new().fg(p.accent).add_modifier(Modifier::BOLD)
-    } else {
-        Style::new().fg(p.overlay0)
-    };
-    buf[(toggle.x, toggle.y)].set_symbol("»").set_style(style);
-    hits.toggle = Some(toggle);
+    agents(buf, bottom, ctx, hits);
+    if top.width > 0 {
+        let toggle = Rect::new(top.x + top.width / 2, area.bottom() - 1, 1, 1);
+        let style = if ctx.snapshot.menu_attention {
+            Style::new().fg(p.accent).add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(p.overlay0)
+        };
+        put(buf, toggle.x, toggle.y, 1, "»", style);
+        hits.toggle = Some(toggle);
+    }
+}
+
+fn spaces(buf: &mut Buffer, top: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
+    let p = ctx.palette;
+    let indicators = ctx.config.ui.status_indicators;
+    for (i, space) in ctx
+        .snapshot
+        .spaces
+        .iter()
+        .take(usize::from(top.height))
+        .enumerate()
+    {
+        let y = top.y + u16::try_from(i).unwrap_or(0);
+        let rect = Rect::new(top.x, y, top.width, 1);
+        let number = if space.selected {
+            let bg = ctx.selection_bg();
+            buf.set_style(rect, Style::new().bg(bg));
+            Style::new().fg(p.overlay1).bg(bg)
+        } else if space.focused {
+            let bg = ctx.active_bg();
+            buf.set_style(rect, Style::new().bg(bg));
+            Style::new().fg(p.text).bg(bg)
+        } else {
+            Style::new().fg(p.overlay0)
+        };
+        put(
+            buf,
+            rect.x,
+            y,
+            rect.width.min(2),
+            &format!("{:<2}", i + 1),
+            number,
+        );
+        let state = space.state.unwrap_or(State::Unknown);
+        put(
+            buf,
+            rect.x + 2,
+            y,
+            rect.width.saturating_sub(2),
+            state.icon(indicators),
+            Style::new().fg(state.color(p)),
+        );
+        hits.spaces.push(SpaceHit {
+            rect,
+            key: space.key.clone(),
+            machine: space.machine.clone(),
+            indented: false,
+            stale: false,
+            group: None,
+        });
+    }
+}
+
+fn agents(buf: &mut Buffer, bottom: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
+    let p = ctx.palette;
+    let indicators = ctx.config.ui.status_indicators;
+    let rows = usize::from(bottom.height.saturating_sub(1));
+    for (i, agent) in ordered_agents(ctx.snapshot)
+        .into_iter()
+        .take(rows)
+        .enumerate()
+    {
+        let y = bottom.y + u16::try_from(i).unwrap_or(0);
+        let rect = Rect::new(bottom.x, y, bottom.width, 1);
+        if agent.focused {
+            buf.set_style(rect, Style::new().bg(p.active_row_bg));
+        }
+        let fg = if agent.focused { p.text } else { p.overlay0 };
+        put(
+            buf,
+            rect.x,
+            y,
+            rect.width.min(2),
+            &format!("{:<2}", i + 1),
+            Style::new().fg(fg),
+        );
+        put(
+            buf,
+            rect.x + 2,
+            y,
+            rect.width.saturating_sub(2),
+            agent.state.icon(indicators),
+            Style::new().fg(agent.state.color(p)),
+        );
+        hits.agents.push(AgentHit {
+            rect,
+            pane: agent.pane.clone(),
+            machine: None,
+            stale: false,
+        });
+    }
 }
