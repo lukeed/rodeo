@@ -137,7 +137,22 @@ impl App {
         };
         let titled =
             matches!(&notice, Notice::Event(event) if matches!(event.change, Change::Title { .. }));
-        match self.terminals.apply(notice) {
+        let watched = match &notice {
+            Notice::Event(event)
+                if matches!(event.change, Change::Status { .. } | Change::Turn { .. }) =>
+            {
+                event
+                    .terminal
+                    .clone()
+                    .map(|address| (self.agent_state(&address), address))
+            }
+            _ => None,
+        };
+        let update = self.terminals.apply(notice);
+        if let Some((before, address)) = watched {
+            self.agent_changed(&address, before);
+        }
+        match update {
             Update::Nothing => {}
             Update::Doc {
                 machine,

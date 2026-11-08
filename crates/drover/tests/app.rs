@@ -595,3 +595,63 @@ fn clicks_focus_panes_and_tabs() {
         assert_eq!(h.app().prefs.sidebar_collapsed, Some(true));
     });
 }
+
+#[test]
+fn agents_toast_and_get_marked_seen() {
+    run(|| async {
+        let mut h =
+            Harness::with_config("[ui.toast]\ndelivery = \"herdr\"\ndelay_seconds = 0\n").await;
+        h.ready().await;
+        let doc = h
+            .until_stored("the first space", |d| d.spaces.len() == 1)
+            .await;
+        let space = doc.spaces[0].id.clone();
+        let tab = doc::fresh_id(doc::Prefix::Tab);
+        let script = r#"sleep 1; printf '\033]7501;state=working:app=claude-code\033\\'; sleep 0.5; printf '\033]7501;state=idle:app=claude-code\033\\'; sleep 60"#;
+        let agent = h
+            .outside
+            .run(&hc::RunParams {
+                line: Some(script.into()),
+                labels: [
+                    ("herdr.space".to_owned(), space),
+                    ("herdr.tab".to_owned(), tab.clone()),
+                    ("herdr.seen".to_owned(), "0".to_owned()),
+                ]
+                .into(),
+                ..hc::RunParams::default()
+            })
+            .await
+            .expect("an agent");
+        h.until_stored("a tab for the agent", |d| d.spaces[0].tabs.len() == 2)
+            .await;
+        h.until("the finished toast", |h| {
+            h.screen().contains("claude finished")
+        })
+        .await;
+        let row = h
+            .app()
+            .snapshot()
+            .agents
+            .into_iter()
+            .find(|a| a.address == agent.address);
+        assert_eq!(row.map(|r| r.state), Some(drover::agents::State::Done));
+        assert!(h.screen().contains("claude"), "the agents list shows it");
+        h.prefix_char('o').await;
+        assert_eq!(h.focused_address().as_deref(), Some(agent.address.as_str()));
+        let mut seen = None;
+        for _ in 0..100 {
+            let record = h.outside.get(&agent.address).await.expect("the agent");
+            if record.label("herdr.seen") == Some("1") {
+                seen = Some(record);
+                break;
+            }
+            h.pump().await;
+        }
+        assert!(seen.is_some(), "drover marks the turn seen");
+        h.until("the agent idle", |h| {
+            h.app().agent_state(&agent.address) == Some(drover::agents::State::Idle)
+        })
+        .await;
+        h.outside.kill(&agent.address).await.expect("kill");
+    });
+}
