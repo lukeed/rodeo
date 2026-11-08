@@ -14,6 +14,7 @@ impl App {
         match event {
             Event::Key(key) => {
                 self.error = None;
+                self.links.hover = None;
                 self.key(key);
             }
             Event::Mouse(mouse) => {
@@ -36,6 +37,9 @@ impl App {
     }
 
     fn paste(&mut self, text: &str) {
+        if self.popup_paste(text) {
+            return;
+        }
         if let Some(mut overlay) = self.view.overlay.take() {
             let outcome = overlay.paste(text);
             self.view.overlay = Some(overlay);
@@ -50,6 +54,10 @@ impl App {
             return;
         }
         self.view.selection = None;
+        if text.is_empty() {
+            self.image_paste(None);
+            return;
+        }
         let Some(address) = self.focused_address() else {
             return;
         };

@@ -243,6 +243,7 @@ fn terminal(
             style: selection_style(app),
         });
     }
+    highlights.extend(app.hover_highlight(address));
     let rendered = term.render(
         pane.content,
         buf,

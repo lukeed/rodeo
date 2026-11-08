@@ -118,14 +118,6 @@ impl App {
         self.open_overlay(&Kind::GlobalMenu);
     }
 
-    pub fn edit_scrollback(&mut self) {
-        tracing::info!("edit_scrollback is not available yet");
-    }
-
-    pub fn open_popup(&mut self, command: &str) {
-        tracing::info!(command, "popup commands are not available yet");
-    }
-
     fn target_space(&self) -> Option<String> {
         match self.view.mode {
             Mode::Navigate => self.view.nav.clone().or_else(|| self.view.space.clone()),
@@ -766,7 +758,7 @@ impl App {
                 Some(vec!["/bin/sh".into(), "-c".into(), command.command.clone()]),
                 true,
             ),
-            CommandKind::Popup => self.open_popup(&command.command),
+            CommandKind::Popup => self.open_popup(&command),
             CommandKind::PluginAction => self.show_error("plugin actions are not supported"),
         }
     }
@@ -776,30 +768,7 @@ impl App {
             return;
         };
         let machine = self.active_machine();
-        let mut env = std::collections::BTreeMap::new();
-        if let Some(space) = &self.view.space {
-            env.insert(
-                "HERDR_ACTIVE_WORKSPACE_ID".to_owned(),
-                local(space, machine.as_deref()).to_owned(),
-            );
-        }
-        if let Some(tab) = self.view.active_tab(&self.machines) {
-            env.insert(
-                "HERDR_ACTIVE_TAB_ID".to_owned(),
-                local(&tab, machine.as_deref()).to_owned(),
-            );
-        }
-        let pane = self.view.focused_pane(&self.machines);
-        if let Some(pane) = &pane {
-            env.insert(
-                "HERDR_ACTIVE_PANE_ID".to_owned(),
-                local(pane, machine.as_deref()).to_owned(),
-            );
-        }
-        let cwd = pane.as_deref().and_then(|p| self.live_cwd(p));
-        if let Some(cwd) = &cwd {
-            env.insert("HERDR_ACTIVE_PANE_CWD".to_owned(), cwd.clone());
-        }
+        let (env, cwd) = self.active_env();
         let params = ExecParams {
             argv: vec!["/bin/sh".into(), "-lc".into(), command.to_owned()],
             on: machine,

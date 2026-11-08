@@ -22,6 +22,10 @@ fn clamp_in(rect: Rect, x: u16, y: u16) -> (u16, u16) {
 
 impl App {
     pub(super) fn mouse(&mut self, event: MouseEvent) {
+        self.update_hover(event);
+        if self.popup_mouse(event) || self.link_click(event) {
+            return;
+        }
         if let Some(mut overlay) = self.view.overlay.take() {
             let snapshot = self.snapshot();
             let ctx = crate::overlay::Ctx {

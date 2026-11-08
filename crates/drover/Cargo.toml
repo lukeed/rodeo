@@ -17,7 +17,7 @@ ratatui = "0.30"
 rustix = { version = "1.1.6", features = ["event", "stdio", "system", "termios"] }
 serde_json = "1"
 time = { version = "0.3", features = ["formatting", "local-offset"] }
-tokio = { version = "1.53.1", features = ["rt", "macros", "sync", "time", "signal"] }
+tokio = { version = "1.53.1", features = ["rt", "macros", "sync", "time", "signal", "process", "io-util", "fs"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "std"] }
 unicode-segmentation = "1.13"

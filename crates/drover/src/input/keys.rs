@@ -9,6 +9,9 @@ impl App {
         if key.kind == KeyEventKind::Release {
             return;
         }
+        if self.popup_key(&key) {
+            return;
+        }
         if let Some(mut overlay) = self.view.overlay.take() {
             let snapshot = self.snapshot();
             let ctx = crate::overlay::Ctx {
@@ -72,6 +75,10 @@ impl App {
     }
 
     fn terminal_key(&mut self, key: KeyEvent) {
+        if self.keymap.is_image_paste(key) {
+            self.image_paste(Some(key));
+            return;
+        }
         match self.keymap.resolve_terminal(key) {
             Some(TerminalKey::Run(action)) => self.run_action(action),
             Some(TerminalKey::EnterPrefix) => self.view.mode = Mode::Prefix,

@@ -61,6 +61,11 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     } else if !online || app.machines.spaces().is_empty() && !app.machines.local().slot.is_ready() {
         unavailable(app, buf, regions.surface);
     }
+    if let Some(popup) = crate::popup::render(app, buf) {
+        cursor = Some(popup);
+    } else if app.popup.is_some() {
+        cursor = None;
+    }
     if app.view.overlay.is_none() {
         modebar::render(app, buf, &mut hits);
     }
