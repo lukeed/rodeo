@@ -611,7 +611,7 @@ fn agents_toast_and_get_marked_seen() {
             .await;
         let space = doc.spaces[0].id.clone();
         let tab = doc::fresh_id(doc::Prefix::Tab);
-        let script = r"sleep 1; printf '\033]7501;state=working:app=claude-code\033\\'; sleep 0.5; printf '\033]7501;state=idle:app=claude-code\033\\'; sleep 60";
+        let script = r"sleep 3; printf '\033]7501;state=working:app=claude-code\033\\'; sleep 0.5; printf '\033]7501;state=idle:app=claude-code\033\\'; sleep 60";
         let agent = h
             .outside
             .run(&hc::RunParams {
@@ -690,5 +690,61 @@ fn mod_blocks_show_a_folder_tree_or_a_placeholder() {
         .await;
         h.until("the placeholder", |h| h.screen().contains("changes mod"))
             .await;
+    });
+}
+
+#[test]
+fn two_clients_share_one_layout_without_duplicates() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let mut other = h.second();
+        let started = std::time::Instant::now();
+        while other.app.view.active_tab(&other.app.machines).is_none() {
+            assert!(
+                started.elapsed() < common::WITHIN,
+                "the second client loads the layout"
+            );
+            h.both(&mut other).await;
+        }
+        h.prefix_char('v').await;
+        let held = std::time::Instant::now();
+        while held.elapsed() < std::time::Duration::from_millis(2600) {
+            let _ = tokio::time::timeout(std::time::Duration::from_millis(50), other.step()).await;
+        }
+        h.prefix(KeyCode::Char('-'), KeyModifiers::NONE).await;
+        let doc = h
+            .until_stored("three panes", |d| d.addresses().len() == 3)
+            .await;
+        let started = std::time::Instant::now();
+        loop {
+            h.both(&mut other).await;
+            let theirs = other.app.machines.local().slot.doc().addresses();
+            if theirs.len() == 3 && other.app.machines.local().slot.is_settled() {
+                break;
+            }
+            assert!(
+                started.elapsed() < common::WITHIN,
+                "the second client shows the splits: {theirs:?}"
+            );
+        }
+        for _ in 0..30 {
+            h.both(&mut other).await;
+        }
+        let (stored, _) = h.stored().await;
+        let mut addresses = stored.addresses();
+        addresses.sort();
+        addresses.dedup();
+        assert_eq!(
+            addresses.len(),
+            stored.addresses().len(),
+            "no terminal shows twice: {stored:#?}"
+        );
+        assert_eq!(stored.addresses().len(), doc.addresses().len());
+        assert_ne!(
+            other.app.view.focused_pane(&other.app.machines),
+            h.focused(),
+            "each client keeps its own focus"
+        );
     });
 }

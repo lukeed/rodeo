@@ -98,6 +98,38 @@ impl Harness {
         }
     }
 
+    pub fn second(&self) -> Runner<TestBackend> {
+        let options = Options {
+            env: self.core.env().clone(),
+            config_path: self.config_path.clone(),
+            prefs_path: self
+                .core
+                .root()
+                .join("state")
+                .join("drover")
+                .join("second.json"),
+            loaded: config::Config::load(&self.config_path),
+            host: HostInfo {
+                cell_px: (8, 16),
+                ..HostInfo::default()
+            },
+            caller: None,
+            notes: Vec::new(),
+            hostname: "testhost".into(),
+        };
+        Runner::new(
+            options,
+            TestBackend::new(100, 30),
+            Box::new(Sink::default()),
+        )
+        .expect("a second runner")
+    }
+
+    pub async fn both(&mut self, other: &mut Runner<TestBackend>) {
+        let _ = tokio::time::timeout(Duration::from_millis(50), self.runner.step()).await;
+        let _ = tokio::time::timeout(Duration::from_millis(50), other.step()).await;
+    }
+
     pub fn app(&self) -> &App {
         &self.runner.app
     }

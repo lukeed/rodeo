@@ -10,6 +10,7 @@ use crate::ids::{local, qualify};
 use crate::sync::Edit;
 
 const GRACE: Duration = Duration::from_secs(5);
+const ADOPT_GRACE_MS: u64 = 2000;
 const WHERE: &str = "where";
 
 impl App {
@@ -30,9 +31,11 @@ impl App {
 
     fn adopt_orphans(&mut self) {
         let shown: Vec<String> = self.machines.panes().filter_map(|p| p.address()).collect();
+        let now = now_ms();
         let mut orphans = Vec::new();
         for terminal in self.terminals.iter() {
             if !terminal.is_live()
+                || now.saturating_sub(terminal.created_ms) < ADOPT_GRACE_MS
                 || shown.contains(&terminal.address)
                 || self.adopting.contains(&terminal.address)
                 || self.killing.contains(&terminal.address)
@@ -286,4 +289,12 @@ impl App {
             });
         space.space.display_name(resolved.as_deref(), home)
     }
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| {
+            u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)
+        })
 }

@@ -177,11 +177,15 @@ impl App {
     }
 
     fn landed(&mut self, machine: Option<&str>, address: &str, edit: Edit, pane: String) {
-        if self.edit(machine, edit) {
-            self.view.want_focus = Some(pane);
-            self.after_docs();
-        } else {
-            self.kill(qualify(address, machine));
+        let qualified = qualify(address, machine);
+        self.edit(machine, edit);
+        let placed = self.machines.pane_of_address(&qualified).map(|p| p.key());
+        match placed {
+            Some(placed) => {
+                self.view.want_focus = Some(if placed == pane { pane } else { placed });
+                self.after_docs();
+            }
+            None => self.kill(qualified),
         }
     }
 
@@ -287,6 +291,7 @@ impl App {
         };
         let machine = target.machine.map(str::to_owned);
         let target_id = target.node.id.clone();
+        let holds = target.node.address().map(str::to_owned);
         let space_id = target.space.id.clone();
         let tab_id = target.tab.id.clone();
         let space_key = target.space_key();
@@ -297,7 +302,7 @@ impl App {
             .unwrap_or_default();
         let pane = doc.fresh_id(Prefix::Pane);
         let cwd = self.new_cwd(Some(&target_key), Some(&space_key), machine.as_deref());
-        let edit = split_edit(&target_id, axis, &pane, PLACEHOLDER);
+        let edit = split_edit(&target_id, holds.as_deref(), axis, &pane, PLACEHOLDER);
         let size = if zoom {
             let surface = self.regions.surface;
             (surface.width, surface.height)
@@ -316,7 +321,7 @@ impl App {
         };
         self.launch(spawn, move |app, result| match result {
             Ok(address) => {
-                let edit = split_edit(&target_id, axis, &pane, &address);
+                let edit = split_edit(&target_id, holds.as_deref(), axis, &pane, &address);
                 let tab_key = qualify(&tab_id, machine.as_deref());
                 app.landed(
                     machine.as_deref(),
@@ -378,6 +383,9 @@ fn new_space_edit(
         address.to_owned(),
     );
     Rc::new(move |doc: &mut Document| {
+        if doc.pane_of_terminal(&address).is_some() {
+            return Ok(());
+        }
         doc.new_space(
             &space,
             &name,
@@ -400,6 +408,9 @@ fn new_tab_edit(space: &str, tab: &str, name: &str, pane: &str, address: &str) -
         address.to_owned(),
     );
     Rc::new(move |doc: &mut Document| {
+        if doc.pane_of_terminal(&address).is_some() {
+            return Ok(());
+        }
         doc.new_tab(
             &space,
             Tab::new(
@@ -412,9 +423,17 @@ fn new_tab_edit(space: &str, tab: &str, name: &str, pane: &str, address: &str) -
     })
 }
 
-fn split_edit(target: &str, axis: Axis, pane: &str, address: &str) -> Edit {
-    let (target, pane, address) = (target.to_owned(), pane.to_owned(), address.to_owned());
+fn split_edit(target: &str, holds: Option<&str>, axis: Axis, pane: &str, address: &str) -> Edit {
+    let (target, holds) = (target.to_owned(), holds.map(str::to_owned));
+    let (pane, address) = (pane.to_owned(), address.to_owned());
     Rc::new(move |doc: &mut Document| {
+        if doc.pane_of_terminal(&address).is_some() {
+            return Ok(());
+        }
+        let target = holds
+            .as_deref()
+            .and_then(|held| doc.pane_of_terminal(held))
+            .map_or_else(|| target.clone(), |found| found.node.id.clone());
         doc.split_pane(&target, axis, Node::terminal(pane.clone(), address.clone()))
             .map(|_| ())
     })
