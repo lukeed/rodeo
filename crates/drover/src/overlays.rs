@@ -48,6 +48,18 @@ impl App {
         }
     }
 
+    pub fn preview_theme(&mut self, theme: Option<&str>) {
+        self.palette = match theme {
+            Some(name) => {
+                let mut preview = self.config.theme.clone();
+                preview.name = Some(name.to_owned());
+                preview.auto_switch = false;
+                preview.palette(Some(&self.config.ui.accent), None)
+            }
+            None => self.config.palette(None),
+        };
+    }
+
     pub fn menu_pick(&mut self, target: MenuTarget, pick: Pick) {
         match target {
             MenuTarget::Space(space) => self.space_pick(space, pick),
