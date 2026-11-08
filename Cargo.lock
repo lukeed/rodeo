@@ -413,6 +413,7 @@ dependencies = [
  "base64",
  "crossterm",
  "libghostty-vt",
+ "memchr",
  "png",
  "ratatui-core",
  "thiserror 2.0.21",
