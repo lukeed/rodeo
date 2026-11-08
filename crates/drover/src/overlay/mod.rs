@@ -1,7 +1,9 @@
 mod confirm;
 mod field;
 pub mod frame;
+pub mod help;
 mod rename;
+pub mod scroll;
 
 use config::{Config, Keymap, Palette};
 use crossterm::event::{KeyEvent, MouseEvent};
@@ -93,4 +95,4 @@ pub fn open(kind: &Kind, ctx: &Ctx<'_>) -> Option<Box<dyn Overlay>> {
     OPENERS.iter().find_map(|opener| opener(kind, ctx))
 }
 
-const OPENERS: &[Opener] = &[];
+const OPENERS: &[Opener] = &[help::open];
