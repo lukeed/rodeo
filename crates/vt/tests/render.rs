@@ -4,7 +4,7 @@ use common::{lines, term};
 use ratatui_core::buffer::{Buffer, CellDiffOption};
 use ratatui_core::layout::Rect;
 use ratatui_core::style::{Color, Modifier, Style};
-use vt::{Cursor, CursorShape, Highlight, Point, RenderOptions, Terminal};
+use vt::{Cursor, CursorShape, Highlight, Point, RenderOptions, Terminal, UnderlineStyle};
 
 fn draw(t: &Terminal, area: Rect) -> (Buffer, Option<Cursor>) {
     let mut buf = Buffer::empty(Rect::new(0, 0, area.right() + 2, area.bottom() + 2));
@@ -36,11 +36,20 @@ fn styles_map_to_modifiers() {
     ];
     for (x, modifier) in expect.into_iter().enumerate() {
         assert_eq!(
-            buf[(u16::try_from(x).unwrap(), 0)].modifier,
+            buf[(u16::try_from(x).unwrap(), 0)].modifier & Modifier::all(),
             modifier,
             "col {x}"
         );
     }
+    assert_eq!(
+        UnderlineStyle::of(buf[(3, 0)].modifier),
+        Some(UnderlineStyle::Single)
+    );
+    assert_eq!(
+        UnderlineStyle::of(buf[(8, 0)].modifier),
+        Some(UnderlineStyle::Curly)
+    );
+    assert_eq!(UnderlineStyle::of(buf[(0, 0)].modifier), None);
     assert_eq!(buf[(8, 0)].underline_color, Color::Indexed(2));
     assert_eq!(buf[(3, 0)].underline_color, Color::Reset);
     assert_eq!(text(&buf, 0, 0, 10), "BFIUKRHSCN");

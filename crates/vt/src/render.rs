@@ -12,6 +12,44 @@ use unicode_width::UnicodeWidthStr;
 use crate::grid::Point;
 use crate::term::{Error, Terminal, Vt};
 
+const UNDERLINE_SHIFT: u16 = 12;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnderlineStyle {
+    Single = 1,
+    Double = 2,
+    Curly = 3,
+    Dotted = 4,
+    Dashed = 5,
+}
+
+impl UnderlineStyle {
+    pub fn of(modifier: Modifier) -> Option<Self> {
+        if !modifier.contains(Modifier::UNDERLINED) {
+            return None;
+        }
+        Some(match (modifier.bits() >> UNDERLINE_SHIFT) & 0x7 {
+            2 => Self::Double,
+            3 => Self::Curly,
+            4 => Self::Dotted,
+            5 => Self::Dashed,
+            _ => Self::Single,
+        })
+    }
+
+    fn mark(underline: Underline, modifier: Modifier) -> Modifier {
+        let style = match underline {
+            Underline::None => return modifier,
+            Underline::Double => Self::Double,
+            Underline::Curly => Self::Curly,
+            Underline::Dotted => Self::Dotted,
+            Underline::Dashed => Self::Dashed,
+            _ => Self::Single,
+        };
+        Modifier::from_bits_retain(modifier.bits() | ((style as u16) << UNDERLINE_SHIFT))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorShape {
     #[default]
@@ -182,7 +220,7 @@ impl Renderer {
                 .into_iter()
                 .filter(|(on, _)| *on)
                 .fold(Modifier::empty(), |out, (_, flag)| out | flag);
-                style = style.add_modifier(modifier);
+                style = style.add_modifier(UnderlineStyle::mark(vt_style.underline, modifier));
                 text.clear();
                 cell.graphemes_utf8(text)?;
                 let target = &mut buf[(area.x + x, area.y + y)];
