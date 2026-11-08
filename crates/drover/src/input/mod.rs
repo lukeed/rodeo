@@ -101,6 +101,7 @@ impl App {
             Request::Focus(crate::overlay::Focus::Space(space)) => self.focus_space(&space),
             Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
             Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),
+            Request::Worktree(op) => self.worktree_op(op),
             Request::Settings(edit) => match edit.write(&self.config_path) {
                 Ok(()) => self.reload_config(),
                 Err(error) => {

@@ -6,6 +6,7 @@ mod notify;
 mod reconcile;
 mod snapshot;
 mod spawn;
+mod worktree;
 
 use std::collections::{HashMap, HashSet};
 use std::future::Future;

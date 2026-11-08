@@ -107,6 +107,7 @@ impl App {
             };
         }
         self.view.overlay = Some(opened);
+        self.overlay_opened();
     }
 
     pub fn context_menu(&mut self, target: MenuTarget) {

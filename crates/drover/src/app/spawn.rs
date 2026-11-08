@@ -196,6 +196,10 @@ impl App {
         let folder = self
             .new_cwd(source.as_deref(), space_key.as_deref(), machine.as_deref())
             .unwrap_or_default();
+        self.new_space_in(machine, folder, name);
+    }
+
+    pub fn new_space_in(&mut self, machine: Option<String>, folder: String, name: String) {
         let Some(doc) = self
             .machines
             .get(machine.as_deref())

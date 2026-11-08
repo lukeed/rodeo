@@ -2,6 +2,7 @@ mod confirm;
 mod field;
 pub mod frame;
 mod rename;
+pub mod worktree;
 
 use config::{Config, Keymap, Palette};
 use crossterm::event::{KeyEvent, MouseEvent};
@@ -13,6 +14,7 @@ use crate::model::Snapshot;
 pub use confirm::{CloseTarget, ConfirmClose};
 pub use field::TextField;
 pub use rename::{Rename, RenameTarget};
+pub use worktree::{Worktree, WorktreeOp};
 
 pub struct Ctx<'a> {
     pub palette: &'a Palette,
@@ -36,6 +38,7 @@ pub enum Request {
     Navigate,
     Focus(Focus),
     Settings(config::Edit),
+    Worktree(WorktreeOp),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +49,7 @@ pub enum Outcome {
     Keep(Request),
 }
 
-pub trait Overlay {
+pub trait Overlay: std::any::Any {
     fn kind(&self) -> Kind;
 
     fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)>;
@@ -93,4 +96,4 @@ pub fn open(kind: &Kind, ctx: &Ctx<'_>) -> Option<Box<dyn Overlay>> {
     OPENERS.iter().find_map(|opener| opener(kind, ctx))
 }
 
-const OPENERS: &[Opener] = &[];
+const OPENERS: &[Opener] = &[worktree::open];

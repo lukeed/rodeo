@@ -93,7 +93,7 @@ impl App {
         self.refresh_status();
     }
 
-    fn space_cwd(&self, key: &str) -> Option<(Option<String>, String)> {
+    pub(crate) fn space_cwd(&self, key: &str) -> Option<(Option<String>, String)> {
         let space = self.machines.space(key)?;
         let machine = space.machine.map(str::to_owned);
         let cwd = space
