@@ -139,8 +139,22 @@ impl App {
         (env, cwd)
     }
 
+    fn popup_cwd(&self, live: Option<String>) -> Option<String> {
+        let machine = self.active_machine();
+        live.or_else(|| {
+            self.view
+                .space
+                .as_deref()
+                .and_then(|s| self.machines.space(s))
+                .map(|s| s.space.folder.clone())
+                .filter(|f| !f.is_empty())
+        })
+        .or_else(|| machine.is_none().then(|| self.home()))
+    }
+
     pub fn open_popup(&mut self, command: &CustomCommand) {
-        let (env, cwd) = self.active_env();
+        let (env, live) = self.active_env();
+        let cwd = self.popup_cwd(live);
         let spec = Spec {
             argv: vec!["/bin/sh".into(), "-c".into(), command.command.clone()],
             machine: self.active_machine(),
@@ -170,7 +184,8 @@ impl App {
             .machines
             .pane(&pane_key)
             .and_then(|p| p.machine.map(str::to_owned));
-        let (mut env, cwd) = self.active_env();
+        let (mut env, live) = self.active_env();
+        let cwd = self.popup_cwd(live);
         if let Some(editor) = self.env.get("EDITOR").filter(|e| !e.is_empty()) {
             env.insert("EDITOR".to_owned(), editor.to_string_lossy().into_owned());
         }
