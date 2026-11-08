@@ -139,7 +139,7 @@ impl App {
     ) {
         let machine = spawn.machine.clone();
         let placeholder = pending(pane);
-        let Some(held) = self.hold(machine.as_deref(), make(&placeholder)) else {
+        let Some(held) = self.hold_edit(machine.as_deref(), make(&placeholder)) else {
             return;
         };
         let pane_key = qualify(pane, machine.as_deref());
@@ -159,22 +159,29 @@ impl App {
             Ok(address) => {
                 let qualified = qualify(&address, machine.as_deref());
                 app.panes.rename(&waiting, &qualified);
-                app.settle(machine.as_deref(), held, Some(make(&address)));
+                app.settle_edit(machine.as_deref(), held, Some(make(&address)));
                 if app.machines.pane_of_address(&qualified).is_none() {
                     app.kill(qualified);
                 }
             }
             Err(error) => {
-                app.settle(machine.as_deref(), held, None);
+                app.settle_edit(machine.as_deref(), held, None);
                 app.show_error(format!("cannot start a shell: {error}"));
             }
         });
     }
 
     pub fn new_workspace_now(&mut self, name: String) {
-        let machine = self.active_machine();
+        self.new_workspace_on(self.active_machine(), name);
+    }
+
+    pub fn new_workspace_on(&mut self, machine: Option<String>, name: String) {
         let source = self.view.focused_pane(&self.machines);
-        let space_key = self.view.space.clone();
+        let space_key = self
+            .view
+            .space
+            .clone()
+            .filter(|_| self.active_machine() == machine);
         let folder = self
             .new_cwd(source.as_deref(), space_key.as_deref(), machine.as_deref())
             .unwrap_or_default();

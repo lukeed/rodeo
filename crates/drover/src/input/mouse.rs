@@ -38,6 +38,14 @@ impl App {
         if self.switcher_mouse(&event) {
             return;
         }
+        if event.kind == MouseEventKind::Down(MouseButton::Left)
+            && self.sidebar_badge(event.column, event.row)
+        {
+            return;
+        }
+        if event.kind == MouseEventKind::Moved {
+            self.sidebar_hover(event.column, event.row);
+        }
         if self.view.drag.is_some()
             && matches!(
                 event.kind,
@@ -101,7 +109,7 @@ impl App {
         if let Some(toast) = self.hits.toast
             && inside(toast, x, y)
         {
-            if let Some(target) = self.notice.take().and_then(|n| n.target) {
+            if let Some(target) = self.take_notice().and_then(|n| n.target) {
                 self.focus_pane(&target);
             }
             return;
@@ -206,70 +214,23 @@ impl App {
         });
     }
 
-    fn sidebar_down(&mut self, x: u16, y: u16) -> bool {
-        let hits = self.hits.sidebar.clone();
-        if hits.toggle.is_some_and(|r| inside(r, x, y)) {
-            self.toggle_sidebar();
-            self.relayout();
-            return true;
-        }
-        if hits.divider.is_some_and(|r| inside(r, x, y)) {
-            let now = Instant::now();
-            let double = self.view.click.is_some_and(|c| {
-                c.target == ClickTarget::SidebarEdge && now.duration_since(c.when) <= DOUBLE_CLICK
-            });
-            self.view.click = Some(Click {
-                at: (x, y),
-                when: now,
-                target: ClickTarget::SidebarEdge,
-            });
-            if double {
-                self.prefs.sidebar_width = None;
-                self.save_prefs();
-                self.relayout();
-            } else {
-                self.view.drag = Some(Drag::SidebarEdge);
-            }
-            return true;
-        }
-        if hits.section_divider.is_some_and(|r| inside(r, x, y)) {
-            self.view.drag = Some(Drag::SectionDivider);
-            return true;
-        }
-        if hits.new_workspace.is_some_and(|r| inside(r, x, y)) {
-            self.run_action(Action::NewWorkspace);
-            return true;
-        }
-        if hits.menu.is_some_and(|r| inside(r, x, y)) {
-            self.global_menu();
-            return true;
-        }
-        if hits.agent_sort.is_some_and(|r| inside(r, x, y)) {
-            let current = self
-                .prefs
-                .agent_panel_sort
-                .unwrap_or(self.config.ui.agent_panel_sort);
-            self.prefs.agent_panel_sort = Some(match current {
-                config::AgentPanelSort::Spaces => config::AgentPanelSort::Priority,
-                config::AgentPanelSort::Priority => config::AgentPanelSort::Spaces,
-            });
-            self.view.agent_scroll = 0;
+    pub(super) fn sidebar_edge_down(&mut self, x: u16, y: u16) {
+        let now = Instant::now();
+        let double = self.view.click.is_some_and(|c| {
+            c.target == ClickTarget::SidebarEdge && now.duration_since(c.when) <= DOUBLE_CLICK
+        });
+        self.view.click = Some(Click {
+            at: (x, y),
+            when: now,
+            target: ClickTarget::SidebarEdge,
+        });
+        if double {
+            self.prefs.sidebar_width = None;
             self.save_prefs();
-            return true;
+            self.relayout();
+        } else {
+            self.view.drag = Some(Drag::SidebarEdge);
         }
-        if let Some((_, pane)) = hits.agents.iter().find(|(r, _)| inside(*r, x, y)) {
-            self.focus_pane(pane);
-            return true;
-        }
-        if let Some((_, space)) = hits.spaces.iter().find(|(r, _)| inside(*r, x, y)) {
-            self.view.drag = Some(Drag::Press {
-                target: Press::Space(space.clone()),
-                at: (x, y),
-                now: (x, y),
-            });
-            return true;
-        }
-        hits.area.is_some_and(|r| inside(r, x, y))
     }
 
     fn tab_bar_down(&mut self, x: u16, y: u16) -> bool {
@@ -302,15 +263,13 @@ impl App {
 
     fn right_down(&mut self, event: MouseEvent) {
         let (x, y) = (event.column, event.row);
-        if let Some((_, space)) = self
-            .hits
-            .sidebar
-            .spaces
-            .iter()
-            .find(|(r, _)| inside(*r, x, y))
-            .cloned()
-        {
-            self.context_menu(MenuTarget::Space(space), (x, y));
+        if let Some(space) = self.hits.sidebar.space_at(x, y).cloned() {
+            if self.hits.sidebar.spaces_body.is_some()
+                && !space.stale
+                && space.machine == self.hits.sidebar.active
+            {
+                self.context_menu(MenuTarget::Space(space.key), (x, y));
+            }
             return;
         }
         if let Some(tab) = self.hits.tab_at(x, y).map(str::to_owned) {
@@ -355,30 +314,7 @@ impl App {
             });
             return;
         }
-        if self
-            .hits
-            .sidebar
-            .spaces_body
-            .is_some_and(|r| inside(r, x, y))
-        {
-            self.view.sidebar_scroll = if up {
-                self.view.sidebar_scroll.saturating_sub(1)
-            } else {
-                self.view.sidebar_scroll + 1
-            };
-            return;
-        }
-        if self
-            .hits
-            .sidebar
-            .agents_body
-            .is_some_and(|r| inside(r, x, y))
-        {
-            self.view.agent_scroll = if up {
-                self.view.agent_scroll.saturating_sub(1)
-            } else {
-                self.view.agent_scroll + 1
-            };
+        if self.sidebar_wheel(x, y, up) {
             return;
         }
         let Some(hit) = self.hits.pane_at(x, y).cloned() else {
@@ -423,6 +359,7 @@ impl App {
         };
         match drag {
             Drag::Split { .. } => self.drag_split(&drag, x, y, up),
+            Drag::Sidebar(sidebar) => self.sidebar_drag(sidebar, y, up),
             Drag::SidebarEdge => {
                 let (min, max) = self.config.ui.sidebar_bounds_or_default();
                 self.prefs.sidebar_width = Some((x + 1).clamp(min, max));
@@ -491,21 +428,7 @@ impl App {
     fn release_press(&mut self, target: Press, at: (u16, u16), x: u16, y: u16) {
         let moved = at.0.abs_diff(x).max(at.1.abs_diff(y)) >= 1;
         match target {
-            Press::Space(space) => {
-                let over = self
-                    .hits
-                    .sidebar
-                    .spaces
-                    .iter()
-                    .any(|(r, k)| *k == space && inside(*r, x, y));
-                if !moved || over {
-                    self.focus_space(&space);
-                    if self.view.mode == Mode::Navigate {
-                        self.view.mode = Mode::Terminal;
-                        self.view.nav = None;
-                    }
-                }
-            }
+            Press::Space(space) => self.release_space(&space, at, x, y),
             Press::Tab(tab) => match self.hits.tab_at(x, y).map(str::to_owned) {
                 Some(other) if moved && other != tab => {
                     let index = self.snapshot().tabs.iter().position(|t| t.key == other);

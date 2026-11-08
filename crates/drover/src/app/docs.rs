@@ -31,7 +31,7 @@ impl App {
         Ok(changed)
     }
 
-    pub fn hold(&mut self, machine: Option<&str>, edit: Edit) -> Option<u64> {
+    pub fn hold_edit(&mut self, machine: Option<&str>, edit: Edit) -> Option<u64> {
         let held = self
             .machines
             .get_mut(machine)
@@ -50,7 +50,7 @@ impl App {
         }
     }
 
-    pub fn settle(&mut self, machine: Option<&str>, id: u64, edit: Option<Edit>) {
+    pub fn settle_edit(&mut self, machine: Option<&str>, id: u64, edit: Option<Edit>) {
         if let Some(entry) = self.machines.get_mut(machine) {
             entry.slot.settle(id, edit);
         }

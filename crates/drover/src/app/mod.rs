@@ -26,6 +26,7 @@ use crate::view::View;
 
 pub use conn::{Conn, State as ConnState};
 pub use extras::{Files, Git, Listing, strip_controls};
+pub use notify::{Notices, Sent};
 pub use spawn::Spawn;
 
 pub type Apply = Box<dyn FnOnce(&mut App)>;
@@ -63,6 +64,7 @@ pub struct HostInfo {
     pub fg: Option<Rgb>,
     pub bg: Option<Rgb>,
     pub cursor: Option<Rgb>,
+    pub scheme: Option<config::Appearance>,
     pub cell_px: (u32, u32),
 }
 
@@ -125,6 +127,8 @@ pub struct App {
     pub out: Vec<u8>,
     pub feedback: Option<Feedback>,
     pub notice: Option<Notice>,
+    pub notices: Notices,
+    pub graphics: crate::graphics::Graphics,
     pub error: Option<(String, Instant)>,
     pub git: HashMap<String, Git>,
     pub files: Files,
@@ -157,7 +161,8 @@ impl App {
         let build = config.keymap();
         let prefs = Preferences::load(&options.prefs_path);
         let resume = resume::Resume::load(&resume::Resume::path(&options.prefs_path));
-        let palette = config.palette(None);
+        let palette = config.palette(options.host.appearance());
+        let notices = Notices::new(&options.env);
         let mut app = Self {
             env: options.env,
             config_path: options.config_path,
@@ -182,6 +187,8 @@ impl App {
             out: Vec::new(),
             feedback: None,
             notice: None,
+            notices,
+            graphics: crate::graphics::Graphics::default(),
             error: None,
             git: HashMap::new(),
             files: Files::default(),
@@ -312,7 +319,7 @@ impl App {
             self.feedback = None;
         }
         if self.notice.as_ref().is_some_and(|n| n.until <= now) {
-            self.notice = None;
+            self.next_notice();
         }
         if self.error.as_ref().is_some_and(|(_, until)| *until <= now) {
             self.error = None;
@@ -354,7 +361,7 @@ impl App {
         if build.prefix_error.is_none() && !keys_kept {
             self.keymap = build.keymap;
         }
-        self.palette = self.config.palette(None);
+        self.palette = self.config.palette(self.host.appearance());
         self.diagnostics = reload.diagnostics;
         self.mouse_captured = None;
         let detail = match status {
@@ -454,5 +461,7 @@ impl App {
         for pane in self.panes.iter_mut() {
             pane.detach();
         }
+        let cleared = self.graphics.clear();
+        self.out.extend_from_slice(cleared.as_bytes());
     }
 }

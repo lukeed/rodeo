@@ -7,7 +7,6 @@ use hc::ExecParams;
 
 use crate::app::{App, NoticeDot};
 use crate::ids::{local, qualify};
-use crate::machines::SpaceRef;
 use crate::overlay::{self, CloseTarget, ConfirmClose, Kind, Rename, RenameTarget};
 use crate::sync::Edit;
 use crate::view::{CopyState, Mode};
@@ -288,7 +287,7 @@ impl App {
     }
 
     fn step_nav(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
+        let keys = self.space_order();
         if keys.is_empty() {
             return;
         }
@@ -371,7 +370,7 @@ impl App {
     }
 
     fn step_space(&mut self, forward: bool) {
-        let keys: Vec<String> = self.machines.spaces().iter().map(SpaceRef::key).collect();
+        let keys = self.space_order();
         let Some(next) = step(&keys, self.view.space.as_deref(), forward) else {
             return;
         };
@@ -379,7 +378,7 @@ impl App {
     }
 
     fn switch_workspace(&mut self, index: usize) {
-        let key = self.machines.spaces().get(index).map(SpaceRef::key);
+        let key = self.space_order().get(index).cloned();
         if let Some(key) = key {
             self.focus_space(&key);
         }
@@ -416,8 +415,7 @@ impl App {
     }
 
     fn open_notification_target(&mut self) {
-        if let Some(target) = self.notice.as_ref().and_then(|n| n.target.clone()) {
-            self.notice = None;
+        if let Some(target) = self.take_notice().and_then(|n| n.target) {
             self.focus_pane(&target);
         }
     }

@@ -14,11 +14,14 @@ use crossterm::terminal::{
 use crossterm::{cursor, execute};
 
 use crate::app::{HostInfo, Rgb};
+use crate::appearance::{COLOR_QUERY, SCHEME_QUERY};
 
 static ENTERED: AtomicBool = AtomicBool::new(false);
 static PUSHED: AtomicBool = AtomicBool::new(false);
 
 const PROBE: Duration = Duration::from_millis(300);
+const SCHEME_REPORTS_ON: &[u8] = b"\x1b[?2031h";
+const SCHEME_REPORTS_OFF: &[u8] = b"\x1b[?2031l";
 
 pub struct Guard(());
 
@@ -38,6 +41,7 @@ pub fn enter() -> io::Result<Guard> {
         EnableBracketedPaste,
         EnableFocusChange
     )?;
+    out.write_all(SCHEME_REPORTS_ON)?;
     if crossterm::terminal::supports_keyboard_enhancement().unwrap_or(false) {
         execute!(
             out,
@@ -67,6 +71,7 @@ pub fn restore() {
         LeaveAlternateScreen,
         cursor::Show
     );
+    let _ = out.write_all(SCHEME_REPORTS_OFF);
     let _ = out.write_all(b"\x1b[0 q");
     let _ = out.flush();
     let _ = disable_raw_mode();
@@ -96,8 +101,9 @@ pub fn probe() -> HostInfo {
         );
     }
     let mut out = io::stdout();
+    let query = format!("{COLOR_QUERY}{SCHEME_QUERY}\x1b[c");
     if out
-        .write_all(b"\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b]12;?\x1b\\\x1b[c")
+        .write_all(query.as_bytes())
         .and_then(|()| out.flush())
         .is_err()
     {
@@ -108,6 +114,7 @@ pub fn probe() -> HostInfo {
     info.fg = fg;
     info.bg = bg;
     info.cursor = cursor;
+    info.scheme = parse_scheme(&replies);
     info
 }
 
@@ -169,6 +176,15 @@ pub fn parse_colors(bytes: &[u8]) -> (Option<Rgb>, Option<Rgb>, Option<Rgb>) {
     (find("10"), find("11"), find("12"))
 }
 
+pub fn parse_scheme(bytes: &[u8]) -> Option<config::Appearance> {
+    bytes
+        .windows(9)
+        .find_map(|w| match crate::host_input::report(w) {
+            Some(crate::host_input::Report::Scheme(appearance)) => Some(appearance),
+            _ => None,
+        })
+}
+
 fn parse_rgb(value: &str) -> Option<Rgb> {
     let mut parts = value.split('/').map(|part| {
         let n = u32::from_str_radix(part, 16).ok()?;
@@ -191,5 +207,10 @@ mod tests {
         assert_eq!(cursor, None);
         assert!(has_device_attributes(replies));
         assert!(!has_device_attributes(b"\x1b]10;rgb:0/0/0\x07"));
+        assert_eq!(parse_scheme(replies), None);
+        assert_eq!(
+            parse_scheme(b"\x1b]11;rgb:0/0/0\x07\x1b[?997;2n\x1b[?62c"),
+            Some(config::Appearance::Light)
+        );
     }
 }

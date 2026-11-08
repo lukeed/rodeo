@@ -127,7 +127,22 @@ fn two_escapes_in_one_read_leave_copy_mode() {
         h.prefix_char('[').await;
         h.press(KeyCode::Char('v'), KeyModifiers::NONE).await;
         assert_eq!(h.app().view.mode, drover::view::Mode::Copy);
-        h.press(KeyCode::Esc, KeyModifiers::ALT).await;
+        let mut splitter = drover::host_input::Splitter::default();
+        let mut pieces = splitter.feed(b"\x1b\x1b");
+        pieces.extend(splitter.flush());
+        assert_eq!(pieces.len(), 2);
+        for piece in pieces {
+            let drover::host_input::Piece::Event(event) = piece else {
+                panic!("expected a key, got {piece:?}");
+            };
+            assert_eq!(
+                event,
+                crossterm::event::Event::Key(KeyCode::Esc.into()),
+                "each byte is its own Esc"
+            );
+            h.send(event);
+        }
+        h.pump().await;
         assert_eq!(h.app().view.mode, drover::view::Mode::Terminal);
     });
 }

@@ -355,6 +355,8 @@ dependencies = [
  "ratatui",
  "rustix",
  "serde_json",
+ "terminput",
+ "terminput-crossterm",
  "time",
  "tokio",
  "tracing",
@@ -1685,6 +1687,25 @@ dependencies = [
  "nom",
  "phf",
  "phf_codegen",
+]
+
+[[package]]
+name = "terminput"
+version = "0.5.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9ad7c04223a82546b9da235674218677e22712bd75e9592a3257db592ab4e2e"
+dependencies = [
+ "bitflags 2.13.2",
+]
+
+[[package]]
+name = "terminput-crossterm"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa8c57c6a9ef37785e06e36280df727d1b8556f6100a87a1f472527bd9f129da"
+dependencies = [
+ "crossterm",
+ "terminput",
 ]
 
 [[package]]
