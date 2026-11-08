@@ -307,11 +307,11 @@ impl App {
             .find(|(r, _)| inside(*r, x, y))
             .cloned()
         {
-            self.context_menu(MenuTarget::Space(space));
+            self.context_menu(MenuTarget::Space(space), (x, y));
             return;
         }
         if let Some(tab) = self.hits.tab_at(x, y).map(str::to_owned) {
-            self.context_menu(MenuTarget::Tab(tab));
+            self.context_menu(MenuTarget::Tab(tab), (x, y));
             return;
         }
         let Some(hit) = self.hits.pane_at(x, y).cloned() else {
@@ -338,7 +338,7 @@ impl App {
                 return;
             }
         }
-        self.context_menu(MenuTarget::Pane(hit.key));
+        self.context_menu(MenuTarget::Pane(hit.key), (x, y));
     }
 
     fn wheel(&mut self, event: MouseEvent) {

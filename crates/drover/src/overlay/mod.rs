@@ -1,8 +1,10 @@
 mod confirm;
+pub mod context;
 mod field;
 pub mod frame;
 pub mod goto;
 pub mod help;
+pub mod menu;
 mod rename;
 pub mod scroll;
 
@@ -34,11 +36,18 @@ pub enum Focus {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Request {
     Action(config::Action),
-    Rename { target: RenameTarget, text: String },
+    Rename {
+        target: RenameTarget,
+        text: String,
+    },
     Close(CloseTarget),
     Navigate,
     Focus(Focus),
     Settings(config::Edit),
+    Menu {
+        target: MenuTarget,
+        pick: context::Pick,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

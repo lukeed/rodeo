@@ -9,6 +9,7 @@ pub mod input;
 pub mod layout;
 pub mod logging;
 pub mod machines;
+pub mod menus;
 pub mod model;
 pub mod overlay;
 pub mod panes;
