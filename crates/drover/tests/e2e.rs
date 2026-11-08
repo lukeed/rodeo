@@ -147,6 +147,38 @@ async fn live_terminals(client: &hc::Client) -> Vec<hc::Terminal> {
         .collect()
 }
 
+async fn until_live(client: &hc::Client, count: usize) -> Vec<hc::Terminal> {
+    let started = Instant::now();
+    loop {
+        let live = live_terminals(client).await;
+        if live.len() == count {
+            return live;
+        }
+        assert!(
+            started.elapsed() < WITHIN,
+            "timed out waiting for {count} live terminals; {} live",
+            live.len()
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+async fn until_stored(client: &hc::Client, count: usize) -> doc::Document {
+    let started = Instant::now();
+    loop {
+        let stored = client.doc_get(doc::NAME, None).await.expect("doc.get");
+        let doc = doc::Document::parse(&stored.value).expect("a doc");
+        if doc.addresses().len() == count {
+            return doc;
+        }
+        assert!(
+            started.elapsed() < WITHIN,
+            "timed out waiting for {count} stored panes\n{doc:#?}"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 #[tokio::test]
 async fn drover_starts_splits_types_and_detaches() {
     let fixture = Fixture::start().await;
@@ -169,9 +201,9 @@ async fn drover_starts_splits_types_and_detaches() {
     tmux.keys(&["C-b", "-"]);
     tmux.until("three framed panes", |t| t.text().matches('┌').count() == 3)
         .await;
-    let terminals = live_terminals(&client).await;
-    assert_eq!(terminals.len(), 3);
+    let terminals = until_live(&client, 3).await;
     assert!(terminals.iter().all(|t| t.keep));
+    until_stored(&client, 3).await;
     tmux.keys(&["C-b", "q"]);
     tmux.until("drover to exit", Tmux::dead).await;
     let terminals = live_terminals(&client).await;
