@@ -1,7 +1,6 @@
 mod common;
 
 use std::path::Path;
-use std::process::Command;
 
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -132,28 +131,7 @@ fn new_open_and_remove_worktrees() {
             .await;
         assert_eq!(h.doc().spaces.len(), 3);
 
-        cd(&mut h, &checkout).await;
-        std::fs::write(checkout.join("dirty.txt"), "x").expect("an untracked file");
-        h.prefix_char('y').await;
-        h.until("the remove dialog", |h| {
-            h.screen().contains("delete worktree checkout?") && h.screen().contains(&shown)
-        })
-        .await;
-        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
-        h.until("the second confirmation", |h| {
-            h.screen().contains("delete anyway")
-        })
-        .await;
-        assert!(checkout.exists());
-        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
-        let folder = shown.clone();
-        h.until_stored("the checkout space closed", |d| {
-            d.spaces.len() == 2 && d.spaces.iter().all(|s| s.folder != folder)
-        })
-        .await;
-        assert!(!checkout.exists());
-        assert!(!worktrees(&h, &repo).contains(&shown));
-        assert!(git(&h, &repo, &["branch", "--list", "feat/x"]).contains("feat/x"));
+        remove_dirty_checkout(&mut h, &repo, &checkout).await;
 
         h.app_mut().focus_space(&main_space);
         h.prefix_char('y').await;
@@ -163,6 +141,32 @@ fn new_open_and_remove_worktrees() {
         .await;
         assert!(h.app().view.overlay.is_none());
     });
+}
+
+async fn remove_dirty_checkout(h: &mut Harness, repo: &Path, checkout: &Path) {
+    let shown = checkout.display().to_string();
+    cd(h, checkout).await;
+    std::fs::write(checkout.join("dirty.txt"), "x").expect("an untracked file");
+    h.prefix_char('y').await;
+    h.until("the remove dialog", |h| {
+        h.screen().contains("delete worktree checkout?") && h.screen().contains(&shown)
+    })
+    .await;
+    h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+    h.until("the second confirmation", |h| {
+        h.screen().contains("delete anyway")
+    })
+    .await;
+    assert!(checkout.exists());
+    h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+    let folder = shown.clone();
+    h.until_stored("the checkout space closed", |d| {
+        d.spaces.len() == 2 && d.spaces.iter().all(|s| s.folder != folder)
+    })
+    .await;
+    assert!(!checkout.exists());
+    assert!(!worktrees(h, repo).contains(&shown));
+    assert!(git(h, repo, &["branch", "--list", "feat/x"]).contains("feat/x"));
 }
 
 fn has_error(h: &Harness, text: &str) -> bool {
