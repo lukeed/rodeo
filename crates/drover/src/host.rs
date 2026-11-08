@@ -78,6 +78,7 @@ pub fn install_panic_hook() {
         restore();
         tracing::error!(%info, "panic");
         previous(info);
+        std::process::exit(101);
     }));
 }
 

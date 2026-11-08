@@ -203,6 +203,8 @@ impl App {
         self.adopting.clear();
         self.checking.clear();
         self.launching.clear();
+        self.killing.clear();
+        self.written_where.clear();
         self.schedule_retry();
     }
 

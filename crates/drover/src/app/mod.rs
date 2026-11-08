@@ -23,7 +23,7 @@ use crate::machines::Machines;
 use crate::panes::Panes;
 use crate::view::View;
 
-pub use conn::Conn;
+pub use conn::{Conn, State as ConnState};
 pub use extras::{Files, Git, Listing, strip_controls};
 pub use spawn::Spawn;
 

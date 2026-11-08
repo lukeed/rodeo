@@ -489,6 +489,10 @@ fn a_conflict_keeps_both_edits() {
             })
             .await;
         assert_eq!(merged.spaces.len(), 1);
+        assert!(
+            h.app().machines.local().slot.conflicts() >= 1,
+            "the write met a conflict"
+        );
     });
 }
 

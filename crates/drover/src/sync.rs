@@ -38,6 +38,7 @@ pub struct Slot {
     stale: bool,
     known: u64,
     errors: Vec<String>,
+    conflicts: u64,
 }
 
 impl Default for Slot {
@@ -53,6 +54,7 @@ impl Default for Slot {
             stale: true,
             known: 0,
             errors: Vec::new(),
+            conflicts: 0,
         }
     }
 }
@@ -91,6 +93,10 @@ impl Slot {
 
     pub fn is_settled(&self) -> bool {
         !self.is_busy() && self.queue.is_empty() && !self.stale
+    }
+
+    pub fn conflicts(&self) -> u64 {
+        self.conflicts
     }
 
     pub fn take_errors(&mut self) -> Vec<String> {
@@ -213,7 +219,10 @@ impl Slot {
                 self.stale = self.known > version;
                 self.rebase();
             }
-            Written::Conflict => self.stale = true,
+            Written::Conflict => {
+                self.conflicts += 1;
+                self.stale = true;
+            }
             Written::Failed(error) => {
                 self.errors.push(error);
                 self.queue.drain(..count.min(self.queue.len()));
@@ -308,6 +317,7 @@ mod tests {
         slot.edit(space("mine")).unwrap();
         assert!(matches!(slot.command(), Some(Command::Write { .. })));
         slot.write_done(Written::Conflict);
+        assert_eq!(slot.conflicts(), 1);
         assert_eq!(slot.command(), Some(Command::Read));
         let theirs = json!({"spaces": [{"id": "theirs", "name": "", "folder": "/t", "tabs": []}]});
         slot.read_done(Ok((theirs, 5)));

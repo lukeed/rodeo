@@ -660,6 +660,9 @@ impl App {
             .machines
             .tab(&tab)
             .and_then(|t| t.machine.map(str::to_owned));
+        self.view
+            .focus
+            .insert(tab, qualify(&pane, machine.as_deref()));
         self.edit(
             machine.as_deref(),
             Rc::new(move |doc: &mut Document| doc.swap_panes(&pane, &other)),

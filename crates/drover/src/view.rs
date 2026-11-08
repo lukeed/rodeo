@@ -189,6 +189,26 @@ impl View {
         if self.previous.as_ref().is_some_and(|p| !panes.contains(p)) {
             self.previous = None;
         }
+        for tab in machines.tabs() {
+            let key = tab.key();
+            if self.focus.contains_key(&key) {
+                continue;
+            }
+            let previous = self
+                .previous
+                .clone()
+                .filter(|p| tab.panes().any(|pane| &pane.key() == p));
+            if let Some(pane) = previous.or_else(|| tab.panes().next().map(|p| p.key())) {
+                self.focus.insert(key, pane);
+            }
+        }
+        for space in machines.spaces() {
+            if let Some(first) = space.space.tabs.first() {
+                self.tabs
+                    .entry(space.key())
+                    .or_insert_with(|| space.tab_key(first));
+            }
+        }
         if self.nav.as_ref().is_some_and(|s| !spaces.contains(s)) {
             self.nav = None;
         }

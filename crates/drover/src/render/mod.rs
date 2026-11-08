@@ -112,16 +112,23 @@ fn unavailable(app: &App, buf: &mut Buffer, area: Rect) {
     }
     let p = &app.palette;
     buf.set_style(area, Style::new().bg(p.panel_bg));
-    let text = match (&app.conn.error, app.conn.is_online()) {
-        (Some(error), false) => format!("Local: {}. {error}", app.conn.label()),
-        _ if app.conn.is_online() => "Local: loading the layout.".to_owned(),
-        _ => format!("Local: {}. Select a connected machine.", app.conn.label()),
+    let style = Style::new().fg(p.overlay0).bg(p.panel_bg);
+    let room = usize::from(area.width.saturating_sub(1));
+    let (text, detail) = if app.conn.is_online() {
+        match app.machines.local().slot.state() {
+            crate::sync::State::Undecodable(why) | crate::sync::State::Unreadable(why) => {
+                ("Local: layout unavailable.".to_owned(), Some(why.clone()))
+            }
+            _ => ("Local: loading the layout.".to_owned(), None),
+        }
+    } else {
+        (
+            format!("Local: {}. Select a connected machine.", app.conn.label()),
+            app.conn.error.clone(),
+        )
     };
-    buf.set_stringn(
-        area.x + 1,
-        area.y,
-        text,
-        usize::from(area.width.saturating_sub(1)),
-        Style::new().fg(p.overlay0).bg(p.panel_bg),
-    );
+    buf.set_stringn(area.x + 1, area.y, text, room, style);
+    if let Some(detail) = detail.filter(|_| area.height > 1) {
+        buf.set_stringn(area.x + 1, area.y + 1, detail, room, style);
+    }
 }
