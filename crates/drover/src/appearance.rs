@@ -53,6 +53,25 @@ impl App {
         }
     }
 
+    pub fn host_resized(&mut self) {
+        if let Ok(size) = crossterm::terminal::window_size()
+            && size.columns > 0
+            && size.rows > 0
+            && size.width > 0
+            && size.height > 0
+        {
+            let cell = (
+                u32::from(size.width / size.columns),
+                u32::from(size.height / size.rows),
+            );
+            if cell != self.host.cell_px {
+                self.host.cell_px = cell;
+                self.relayout();
+            }
+        }
+        self.query_host_colors();
+    }
+
     pub fn query_host_colors(&mut self) {
         self.out.extend_from_slice(COLOR_QUERY.as_bytes());
     }

@@ -127,6 +127,7 @@ pub struct App {
     pub feedback: Option<Feedback>,
     pub notice: Option<Notice>,
     pub notices: Notices,
+    pub graphics: crate::graphics::Graphics,
     pub error: Option<(String, Instant)>,
     pub git: HashMap<String, Git>,
     pub files: Files,
@@ -184,6 +185,7 @@ impl App {
             feedback: None,
             notice: None,
             notices,
+            graphics: crate::graphics::Graphics::default(),
             error: None,
             git: HashMap::new(),
             files: Files::default(),
@@ -462,5 +464,7 @@ impl App {
         for pane in self.panes.iter_mut() {
             pane.detach();
         }
+        let cleared = self.graphics.clear();
+        self.out.extend_from_slice(cleared.as_bytes());
     }
 }

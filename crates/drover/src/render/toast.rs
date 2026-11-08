@@ -9,33 +9,37 @@ use crate::overlay::frame::{contrast, panel};
 use crate::text::{truncate, width};
 
 pub fn render(app: &App, buf: &mut Buffer, area: Rect, hits: &mut Hits) {
-    let offset = banner(app, buf, area);
+    let (offset, banner) = banner(app, buf, area);
     let card = app
         .notice
         .as_ref()
         .and_then(|notice| card(app, buf, area, notice, offset));
     hits.toast = card;
-    if let Some(feedback) = &app.feedback {
-        copied(app, buf, area, feedback, offset, card);
-    }
+    let copied = app
+        .feedback
+        .as_ref()
+        .and_then(|feedback| copied(app, buf, area, feedback, offset, card));
+    hits.covers
+        .extend([banner, card, copied].into_iter().flatten());
 }
 
-fn banner(app: &App, buf: &mut Buffer, area: Rect) -> u16 {
+fn banner(app: &App, buf: &mut Buffer, area: Rect) -> (u16, Option<Rect>) {
     let place = if app.regions.mobile {
         app.regions.surface
     } else {
         area
     };
     let Some(text) = app.banner().filter(|_| place.height > 0) else {
-        return 0;
+        return (0, None);
     };
     let text = truncate(&format!(" {text} "), usize::from(place.width));
     let style = Style::new()
         .fg(contrast(&app.palette))
         .bg(app.palette.yellow)
         .add_modifier(Modifier::BOLD);
-    buf.set_string(place.right() - width(&text), place.y, text, style);
-    1
+    let wide = width(&text);
+    buf.set_string(place.right() - wide, place.y, text, style);
+    (1, Some(Rect::new(place.right() - wide, place.y, wide, 1)))
 }
 
 fn dot_color(app: &App, notice: &Notice) -> Color {
@@ -161,7 +165,7 @@ fn copied(
     feedback: &Feedback,
     offset: u16,
     card: Option<Rect>,
-) {
+) -> Option<Rect> {
     let palette = &app.palette;
     let surface = if app.regions.mobile {
         area
@@ -170,7 +174,7 @@ fn copied(
     };
     let toast_width = (width(&feedback.text) + 4).min(surface.width);
     if toast_width < 4 || surface.height < 3 {
-        return;
+        return None;
     }
     let position = app.config.ui.toast.clipboard.position;
     let x = match position {
@@ -205,9 +209,7 @@ fn copied(
             card.y.saturating_sub(3)
         };
     }
-    let Some(inner) = panel(buf, rect, palette.green, palette.panel_bg) else {
-        return;
-    };
+    let inner = panel(buf, rect, palette.green, palette.panel_bg)?;
     buf.set_string(
         inner.x,
         inner.y,
@@ -220,4 +222,5 @@ fn copied(
         .add_modifier(Modifier::BOLD);
     let room = usize::from(inner.width.saturating_sub(2));
     buf.set_stringn(inner.x + 2, inner.y, &feedback.text, room, style);
+    Some(rect)
 }

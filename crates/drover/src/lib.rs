@@ -3,6 +3,7 @@ pub mod agents;
 pub mod app;
 pub mod appearance;
 pub mod cli;
+pub mod graphics;
 pub mod hits;
 pub mod host;
 pub mod host_input;

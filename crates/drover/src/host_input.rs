@@ -279,7 +279,7 @@ pub fn start(tx: UnboundedSender<Msg>) {
                 continue;
             };
             if tx.send(Msg::Host(Event::Resize(cols, rows))).is_err()
-                || tx.send(apply(App::query_host_colors)).is_err()
+                || tx.send(apply(App::host_resized)).is_err()
             {
                 return;
             }

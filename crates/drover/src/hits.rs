@@ -39,6 +39,7 @@ pub struct Hits {
     pub tabs: TabHits,
     pub sidebar: crate::sidebar::Hits,
     pub toast: Option<Rect>,
+    pub covers: Vec<Rect>,
     pub surface: Rect,
 }
 
