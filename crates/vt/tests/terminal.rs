@@ -218,6 +218,29 @@ fn resize_reflows() {
 }
 
 #[test]
+fn shrinking_keeps_text_on_screen_while_blank_rows_remain() {
+    let mut t = term(40, 10);
+    t.feed(b"a line that is longer than twenty cells\r\nnext\r\n\r\n$ ");
+    t.resize(20, 8, (8, 16)).unwrap();
+    assert_eq!(t.viewport_top(), 0);
+    assert_eq!(
+        screen(&t)[..5],
+        [
+            "a line that is longe",
+            "r than twenty cells",
+            "next",
+            "",
+            "$"
+        ]
+    );
+    assert!(!t.is_scrolled_back());
+    lines(&mut t, 12);
+    t.resize(40, 6, (8, 16)).unwrap();
+    assert_eq!(screen(&t)[5], "");
+    assert_eq!(screen(&t)[4], "line 11");
+}
+
+#[test]
 fn scrollback_follows_output_at_the_bottom() {
     let mut t = term(10, 3);
     lines(&mut t, 10);
