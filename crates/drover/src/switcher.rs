@@ -563,7 +563,6 @@ impl App {
             {
                 self.view.switcher_scroll = 0;
                 self.view.reveal_space = false;
-                self.view.highlight = None;
                 self.view.nav = self.view.space.clone();
                 self.view.mode = Mode::Navigate;
                 return true;
