@@ -45,6 +45,7 @@ pub fn render(app: &App, buf: &mut Buffer, hits: &mut Hits) {
     if hits.tabs.row == Some(bar) {
         hits.tabs = crate::hits::TabHits::default();
     }
+    hits.covers.push(bar);
     let p = &app.palette;
     let styles = Styles {
         base: Style::new().fg(p.overlay0).bg(p.panel_bg),

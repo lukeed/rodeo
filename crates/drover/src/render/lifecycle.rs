@@ -7,15 +7,12 @@ use crate::model::MachineStatus;
 use crate::sidebar::status_look;
 use crate::text::{truncate, width};
 
-pub fn render(app: &App, buf: &mut Buffer, area: Rect, top: u16) -> u16 {
-    let Some(machine) = app
+pub fn render(app: &App, buf: &mut Buffer, area: Rect, top: u16) -> Option<Rect> {
+    let machine = app
         .active_machine_row()
-        .filter(|m| m.status != MachineStatus::Online)
-    else {
-        return 0;
-    };
+        .filter(|m| m.status != MachineStatus::Online)?;
     if area.is_empty() {
-        return 0;
+        return None;
     }
     let (symbol, state, color) = status_look(machine.status, &app.palette);
     let text = format!("{symbol} {} · {state}", machine.label);
@@ -29,5 +26,5 @@ pub fn render(app: &App, buf: &mut Buffer, area: Rect, top: u16) -> u16 {
     }
     let room = usize::from(w.saturating_sub(2));
     buf.set_string(rect.x + 1, y, truncate(&text, room), style);
-    1
+    Some(rect)
 }

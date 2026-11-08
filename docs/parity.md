@@ -129,7 +129,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Agent notification toasts | match | |
 | Endpoint notices and lifecycle banner | hc | From machine states in `machine.list` and the events stream. |
 | Unavailable state ("Select a connected machine") | hc | When hc is not reachable or a machine's doc cannot be read. |
-| Kitty graphics | match | Pass-through to the host terminal with pane offset and clipping. Toasts and banners cut the image around them. An open overlay hides all images. |
+| Kitty graphics | match | Pass-through to the host terminal with pane offset and clipping. Toasts, banners, the mode bar, popups, overlays, selections and copy-mode highlights cut the image to their exact cells, as in Herdr. Images inside a popup terminal are not shown. |
 
 ## Overlays
 

@@ -54,12 +54,15 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
     } else if app.popup.is_some() {
         cursor = None;
     }
+    hits.covers
+        .extend(app.popup.as_ref().and_then(|p| p.geometry).map(|g| g.outer));
     if app.view.overlay.is_none() {
         modebar::render(app, buf, &mut hits);
     }
     toast::render(app, buf, area, &mut hits);
     if app.switcher_open() {
         hits.switcher = crate::switcher::render(app, &snapshot, buf, area);
+        hits.covers.push(area);
     }
     if !app.config.ui.mouse_capture {
         hits.clear_chrome();
@@ -74,7 +77,9 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             config: &app.config,
             snapshot: &snapshot,
         };
-        cursor = open.render(area, buf, &ctx).map(|(x, y)| Cursor {
+        let drawn = open.render(area, buf, &ctx);
+        hits.covers.extend(drawn.map(|d| d.area));
+        cursor = drawn.and_then(|d| d.cursor).map(|(x, y)| Cursor {
             x,
             y,
             shape: vt::CursorShape::Bar,
@@ -83,7 +88,7 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         app.view.overlay = Some(open);
     }
     place_cursor(app, frame, cursor);
-    let covers = std::mem::take(&mut hits.covers);
+    let covers = hits.covers.clone();
     app.hits = hits;
     app.compose_graphics(&covers);
 }

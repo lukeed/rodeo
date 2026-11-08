@@ -7,7 +7,7 @@ use ratatui::style::{Modifier, Style};
 use unicode_width::UnicodeWidthStr;
 
 use super::frame::{button, contrast, panel, popup, row, text};
-use super::{Ctx, Kind, Outcome, Overlay, Request, TextField};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, Request, TextField};
 use crate::view::Mode;
 
 const ADJECTIVES: [&str; 8] = [
@@ -560,7 +560,7 @@ impl Worktree {
         }
     }
 
-    fn render_create(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render_create(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let State::Create(create) = &self.state else {
             return None;
         };
@@ -609,10 +609,10 @@ impl Worktree {
         );
         button(buf, rects[1], " esc cancel ", plain_style(ctx));
         (self.primary, self.cancel) = (rects[0], rects[1]);
-        cursor.filter(|_| !create.busy)
+        Some(Drawn::new(outer, cursor.filter(|_| !create.busy)))
     }
 
-    fn render_open(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render_open(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let State::Open(open) = &self.state else {
             return None;
         };
@@ -699,10 +699,10 @@ impl Worktree {
         button(buf, rects[1], " esc cancel ", plain_style(ctx));
         let busy = open.busy;
         (self.primary, self.cancel, self.search, self.rows) = (rects[0], rects[1], search, rows);
-        cursor.filter(|_| !busy)
+        Some(Drawn::new(outer, cursor.filter(|_| !busy)))
     }
 
-    fn render_remove(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render_remove(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let State::Remove(remove) = &self.state else {
             return None;
         };
@@ -773,7 +773,7 @@ impl Worktree {
         button(buf, rects[0], label, primary_style(ctx, true));
         button(buf, rects[1], " esc cancel ", plain_style(ctx));
         (self.primary, self.cancel) = (rects[0], rects[1]);
-        None
+        Some(Drawn::new(outer, None))
     }
 }
 
@@ -932,7 +932,7 @@ impl Overlay for Worktree {
         self.action.kind()
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         match self.state {
             State::Loading { .. } => None,
             State::Create(_) => self.render_create(area, buf, ctx),

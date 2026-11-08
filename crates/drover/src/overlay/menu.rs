@@ -5,7 +5,7 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::{Modifier, Style};
 
 use super::frame::{contrast, panel, text};
-use super::{Ctx, Kind, Outcome, Overlay, Request};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, Request};
 use crate::text::width;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -142,7 +142,7 @@ impl Overlay for GlobalMenu {
         false
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let (w, h) = self.list.size(3, 0);
         let w = w.min(area.width.max(1));
         let h = h.min(area.height.max(1));
@@ -152,8 +152,9 @@ impl Overlay for GlobalMenu {
             .saturating_sub(w)
             .min(area.right().saturating_sub(w));
         let y = self.launcher.y.saturating_sub(h).max(area.y);
-        self.list.render(buf, Rect::new(x, y, w, h), ctx.palette);
-        None
+        let rect = Rect::new(x, y, w, h);
+        self.list.render(buf, rect, ctx.palette);
+        Some(Drawn::new(rect, None))
     }
 
     fn key(&mut self, key: &KeyEvent, _ctx: &Ctx<'_>) -> Outcome {

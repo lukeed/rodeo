@@ -4,7 +4,7 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::{Modifier, Style};
 
 use super::frame::{button, contrast, panel, popup, row, text};
-use super::{Ctx, Kind, Outcome, Overlay, Request};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, Request};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CloseTarget {
@@ -60,7 +60,7 @@ impl Overlay for ConfirmClose {
         Kind::ConfirmClose
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let p = ctx.palette;
         let outer = popup(area, 64, 6)?;
         let inner = panel(buf, outer, p.red, p.panel_bg)?;
@@ -97,7 +97,7 @@ impl Overlay for ConfirmClose {
         button(buf, rects[0], " ↵ confirm ", danger);
         button(buf, rects[1], " esc cancel ", plain);
         self.confirm = rects[0];
-        None
+        Some(Drawn::new(outer, None))
     }
 
     fn key(&mut self, key: &KeyEvent, _ctx: &Ctx<'_>) -> Outcome {

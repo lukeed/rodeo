@@ -4,7 +4,7 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::{Modifier, Style};
 
 use super::frame::{button, contrast, panel, popup, row, text};
-use super::{Ctx, Kind, Outcome, Overlay, Request, TextField};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, Request, TextField};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RenameTarget {
@@ -83,7 +83,7 @@ impl Overlay for Rename {
         Kind::Rename
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let p = ctx.palette;
         let outer = popup(area, 56, 7)?;
         let inner = panel(buf, outer, p.accent, p.panel_bg)?;
@@ -120,7 +120,7 @@ impl Overlay for Rename {
         button(buf, rects[1], " ^c clear ", plain);
         button(buf, rects[2], " esc cancel ", plain);
         self.buttons = [rects[0], rects[1], rects[2]];
-        cursor
+        Some(Drawn::new(outer, cursor))
     }
 
     fn key(&mut self, key: &KeyEvent, _ctx: &Ctx<'_>) -> Outcome {

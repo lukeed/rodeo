@@ -11,7 +11,8 @@ use crate::text::{truncate, width};
 pub fn render(app: &App, buf: &mut Buffer, area: Rect, hits: &mut Hits) {
     let (config, banner) = banner(app, buf, area);
     let header = app.regions.header.map_or(0, |h| h.height);
-    let offset = config + super::lifecycle::render(app, buf, area, config + header);
+    let lifecycle = super::lifecycle::render(app, buf, area, config + header);
+    let offset = config + u16::from(lifecycle.is_some());
     let card = app
         .notice
         .as_ref()
@@ -22,7 +23,7 @@ pub fn render(app: &App, buf: &mut Buffer, area: Rect, hits: &mut Hits) {
         .as_ref()
         .and_then(|feedback| copied(app, buf, area, feedback, offset, card));
     hits.covers
-        .extend([banner, card, copied].into_iter().flatten());
+        .extend([banner, lifecycle, card, copied].into_iter().flatten());
 }
 
 fn banner(app: &App, buf: &mut Buffer, area: Rect) -> (u16, Option<Rect>) {

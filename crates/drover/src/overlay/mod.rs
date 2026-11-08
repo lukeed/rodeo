@@ -55,6 +55,18 @@ pub enum Request {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Drawn {
+    pub area: Rect,
+    pub cursor: Option<(u16, u16)>,
+}
+
+impl Drawn {
+    pub const fn new(area: Rect, cursor: Option<(u16, u16)>) -> Self {
+        Self { area, cursor }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome {
     Stay,
@@ -66,7 +78,7 @@ pub enum Outcome {
 pub trait Overlay: std::any::Any {
     fn kind(&self) -> Kind;
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)>;
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn>;
 
     fn key(&mut self, key: &KeyEvent, ctx: &Ctx<'_>) -> Outcome;
 

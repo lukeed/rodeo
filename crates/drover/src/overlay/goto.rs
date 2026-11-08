@@ -7,7 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use super::frame::{contrast, panel, text};
 use super::help::typed;
 use super::scroll::Bar;
-use super::{Ctx, Focus, Kind, Outcome, Overlay, Request, TextField};
+use super::{Ctx, Drawn, Focus, Kind, Outcome, Overlay, Request, TextField};
 use crate::agents::State;
 use crate::ids;
 use crate::model::{MachineRow, PaneRow, Snapshot, SpaceRow};
@@ -519,7 +519,7 @@ impl Overlay for Goto {
         false
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let p = ctx.palette;
         let w = area.width.saturating_sub(4).min(116);
         let h = area.height.saturating_sub(2).min(42);
@@ -546,7 +546,7 @@ impl Overlay for Goto {
         let cursor = self.header(buf, inner, &rows, p);
         let selected = self.body(buf, inner, &rows, ctx);
         self.footer(buf, inner, rows.get(selected), p);
-        cursor
+        Some(Drawn::new(outer, cursor))
     }
 
     fn key(&mut self, key: &KeyEvent, ctx: &Ctx<'_>) -> Outcome {

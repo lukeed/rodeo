@@ -9,7 +9,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::frame::{button, contrast, panel, popup, text};
 use super::scroll::Bar;
-use super::{Ctx, Kind, Outcome, Overlay, TextField};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, TextField};
 
 const PAGE: isize = 8;
 const WHEEL: usize = 3;
@@ -184,13 +184,13 @@ impl Overlay for Help {
         Kind::Help
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let p = ctx.palette;
         let outer = popup(area, 76, 22)?;
         let inner = panel(buf, outer, p.accent, p.panel_bg)?;
         self.popup = outer;
         if inner.width < 20 || inner.height < 6 {
-            return None;
+            return Some(Drawn::new(outer, None));
         }
         let bold = Style::new()
             .fg(p.text)
@@ -256,7 +256,7 @@ impl Overlay for Help {
             footer,
             Style::new().fg(p.overlay0).bg(p.panel_bg),
         );
-        cursor
+        Some(Drawn::new(outer, cursor))
     }
 
     fn key(&mut self, key: &KeyEvent, _ctx: &Ctx<'_>) -> Outcome {

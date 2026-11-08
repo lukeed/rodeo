@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 
 use base64::Engine;
 use ratatui::layout::Rect;
-use vt::{ImageFormat, Placement};
+use vt::{Highlight, ImageFormat, Placement};
 
 use crate::app::App;
 
@@ -112,6 +112,45 @@ pub fn visible(rect: Rect, covers: &[Rect]) -> Vec<Rect> {
         }
     }
     pieces
+}
+
+pub fn highlight_covers(
+    highlights: &[Highlight],
+    top: u64,
+    (cols, rows): (u16, u16),
+    area: Rect,
+) -> Vec<Rect> {
+    let (width, height) = (cols.min(area.width), rows.min(area.height));
+    let mut covers: Vec<Rect> = Vec::new();
+    if width == 0 || height == 0 {
+        return covers;
+    }
+    let bottom = top + u64::from(height) - 1;
+    for highlight in highlights {
+        let (start, end) = if highlight.start <= highlight.end {
+            (highlight.start, highlight.end)
+        } else {
+            (highlight.end, highlight.start)
+        };
+        for row in start.row.max(top)..=end.row.min(bottom) {
+            let from = if row == start.row { start.col } else { 0 };
+            let to = if row == end.row { end.col } else { cols - 1 }.min(width - 1);
+            if from > to {
+                continue;
+            }
+            let y = area.y + u16::try_from(row - top).unwrap_or(0);
+            let rect = Rect::new(area.x + from, y, to - from + 1, 1);
+            match covers.last_mut() {
+                Some(last)
+                    if last.x == rect.x && last.width == rect.width && last.bottom() == y =>
+                {
+                    last.height += 1;
+                }
+                _ => covers.push(rect),
+            }
+        }
+    }
+    covers
 }
 
 pub fn pieces(
@@ -276,6 +315,12 @@ pub fn place(out: &mut String, id: u32, placement: u32, piece: &Piece) {
 }
 
 impl Graphics {
+    pub fn placed(&self) -> Vec<Piece> {
+        let mut placed: Vec<Piece> = self.placed.values().copied().collect();
+        placed.sort_unstable_by_key(|p| (p.y, p.x));
+        placed
+    }
+
     pub fn clear(&mut self) -> String {
         let mut out = String::new();
         let mut ids: Vec<u32> = self.images.keys().copied().collect();
@@ -292,7 +337,7 @@ impl Graphics {
 impl App {
     pub fn compose_graphics(&mut self, covers: &[Rect]) {
         let (w, h) = self.host.cell_px;
-        let hidden = self.view.overlay.is_some() || !self.conn.is_online();
+        let hidden = !self.conn.is_online();
         if !self.config.kitty_graphics() || w == 0 || h == 0 {
             let bytes = self.graphics.clear();
             self.out.extend_from_slice(bytes.as_bytes());
@@ -535,6 +580,40 @@ mod tests {
         assert_eq!(out.matches("\x1b_G").count(), 2);
         assert!(out.contains(",m=1;"));
         assert!(out.contains("\x1b_Gm=0;"));
+    }
+
+    fn highlight(start: (u64, u16), end: (u64, u16)) -> Highlight {
+        Highlight {
+            start: vt::Point::new(start.0, start.1),
+            end: vt::Point::new(end.0, end.1),
+            style: ratatui::style::Style::new(),
+        }
+    }
+
+    #[test]
+    fn highlights_cover_exactly_their_cells() {
+        let area = Rect::new(10, 5, 20, 6);
+        let line = [highlight((102, 3), (102, 7))];
+        assert_eq!(
+            highlight_covers(&line, 100, (20, 6), area),
+            [Rect::new(13, 7, 5, 1)]
+        );
+        let flow = [highlight((104, 15), (101, 4))];
+        assert_eq!(
+            highlight_covers(&flow, 100, (20, 6), area),
+            [
+                Rect::new(14, 6, 16, 1),
+                Rect::new(10, 7, 20, 2),
+                Rect::new(10, 9, 16, 1),
+            ]
+        );
+        let clipped = [highlight((90, 2), (200, 1))];
+        assert_eq!(
+            highlight_covers(&clipped, 100, (20, 6), Rect::new(10, 5, 12, 4)),
+            [Rect::new(10, 5, 12, 4)]
+        );
+        let past = [highlight((95, 0), (99, 5))];
+        assert_eq!(highlight_covers(&past, 100, (20, 6), area), []);
     }
 
     #[test]

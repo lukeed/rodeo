@@ -66,6 +66,7 @@ pub fn render(app: &App, buf: &mut Buffer, hits: &mut Hits) -> Option<Cursor> {
                     pane,
                     address.as_deref().unwrap_or_default(),
                     focused,
+                    &mut hits.covers,
                 ) {
                     cursor = Some(c);
                 }
@@ -194,6 +195,7 @@ fn terminal(
     pane: &PaneGeom,
     address: &str,
     focused: bool,
+    covers: &mut Vec<Rect>,
 ) -> Option<Cursor> {
     let entry = app.panes.get(address)?;
     let term = &entry.term;
@@ -251,6 +253,12 @@ fn terminal(
         });
     }
     highlights.extend(app.hover_highlight(address));
+    covers.extend(crate::graphics::highlight_covers(
+        &highlights,
+        term.viewport_top(),
+        term.size(),
+        pane.content.intersection(buf.area),
+    ));
     let rendered = term.render(
         pane.content,
         buf,

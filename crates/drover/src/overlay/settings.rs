@@ -5,7 +5,7 @@ use ratatui::layout::{Position, Rect};
 use ratatui::style::{Modifier, Style};
 
 use super::frame::{button, contrast, panel, popup, row, text};
-use super::{Ctx, Kind, Outcome, Overlay, Request};
+use super::{Ctx, Drawn, Kind, Outcome, Overlay, Request};
 use crate::text::width;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -282,7 +282,7 @@ impl Overlay for Settings {
         Kind::Settings
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let p = ctx.palette;
         let outer = popup(area, 76, 22)?;
         let inner = panel(buf, outer, p.accent, p.panel_bg)?;
@@ -290,7 +290,7 @@ impl Overlay for Settings {
         self.tabs.clear();
         self.choices.clear();
         if inner.width < 20 || inner.height < 8 {
-            return None;
+            return Some(Drawn::new(outer, None));
         }
         text(
             buf,
@@ -367,7 +367,7 @@ impl Overlay for Settings {
             " ↑↓ select  tab section",
             Style::new().fg(p.overlay1).bg(p.panel_bg),
         );
-        None
+        Some(Drawn::new(outer, None))
     }
 
     fn key(&mut self, key: &KeyEvent, ctx: &Ctx<'_>) -> Outcome {

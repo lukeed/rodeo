@@ -575,6 +575,7 @@ fn a_lost_core_shows_the_lifecycle_banner() {
     assert_eq!(buf[(x, y)].fg, app.palette.yellow);
     assert_eq!(buf[(x - 1, y)].bg, app.palette.surface0);
     assert_eq!(line(&buf, 0, 26), " machines                │");
+    assert!(app.hits.covers.contains(&Rect::new(x - 1, y, W - x + 1, 1)));
 }
 
 #[test]

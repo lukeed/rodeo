@@ -3,7 +3,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 
 use super::menu::{List, clamp};
-use super::{Ctx, Kind, MenuTarget, Outcome, Overlay, Request};
+use super::{Ctx, Drawn, Kind, MenuTarget, Outcome, Overlay, Request};
 use crate::model::Snapshot;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -161,10 +161,10 @@ impl Overlay for ContextMenu {
         false
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<(u16, u16)> {
+    fn render(&mut self, area: Rect, buf: &mut Buffer, ctx: &Ctx<'_>) -> Option<Drawn> {
         let rect = clamp(area, self.at.0, self.at.1, self.list.size(4, 14));
         self.list.render(buf, rect, ctx.palette);
-        None
+        Some(Drawn::new(rect, None))
     }
 
     fn key(&mut self, key: &KeyEvent, _ctx: &Ctx<'_>) -> Outcome {
