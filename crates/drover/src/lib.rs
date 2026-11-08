@@ -1,6 +1,7 @@
 pub mod actions;
 pub mod agents;
 pub mod app;
+pub mod backend;
 pub mod cli;
 pub mod hits;
 pub mod host;
