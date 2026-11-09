@@ -32,9 +32,10 @@ $ git clone https://git.nexthub.sh/lukeed/drover.git
 $ cd drover
 $ mise install
 $ cargo build --release
+$ cargo install --path crates/drover --locked   # optional: put it on your PATH
 ```
 
-The binary is `target/release/drover`.
+The binary is `target/release/drover`, or `~/.cargo/bin/drover` after the optional step.
 
 ## Usage
 
