@@ -19,13 +19,13 @@ pub fn commands(title: &str, body: &str) -> Vec<Vec<String>> {
                 "-message",
                 body,
                 "-group",
-                "drover",
+                "rodeo",
             ]),
             own(&["osascript", "-e", &script]),
         ]
     } else {
         vec![
-            own(&["notify-send", "--app-name=drover", "--", title, body]),
+            own(&["notify-send", "--app-name=rodeo", "--", title, body]),
             own(&[
                 "gdbus",
                 "call",
@@ -33,7 +33,7 @@ pub fn commands(title: &str, body: &str) -> Vec<Vec<String>> {
                 "--dest=org.freedesktop.Notifications",
                 "--object-path=/org/freedesktop/Notifications",
                 "--method=org.freedesktop.Notifications.Notify",
-                "drover",
+                "rodeo",
                 "0",
                 "",
                 title,
@@ -57,7 +57,7 @@ pub fn clean(text: &str) -> String {
 pub fn show(title: &str, body: &str) {
     let commands = commands(&clean(title), &clean(body));
     let spawned = std::thread::Builder::new()
-        .name("drover-notify".into())
+        .name("rodeo-notify".into())
         .spawn(move || {
             for argv in commands {
                 if run(&argv) {

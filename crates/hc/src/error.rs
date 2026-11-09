@@ -56,9 +56,9 @@ impl std::fmt::Display for RemoteError {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Mismatch {
-    #[error("hc speaks protocol generation {}, drover speaks {}", .0.map_or_else(|| "another".to_owned(), |g| g.to_string()), crate::GENERATION)]
+    #[error("hc speaks protocol generation {}, rodeo speaks {}", .0.map_or_else(|| "another".to_owned(), |g| g.to_string()), crate::GENERATION)]
     Generation(Option<u32>),
-    #[error("hc lacks methods drover needs: {}", .0.join(", "))]
+    #[error("hc lacks methods rodeo needs: {}", .0.join(", "))]
     Methods(Vec<String>),
 }
 
@@ -80,7 +80,7 @@ pub enum HcError {
     Timeout { method: String, after: Duration },
     #[error("hc gave no channel for {0}")]
     NoChannel(String),
-    #[error("hc cannot serve drover: {0}")]
+    #[error("hc cannot serve rodeo: {0}")]
     Unsupported(#[from] Mismatch),
     #[error("{0}")]
     Paths(String),

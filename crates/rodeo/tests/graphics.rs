@@ -2,8 +2,8 @@ mod common;
 
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers, MouseButton, MouseEventKind};
-use drover::graphics::host_image_id;
 use ratatui::layout::{Position, Rect};
+use rodeo::graphics::host_image_id;
 
 const PNG_2X2: &str = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGP4z8AAQv8ZYAwAQ84H+VjtZqAAAAAASUVORK5CYII=";
 

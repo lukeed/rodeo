@@ -1,15 +1,15 @@
 use std::process::ExitCode;
 
-use drover::app::{Msg, Options};
-use drover::cli::{self, Command, USAGE};
-use drover::runtime::Runner;
-use drover::{host, logging};
+use rodeo::app::{Msg, Options};
+use rodeo::cli::{self, Command, USAGE};
+use rodeo::runtime::Runner;
+use rodeo::{host, logging};
 
 fn main() -> ExitCode {
     let command = match cli::parse(std::env::args_os().skip(1)) {
         Ok(command) => command,
         Err(error) => {
-            eprintln!("drover: {error}\n\n{USAGE}");
+            eprintln!("rodeo: {error}\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -20,7 +20,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Version => {
-            println!("drover {}", env!("CARGO_PKG_VERSION"));
+            println!("rodeo {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
         }
         Command::DefaultConfig => {
@@ -68,7 +68,7 @@ fn reset_keys(paths: &config::Paths) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(error) => {
-            eprintln!("drover: cannot reset keys: {error}");
+            eprintln!("rodeo: cannot reset keys: {error}");
             ExitCode::FAILURE
         }
     }
@@ -93,11 +93,11 @@ fn options(paths: &config::Paths, session: Option<&str>) -> Result<Options, Exit
                 migration.from.display(),
                 migration.to.display()
             );
-            eprintln!("drover: {note}");
+            eprintln!("rodeo: {note}");
             notes.push(note);
         }
         Ok(None) => {}
-        Err(error) => eprintln!("drover: cannot copy the Herdr config: {error}"),
+        Err(error) => eprintln!("rodeo: cannot copy the Herdr config: {error}"),
     }
     let loaded = config::Config::load(&paths.config);
     let caller = std::env::var("HC_TERMINAL_ID")
@@ -107,7 +107,7 @@ fn options(paths: &config::Paths, session: Option<&str>) -> Result<Options, Exit
         && !loaded.config.experimental.allow_nested
     {
         eprintln!(
-            "drover: this shell runs inside hc terminal {id}; set experimental.allow_nested = true in {} to open drover here",
+            "rodeo: this shell runs inside hc terminal {id}; set experimental.allow_nested = true in {} to open rodeo here",
             paths.config.display()
         );
         return Err(ExitCode::FAILURE);
@@ -126,7 +126,7 @@ fn options(paths: &config::Paths, session: Option<&str>) -> Result<Options, Exit
         config_path: paths.config.clone(),
         prefs_path: paths.preferences(&session_name),
         loaded,
-        host: drover::app::HostInfo::default(),
+        host: rodeo::app::HostInfo::default(),
         caller,
         notes,
         hostname: hostname(),
@@ -142,13 +142,13 @@ fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
         Err(code) => return code,
     };
     logging::init(&paths.state);
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), "drover starting");
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "rodeo starting");
     host::install_panic_hook();
     let guard = match host::enter() {
         Ok(guard) => guard,
         Err(error) => {
             host::restore();
-            eprintln!("drover: cannot set up the terminal: {error}");
+            eprintln!("rodeo: cannot set up the terminal: {error}");
             return ExitCode::FAILURE;
         }
     };
@@ -160,7 +160,7 @@ fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
         Ok(runtime) => runtime,
         Err(error) => {
             drop(guard);
-            eprintln!("drover: {error}");
+            eprintln!("rodeo: {error}");
             return ExitCode::FAILURE;
         }
     };
@@ -170,16 +170,16 @@ fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("drover: {error}");
+            eprintln!("rodeo: {error}");
             ExitCode::FAILURE
         }
     }
 }
 
 async fn drive(options: Options) -> std::io::Result<()> {
-    let backend = drover::backend::HostBackend::new(std::io::stdout());
+    let backend = rodeo::backend::HostBackend::new(std::io::stdout());
     let mut runner = Runner::new(options, backend, Box::new(std::io::stdout()))?;
-    drover::host_input::start(runner.sender());
+    rodeo::host_input::start(runner.sender());
     let signals = runner.sender();
     tokio::task::spawn_local(async move {
         use tokio::signal::unix::{SignalKind, signal};

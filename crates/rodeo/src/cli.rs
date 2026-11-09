@@ -10,14 +10,14 @@ pub enum Command {
     ResetKeys,
 }
 
-pub const USAGE: &str = "drover: a terminal UI for herdr-core
+pub const USAGE: &str = "rodeo: a terminal UI for herdr-core
 
 usage:
-  drover [--session <name>]   open drover on an hc session
-  drover --default-config     print the default config
-  drover config check         check the config file
-  drover config reset-keys    remove [keys] from the config (keeps a backup)
-  drover --help | --version
+  rodeo [--session <name>]   open rodeo on an hc session
+  rodeo --default-config     print the default config
+  rodeo config check         check the config file
+  rodeo config reset-keys    remove [keys] from the config (keeps a backup)
+  rodeo --help | --version
 
 Detach with the detach key (prefix+q). Terminals keep running in hc.";
 

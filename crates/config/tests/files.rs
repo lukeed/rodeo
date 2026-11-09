@@ -274,22 +274,22 @@ fn path_resolution() {
     let paths = Paths::from_lookup(env(&[("HOME", home)]));
     assert_eq!(
         paths.config,
-        PathBuf::from("/home/me/.config/drover/config.toml")
+        PathBuf::from("/home/me/.config/rodeo/config.toml")
     );
-    assert_eq!(paths.state, PathBuf::from("/home/me/.local/state/drover"));
+    assert_eq!(paths.state, PathBuf::from("/home/me/.local/state/rodeo"));
     assert_eq!(
         paths.herdr_config,
         PathBuf::from("/home/me/.config/herdr/config.toml")
     );
-    assert_eq!(paths.config_dir(), Path::new("/home/me/.config/drover"));
+    assert_eq!(paths.config_dir(), Path::new("/home/me/.config/rodeo"));
 
     let xdg = Paths::from_lookup(env(&[
         ("HOME", home),
         ("XDG_CONFIG_HOME", Path::new("/xdg/config")),
         ("XDG_STATE_HOME", Path::new("/xdg/state")),
     ]));
-    assert_eq!(xdg.config, PathBuf::from("/xdg/config/drover/config.toml"));
-    assert_eq!(xdg.state, PathBuf::from("/xdg/state/drover"));
+    assert_eq!(xdg.config, PathBuf::from("/xdg/config/rodeo/config.toml"));
+    assert_eq!(xdg.state, PathBuf::from("/xdg/state/rodeo"));
     assert_eq!(
         xdg.herdr_config,
         PathBuf::from("/xdg/config/herdr/config.toml")
@@ -297,11 +297,11 @@ fn path_resolution() {
 
     let explicit = Paths::from_lookup(env(&[
         ("HOME", home),
-        ("DROVER_CONFIG_PATH", Path::new("/etc/drover.toml")),
+        ("RODEO_CONFIG_PATH", Path::new("/etc/rodeo.toml")),
         ("HERDR_CONFIG_PATH", Path::new("/etc/herdr.toml")),
         ("XDG_CONFIG_HOME", Path::new("")),
     ]));
-    assert_eq!(explicit.config, PathBuf::from("/etc/drover.toml"));
+    assert_eq!(explicit.config, PathBuf::from("/etc/rodeo.toml"));
     assert_eq!(explicit.herdr_config, PathBuf::from("/etc/herdr.toml"));
 
     let homeless = Paths::from_lookup(env(&[]));
@@ -310,19 +310,19 @@ fn path_resolution() {
 
     assert_eq!(
         paths.preferences("work"),
-        PathBuf::from("/home/me/.local/state/drover/preferences/work.json")
+        PathBuf::from("/home/me/.local/state/rodeo/preferences/work.json")
     );
     assert_eq!(
         paths.preferences("a/b c"),
-        PathBuf::from("/home/me/.local/state/drover/preferences/a_b_c.json")
+        PathBuf::from("/home/me/.local/state/rodeo/preferences/a_b_c.json")
     );
     assert_eq!(
         paths.preferences(".."),
-        PathBuf::from("/home/me/.local/state/drover/preferences/default.json")
+        PathBuf::from("/home/me/.local/state/rodeo/preferences/default.json")
     );
     assert_eq!(
         paths.preferences(""),
-        PathBuf::from("/home/me/.local/state/drover/preferences/default.json")
+        PathBuf::from("/home/me/.local/state/rodeo/preferences/default.json")
     );
 }
 
@@ -341,7 +341,7 @@ fn migration_copies_herdr_config_once() {
         paths.migrate().unwrap(),
         Some(Migration {
             from: herdr.clone(),
-            to: home.join(".config/drover/config.toml"),
+            to: home.join(".config/rodeo/config.toml"),
         })
     );
     assert_eq!(
@@ -377,7 +377,7 @@ fn migration_uses_herdr_overrides() {
         ("HERDR_CONFIG_PATH", &herdr),
     ]));
     let migration = paths.migrate().unwrap().unwrap();
-    assert_eq!(migration.to, xdg.join("drover/config.toml"));
+    assert_eq!(migration.to, xdg.join("rodeo/config.toml"));
     assert_eq!(
         std::fs::read_to_string(&migration.to).unwrap(),
         "onboarding = false\n"
@@ -387,7 +387,7 @@ fn migration_uses_herdr_overrides() {
     std::fs::create_dir_all(&directory).unwrap();
     let other = Paths::from_lookup(env(&[
         ("HOME", root),
-        ("DROVER_CONFIG_PATH", &root.join("second.toml")),
+        ("RODEO_CONFIG_PATH", &root.join("second.toml")),
         ("HERDR_CONFIG_PATH", &directory),
     ]));
     assert_eq!(other.migrate().unwrap(), None);

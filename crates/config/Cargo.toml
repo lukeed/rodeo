@@ -1,5 +1,5 @@
 [package]
-name = "drover-config"
+name = "rodeo-config"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

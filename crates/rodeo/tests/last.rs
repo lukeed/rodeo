@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers};
 use doc::Document;
-use drover::view::Mode;
+use rodeo::view::Mode;
 
 async fn until_killed(h: &mut Harness, address: &str) {
     let started = Instant::now();
@@ -137,7 +137,7 @@ fn a_doc_emptied_elsewhere_stays_empty_until_the_user_asks() {
         }
         let (doc, stored) = h.stored().await;
         assert!(doc.spaces.is_empty(), "{doc:#?}");
-        assert_eq!(stored, emptied, "drover wrote nothing");
+        assert_eq!(stored, emptied, "rodeo wrote nothing");
         let screen = h.screen();
         assert!(screen.contains(" spaces"), "{screen}");
         assert!(screen.contains("NAVIGATE"), "{screen}");

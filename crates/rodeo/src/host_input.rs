@@ -240,7 +240,7 @@ fn component(part: &str) -> Option<u8> {
 pub fn start(tx: UnboundedSender<Msg>) {
     let (pieces, mut rx) = unbounded_channel::<Option<Piece>>();
     let spawned = std::thread::Builder::new()
-        .name("drover-input".into())
+        .name("rodeo-input".into())
         .spawn(move || read_loop(&pieces));
     if let Err(error) = spawned {
         tracing::error!(%error, "cannot start the input thread");

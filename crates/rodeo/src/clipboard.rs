@@ -102,7 +102,7 @@ async fn read_macos(env: &hc::Env) -> Option<Image> {
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_nanos());
     let path = std::env::temp_dir().join(format!(
-        "drover-clipboard-{}-{nanos}.png",
+        "rodeo-clipboard-{}-{nanos}.png",
         std::process::id()
     ));
     let script = format!(

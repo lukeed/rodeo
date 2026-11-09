@@ -181,7 +181,7 @@ fn linked_worktrees_group_under_their_repo() {
             let app = h.app();
             app.focused_address()
                 .and_then(|a| app.panes.get(&a))
-                .is_some_and(|p| p.link == drover::panes::Link::Attached)
+                .is_some_and(|p| p.link == rodeo::panes::Link::Attached)
         })
         .await;
         h.typed(&format!("cd {wt}\r")).await;

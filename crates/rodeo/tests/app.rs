@@ -3,7 +3,7 @@ mod common;
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers, MouseButton, MouseEventKind};
 use doc::{Kind, Size};
-use drover::view::Mode;
+use rodeo::view::Mode;
 
 fn root_kind(doc: &doc::Document) -> Vec<String> {
     doc.spaces[0].tabs[0]
@@ -120,7 +120,7 @@ fn closing_panes_tabs_and_workspaces() {
             h.tab_panes().len() == 2
                 && h.focused_address()
                     .and_then(|a| h.app().panes.get(&a))
-                    .is_some_and(|p| p.link == drover::panes::Link::Attached)
+                    .is_some_and(|p| p.link == rodeo::panes::Link::Attached)
         })
         .await;
         let doomed = h.focused_address().expect("the new pane");
@@ -209,7 +209,7 @@ fn new_tabs_switch_and_rename() {
                     h.app()
                         .panes
                         .get(&a)
-                        .map(|p| p.link == drover::panes::Link::Attached)
+                        .map(|p| p.link == rodeo::panes::Link::Attached)
                 })
                 .unwrap_or(false)
         })
@@ -562,7 +562,7 @@ fn an_exiting_shell_removes_its_pane() {
                     h.app()
                         .panes
                         .get(&a)
-                        .map(|p| p.link == drover::panes::Link::Attached)
+                        .map(|p| p.link == rodeo::panes::Link::Attached)
                 })
                 .unwrap_or(false)
         })
@@ -654,7 +654,7 @@ fn agents_toast_and_get_marked_seen() {
             .agents
             .into_iter()
             .find(|a| a.address == agent.address);
-        assert_eq!(row.map(|r| r.state), Some(drover::agents::State::Done));
+        assert_eq!(row.map(|r| r.state), Some(rodeo::agents::State::Done));
         assert!(h.screen().contains("claude"), "the agents list shows it");
         h.prefix_char('o').await;
         assert_eq!(h.focused_address().as_deref(), Some(agent.address.as_str()));
@@ -667,9 +667,9 @@ fn agents_toast_and_get_marked_seen() {
             }
             h.pump().await;
         }
-        assert!(seen.is_some(), "drover marks the turn seen");
+        assert!(seen.is_some(), "rodeo marks the turn seen");
         h.until("the agent idle", |h| {
-            h.app().agent_state(&agent.address) == Some(drover::agents::State::Idle)
+            h.app().agent_state(&agent.address) == Some(rodeo::agents::State::Idle)
         })
         .await;
         h.outside.kill(&agent.address).await.expect("kill");

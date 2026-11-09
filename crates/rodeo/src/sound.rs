@@ -10,7 +10,7 @@ const LIMIT: Duration = Duration::from_secs(15);
 const POLL: Duration = Duration::from_millis(25);
 const RATE: u32 = 22_050;
 const HISTORY: usize = 16;
-const MUTES: [&str; 3] = ["DROVER_DISABLE_SOUND", "HERDR_DISABLE_SOUND", "NEXTEST"];
+const MUTES: [&str; 3] = ["RODEO_DISABLE_SOUND", "HERDR_DISABLE_SOUND", "NEXTEST"];
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
@@ -100,7 +100,7 @@ impl Sounds {
             return;
         }
         let spawned = std::thread::Builder::new()
-            .name("drover-sound".into())
+            .name("rodeo-sound".into())
             .spawn(move || {
                 if let Some(path) = custom {
                     match play_file(&path, Kind::Mp3) {
@@ -122,7 +122,7 @@ impl Sounds {
 
 fn play_builtin(sound: Sound) -> Result<(), String> {
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("drover-sound-{}-{id}.wav", std::process::id()));
+    let path = std::env::temp_dir().join(format!("rodeo-sound-{}-{id}.wav", std::process::id()));
     std::fs::write(&path, wav(sound)).map_err(|e| e.to_string())?;
     let result = play_file(&path, Kind::Wav);
     let _ = std::fs::remove_file(&path);
@@ -290,10 +290,10 @@ mod tests {
 
     #[test]
     fn the_env_mutes_playback() {
-        for key in ["DROVER_DISABLE_SOUND", "HERDR_DISABLE_SOUND"] {
+        for key in ["RODEO_DISABLE_SOUND", "HERDR_DISABLE_SOUND"] {
             assert!(Sounds::from_env(&hc::Env::new().with(key, "1")).muted);
         }
-        let mut sounds = Sounds::from_env(&hc::Env::new().with("DROVER_DISABLE_SOUND", ""));
+        let mut sounds = Sounds::from_env(&hc::Env::new().with("RODEO_DISABLE_SOUND", ""));
         sounds.play(Sound::Done, None);
         assert_eq!(sounds.played, [(Sound::Done, None)]);
     }

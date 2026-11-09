@@ -2,9 +2,9 @@ use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
 
-pub const CONFIG_PATH_ENV: &str = "DROVER_CONFIG_PATH";
+pub const CONFIG_PATH_ENV: &str = "RODEO_CONFIG_PATH";
 pub const HERDR_CONFIG_PATH_ENV: &str = "HERDR_CONFIG_PATH";
-pub const APP_DIR: &str = "drover";
+pub const APP_DIR: &str = "rodeo";
 const CONFIG_FILE: &str = "config.toml";
 
 #[derive(Debug, Clone, PartialEq, Eq)]

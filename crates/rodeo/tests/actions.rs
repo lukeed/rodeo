@@ -1,10 +1,10 @@
 use config::Action;
 use doc::{Axis, Document, Node, Size, Tab};
-use drover::app::{App, HostInfo, Options};
-use drover::view::Mode;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::layout::Rect;
+use rodeo::app::{App, HostInfo, Options};
+use rodeo::view::Mode;
 
 fn doc() -> Document {
     let mut doc = Document::default();
@@ -31,7 +31,7 @@ fn doc() -> Document {
 }
 
 fn app() -> App {
-    let dir = std::env::temp_dir().join(format!("drover-actions-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("rodeo-actions-{}", std::process::id()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     let mut app = App::new(
         Options {
@@ -142,7 +142,7 @@ fn tabs_and_spaces_switch_move_and_rename() {
         "each space keeps its tab"
     );
     app.finish_rename(
-        drover::overlay::RenameTarget::Tab {
+        rodeo::overlay::RenameTarget::Tab {
             tab: "tb1".into(),
             original: "2".into(),
             custom: false,
@@ -191,10 +191,10 @@ fn closing_without_confirm_edits_the_doc() {
 #[test]
 fn hits_match_the_drawn_frame() {
     let mut app = app();
-    app.conn.state = drover::app::ConnState::Online;
+    app.conn.state = rodeo::app::ConnState::Online;
     let mut terminal = Terminal::new(TestBackend::new(120, 40)).expect("a terminal");
     terminal
-        .draw(|frame| drover::render::draw(&mut app, frame))
+        .draw(|frame| rodeo::render::draw(&mut app, frame))
         .expect("a frame");
     let hits = &app.hits;
     assert_eq!(hits.panes.len(), 2);

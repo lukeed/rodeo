@@ -110,7 +110,7 @@ fn unreadable_file_is_defaults() {
     assert!(loaded.diagnostics[0].ends_with("; using defaults"));
     assert_eq!(
         summary(&loaded.diagnostics, Path::new("/x/config.toml")).as_deref(),
-        Some("config.toml unreadable; using defaults; drover config check")
+        Some("config.toml unreadable; using defaults; rodeo config check")
     );
 }
 
@@ -135,7 +135,7 @@ fn hard_errors_drop_everything() {
     let summary_text = summary(&parse("[ui\n").diagnostics, Path::new("config.toml"));
     assert_eq!(
         summary_text.as_deref(),
-        Some("config.toml invalid; using defaults; drover config check")
+        Some("config.toml invalid; using defaults; rodeo config check")
     );
 }
 
@@ -190,11 +190,11 @@ fn unknown_sections_and_keys_are_soft() {
     let only_keys = parse("[ui]\nwidth = 3\n").diagnostics;
     assert_eq!(
         summary(&only_keys, Path::new("/a/config.toml")).as_deref(),
-        Some("config.toml has unknown keys; drover config check")
+        Some("config.toml has unknown keys; rodeo config check")
     );
     assert_eq!(
         summary(&loaded.diagnostics, Path::new("/a/my.toml")).as_deref(),
-        Some("my.toml; drover config check")
+        Some("my.toml; rodeo config check")
     );
     assert_eq!(summary(&[], Path::new("config.toml")), None);
 }
@@ -226,7 +226,7 @@ fn soft_diagnostics() {
         vec![
             "unsafe direct keybinding: keys.help = \"q\" would intercept typing; use \"prefix+q\" to require the prefix; disabling binding".to_string(),
             "empty custom command: keys.command[0].command; disabling custom command".into(),
-            "unsupported custom command: keys.command[1].type = \"plugin_action\"; drover has no plugins; disabling custom command".into(),
+            "unsupported custom command: keys.command[1].type = \"plugin_action\"; rodeo has no plugins; disabling custom command".into(),
             "invalid keybinding: keys.remote_image_paste = \"ctrl+nope\"; disabling binding".into(),
             format!("unknown theme name theme.name = \"neon\"; using \"catppuccin\"; valid themes: {valid}"),
             format!("unknown theme name theme.light_name = \"glow\"; using \"catppuccin-latte\"; valid themes: {valid}"),
@@ -354,7 +354,7 @@ fn reload_syntax_error_keeps_everything() {
     assert!(reload.diagnostics[0].ends_with("; keeping current config"));
     assert_eq!(
         summary(&reload.diagnostics, Path::new("config.toml")).as_deref(),
-        Some("config.toml invalid; keeping current config; drover config check")
+        Some("config.toml invalid; keeping current config; rodeo config check")
     );
 }
 
@@ -414,7 +414,7 @@ fn reload_kitty_graphics_needs_restart() {
     assert_eq!(reload.config.terminal.new_cwd, config::NewCwd::Home);
     assert_eq!(
         reload.diagnostics,
-        vec!["terminal.kitty_graphics changes require restarting drover; kept current setting"]
+        vec!["terminal.kitty_graphics changes require restarting rodeo; kept current setting"]
     );
     let legacy = current.reload_text("[experimental]\nkitty_graphics = false\n", dir());
     assert!(legacy.config.kitty_graphics());
@@ -447,6 +447,6 @@ fn reload_from_disk() {
     assert_eq!(unreadable.config, current);
     assert_eq!(
         summary(&unreadable.diagnostics, &path).as_deref(),
-        Some("config.toml unreadable; keeping current config; drover config check")
+        Some("config.toml unreadable; keeping current config; rodeo config check")
     );
 }

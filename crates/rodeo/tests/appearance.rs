@@ -2,9 +2,9 @@ mod common;
 
 use common::{Harness, run};
 use config::Appearance;
-use drover::app::Rgb;
-use drover::appearance::COLOR_QUERY;
-use drover::host_input::Report;
+use rodeo::app::Rgb;
+use rodeo::appearance::COLOR_QUERY;
+use rodeo::host_input::Report;
 
 const ASK_BG: &str = r#"stty -icanon -echo min 0 time 10; printf '\033]11;?\033\\'; v=$(dd bs=64 count=1 2>/dev/null); stty sane; printf 'got%s\n' "$v" | tr -d '\033\007'"#;
 

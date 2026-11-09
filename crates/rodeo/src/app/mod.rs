@@ -457,7 +457,7 @@ impl App {
             pane: &pane,
             terminal_title: &terminal_title,
         });
-        let title = title.unwrap_or_else(|| "drover".to_owned());
+        let title = title.unwrap_or_else(|| "rodeo".to_owned());
         if self.title.as_deref() == Some(title.as_str()) {
             return;
         }

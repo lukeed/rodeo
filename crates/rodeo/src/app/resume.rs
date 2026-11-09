@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn a_view_round_trips_through_its_file() {
-        let dir = std::env::temp_dir().join(format!("drover-resume-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("rodeo-resume-{}", std::process::id()));
         let path = Resume::path(&dir.join("default.json"));
         let resume = Resume {
             space: Some("sp1".into()),

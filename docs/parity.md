@@ -1,6 +1,6 @@
 # Parity with Herdr TUI v0.9.5
 
-This is the inventory of every key bind, visible element and config option in Herdr TUI v0.9.5, and what drover does with each one. The detail (defaults, glyphs, colors, exact keys, source lines) is in `docs/research/`:
+This is the inventory of every key bind, visible element and config option in Herdr TUI v0.9.5, and what rodeo does with each one. The detail (defaults, glyphs, colors, exact keys, source lines) is in `docs/research/`:
 
 - `herdr-keys-config.md`: key binds, modes, overlay keys, config options, config load and reload.
 - `herdr-ui.md`: screen regions, sidebar, tab bar, panes, overlays, mouse, themes, titles, notifications.
@@ -8,9 +8,9 @@ This is the inventory of every key bind, visible element and config option in He
 
 Status words:
 
-- **match**: drover does the same thing. The look need not be exact, but the same element shows and the same key gives the same result.
-- **hc**: the feature belonged to the Herdr runtime. drover gets it from hc or from the `herdr-app` doc, as the Notes column says.
-- **dropped**: drover does not have it. The Notes column gives the reason.
+- **match**: rodeo does the same thing. The look need not be exact, but the same element shows and the same key gives the same result.
+- **hc**: the feature belonged to the Herdr runtime. rodeo gets it from hc or from the `herdr-app` doc, as the Notes column says.
+- **dropped**: rodeo does not have it. The Notes column gives the reason.
 
 Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words ("workspace", "spaces", "agents") where Herdr shows them.
 
@@ -21,18 +21,18 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Workspace | hc | A `herdr-app` doc space. Order: local machine first, then machines by name; doc order inside a machine. |
 | Workspace label | hc | Space `name`, else the app's rule: git top-level folder name of its first terminal, else that terminal's live folder, else `folder`; `~` for home. |
 | Tab | hc | A doc tab. Label: `name`, else its 1-based number. |
-| Last workspace closed | match | When a user closes the last workspace in this client (its last tab or pane too, or its group), one doc write removes it and adds a fresh workspace with a new shell, as Herdr does (folder: `terminal.new_cwd` with no source pane, so `follow` gives home). When the doc becomes empty through another client or the app, or because the last shell exits (every client sees the exit), drover adds nothing: it shows the empty spaces list, and `new` or `prefix+shift+n` starts a workspace. |
+| Last workspace closed | match | When a user closes the last workspace in this client (its last tab or pane too, or its group), one doc write removes it and adds a fresh workspace with a new shell, as Herdr does (folder: `terminal.new_cwd` with no source pane, so `follow` gives home). When the doc becomes empty through another client or the app, or because the last shell exits (every client sees the exit), rodeo adds nothing: it shows the empty spaces list, and `new` or `prefix+shift+n` starts a workspace. |
 | Pane | hc | A doc `block` with `{terminal}` content. The terminal is an hc terminal with `herdr.space`, `herdr.tab`, `herdr.seen=0` labels and `keep: true`. |
 | Pane manual name | hc | Stored in the block's `title` field. The app parses and keeps `title`, so it survives app writes. |
 | Mod blocks (`{mod}`) | match | Files: a text folder tree. Other mods: a placeholder with the mod name. |
 | Split tree | hc | Doc `row` (side by side) and `column` (stacked) with `size.weight`. Split and remove follow the app's tree rules. |
-| Zoom, focus, active workspace, active tab | match | Private to each drover client, as in the app. Never in the doc. Saved on quit beside the client preferences and restored on the next start, as Herdr's server keeps them. |
+| Zoom, focus, active workspace, active tab | match | Private to each rodeo client, as in the app. Never in the doc. Saved on quit beside the client preferences and restored on the next start, as Herdr's server keeps them. |
 | Agent | hc | A terminal with an hc status (OSC 7501 reports). Kind from `status.app`. |
 | Agent state blocked / working / done / idle / unknown | hc | From `status.state` and `turn` against the shared `herdr.seen` label, as the app computes it. `error` shows as blocked. `status: null` is not an agent. Agents that do not report OSC 7501 show no state (Herdr detected them from the screen). |
 | Seen tracking | hc | `herdr.seen=<turn>` label, raised only while a person looks at the pane, once per turn. Shared with the app. |
-| Session | hc | An hc session (`HC_SESSION`). `drover --session <name>` sets it. |
-| Client / server | hc | hc is the server. drover is a client with no server of its own. Detach quits drover; terminals keep running. |
-| Multiple clients, per-client view | match | Each drover client has its own focus and view. The last active viewer sets a terminal's size (hc rule). |
+| Session | hc | An hc session (`HC_SESSION`). `rodeo --session <name>` sets it. |
+| Client / server | hc | hc is the server. rodeo is a client with no server of its own. Detach quits rodeo; terminals keep running. |
+| Multiple clients, per-client view | match | Each rodeo client has its own focus and view. The last active viewer sets a terminal's size (hc rule). |
 | Connected machines (endpoints) | hc | `machine.list`, each machine's own `herdr-app` doc (`on`), and `machine/tN` terminal addresses. Temporary machines are not shown. |
 
 ## Modes
@@ -64,8 +64,8 @@ Every `[keys]` field, with Herdr's defaults and binding syntax (1.1 to 1.3: modi
 | `goto` | `prefix+g` | match | |
 | `navigate_workspace_up` / `_down` | `up` / `down` | match | |
 | `navigate_pane_left` / `_down` / `_up` / `_right` | `h` `j` `k` `l` | match | |
-| `detach` | `prefix+q` | match | Quits drover. |
-| `reload_config` | `prefix+shift+r` | match | Reloads drover's config only. There is no server config. |
+| `detach` | `prefix+q` | match | Quits rodeo. |
+| `reload_config` | `prefix+shift+r` | match | Reloads rodeo's config only. There is no server config. |
 | `open_notification_target` | `prefix+o` | match | |
 | `previous_workspace` / `next_workspace` | unset | match | Across all machines. |
 | `previous_agent` / `next_agent` | unset | match | |
@@ -125,7 +125,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Link hover and click (OSC 8 and detected URLs) | match | |
 | Popup pane (custom command `popup`) | hc | |
 | Copy feedback toast ("copied") | match | |
-| Config diagnostic banner | match | Text says `drover config check`. |
+| Config diagnostic banner | match | Text says `rodeo config check`. |
 | Agent notification toasts | match | |
 | Endpoint notices and lifecycle banner | hc | From machine states in `machine.list` and the events stream. |
 | Unavailable state ("Select a connected machine") | hc | When hc is not reachable or a machine's doc cannot be read. |
@@ -142,7 +142,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Worktree create, open, remove | hc | `machine.exec git`. |
 | Context menu: workspace, tab, pane | match | Pane menu "Send right-clicks to pane" writes the `herdr.right-click=program` label the app also reads. |
 | Global menu | match | Items: settings, keybinds, reload config, detach. "update ready" and "what's new" are dropped. |
-| Settings: theme, indicators, sound, toast | match | Writes drover's `config.toml`. |
+| Settings: theme, indicators, sound, toast | match | Writes rodeo's `config.toml`. |
 | Settings: integrations | dropped | Agent integrations belong to the app and hc (OSC 7501 reporting). |
 | Onboarding | dropped | Its only job was to lead to integrations. `onboarding` in config is accepted and ignored. |
 | Product announcement | dropped | Herdr product news. |
@@ -166,23 +166,23 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 
 | Feature | Status | Notes |
 |---|---|---|
-| Outer window title (`ui.window_title` tokens) | match | Drawn by drover. `{hostname}` is the focused space's machine. |
+| Outer window title (`ui.window_title` tokens) | match | Drawn by rodeo. `{hostname}` is the focused space's machine. |
 | Pane terminal titles | hc | hc `title` event. |
 | Toast delivery `off`, `herdr`, `terminal`, `system` | match | Fired on agent state changes from hc events. `system`: `terminal-notifier`, then `osascript` on macOS; `notify-send`, then `gdbus` on Linux. A system notification click does not focus the pane (Herdr does that on Windows only). |
-| Sound per state and per agent | match | Players: `afplay` on macOS; `paplay`, `pw-play`, `aplay` (built-in sounds only), `ffplay`, `mpg123`, `mpv` on Linux. The built-in sounds are short chimes that drover makes itself, not Herdr's mp3 files. `DROVER_DISABLE_SOUND` or `HERDR_DISABLE_SOUND` turns playback off. |
+| Sound per state and per agent | match | Players: `afplay` on macOS; `paplay`, `pw-play`, `aplay` (built-in sounds only), `ffplay`, `mpg123`, `mpv` on Linux. The built-in sounds are short chimes that rodeo makes itself, not Herdr's mp3 files. `RODEO_DISABLE_SOUND` or `HERDR_DISABLE_SOUND` turns playback off. |
 | Bell pass-through | match | Only for attached panes; BEL is in the attach stream only. |
 | Host light/dark detection and `theme.auto_switch` | match | |
 
 ## Config
 
-drover reads `~/.config/drover/config.toml` with Herdr's schema. On first start it copies `~/.config/herdr/config.toml` if its own file does not exist. Same load rules: startup all-or-nothing, reload per section, soft diagnostics, unknown key warnings (`herdr-keys-config.md` section 3). `DROVER_CONFIG_PATH` replaces `HERDR_CONFIG_PATH`. Client preferences (sidebar width, collapsed state, section split, agent sort, collapsed groups) go to `~/.local/state/drover/`.
+rodeo reads `~/.config/rodeo/config.toml` with Herdr's schema. On first start it copies `~/.config/herdr/config.toml` if its own file does not exist. Same load rules: startup all-or-nothing, reload per section, soft diagnostics, unknown key warnings (`herdr-keys-config.md` section 3). `RODEO_CONFIG_PATH` replaces `HERDR_CONFIG_PATH`. Client preferences (sidebar width, collapsed state, section split, agent sort, collapsed groups) go to `~/.local/state/rodeo/`.
 
 | Section | Status | Notes |
 |---|---|---|
 | `onboarding` | dropped | Accepted, ignored. |
 | `[theme]` all fields, 18 themes, custom tokens, light/dark overrides | match | |
-| `terminal.default_shell`, `terminal.shell_mode` | hc | Empty: hc runs the machine's shell (empty argv). Set: drover sends it as argv (with `-l` for `login`). |
-| `terminal.new_cwd` | match | drover computes the folder and always sends an absolute path. |
+| `terminal.default_shell`, `terminal.shell_mode` | hc | Empty: hc runs the machine's shell (empty argv). Set: rodeo sends it as argv (with `-l` for `login`). |
+| `terminal.new_cwd` | match | rodeo computes the folder and always sends an absolute path. |
 | `terminal.kitty_graphics` (and `experimental.kitty_graphics`) | match | |
 | `[session]` | hc | Agent resume and restore belong to hc (kept terminals). Accepted, ignored. |
 | `[server]` | hc | Headless size is hc's `headless` config. Accepted, ignored. |
@@ -197,19 +197,19 @@ drover reads `~/.config/drover/config.toml` with Herdr's schema. On first start 
 | `experimental.allow_nested` | match | Checks `HC_TERMINAL_ID` instead of `HERDR_ENV`. |
 | `experimental.pane_history` | hc | hc keeps screens. Accepted, ignored. |
 | `experimental.reveal_hidden_cursor_for_cjk_ime`, `cjk_ime_agents`, `cjk_ime_cursor_shape` | match | |
-| `experimental.switch_ascii_input_source_in_prefix` | dropped | Accepted, ignored. Herdr calls macOS Carbon input source APIs (TIS) over FFI and pumps the main run loop. drover denies `unsafe_code`, and the switch cannot be tested on the Linux build host. |
+| `experimental.switch_ascii_input_source_in_prefix` | dropped | Accepted, ignored. Herdr calls macOS Carbon input source APIs (TIS) over FFI and pumps the main run loop. rodeo denies `unsafe_code`, and the switch cannot be tested on the Linux build host. |
 
 ## CLI
 
 | Herdr 0.9.5 | Status | Notes |
 |---|---|---|
-| `herdr` (attach default session) | match | `drover` |
-| `herdr session list/attach` | hc | `drover --session <name>`; `hc` lists sessions. |
-| `herdr --remote` | hc | Run `drover` on the remote host, or add it as an hc machine. |
+| `herdr` (attach default session) | match | `rodeo` |
+| `herdr session list/attach` | hc | `rodeo --session <name>`; `hc` lists sessions. |
+| `herdr --remote` | hc | Run `rodeo` on the remote host, or add it as an hc machine. |
 | `herdr server stop/reload-config` | hc | `hc server stop`. Reload is the `reload_config` key. |
-| `herdr --default-config` | match | `drover --default-config` |
-| `herdr config check` | match | `drover config check` |
-| `herdr config reset-keys` | match | `drover config reset-keys` |
+| `herdr --default-config` | match | `rodeo --default-config` |
+| `herdr config check` | match | `rodeo config check` |
+| `herdr config reset-keys` | match | `rodeo config reset-keys` |
 | `herdr plugin ...` | dropped | No plugins. |
 | `herdr update` | dropped | No self-update. |
 | Socket API and pane/workspace CLI commands | dropped | `hc` and `herdr-app do` cover programs and layout. |

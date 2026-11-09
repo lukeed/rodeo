@@ -1,4 +1,4 @@
-# hc integration: facts for drover
+# hc integration: facts for rodeo
 
 Research date: 2026-11-07. Everything here is cited to source. Items marked **verified** were run against an isolated hc 0.1.18 core on workbox (section 1.2).
 
@@ -32,7 +32,7 @@ All paths are relative to `~/oss/thuic-ref/`. Short prefixes used below:
    - `socket` key in config.toml (`core/config.rs:24-25`).
    - `$XDG_RUNTIME_DIR/herdr-core/<session>.sock`; else `/run/user/<uid>/herdr-core/<session>.sock` if `/run/user/<uid>` exists; else `<state dir>/<session>.sock` (`core/platform/unix.rs:98-105`). On macOS there is normally no `XDG_RUNTIME_DIR` and no `/run/user`, so the socket is `~/.local/state/herdr-core/default/default.sock`.
 5. The holder socket sits beside it: `<socket minus .sock>.holder.sock` (`core/paths.rs:33-34`). Path length is checked against `sun_path` (macOS 103, Linux 107 bytes) (`core/paths.rs:36-47`, `core/platform/unix.rs:92-96`). Keep test roots short.
-6. The running core writes the socket path it listens on into `<state dir>/core.lock` (`core/server.rs:30-32`). The CLI uses it to say "the core listens at X, but this shell looks at Y" when env differs (`core/client.rs:107-118`). drover can read that file for the same diagnosis.
+6. The running core writes the socket path it listens on into `<state dir>/core.lock` (`core/server.rs:30-32`). The CLI uses it to say "the core listens at X, but this shell looks at Y" when env differs (`core/client.rs:107-118`). rodeo can read that file for the same diagnosis.
 
 Directories are created with mode 0700 (`core/platform/unix.rs:107-111`, `herdr-core/docs/security.md:20-25`).
 
@@ -59,7 +59,7 @@ rm -rf $R
 Two ways, both carry the same bytes:
 
 - **Spawn `hc connect`** and speak on its stdin/stdout. It resolves the socket like any `hc` command, starts the core if none listens (`connect_or_start`), then pumps bytes both ways, unbuffered (`core/cli.rs:512-522`, `core/cli.rs:829-848`). `hc connect --session <name>` sets `HC_SESSION` for that call (`core/cli.rs:101-107`). The app does this (`app/hc.rs:297-304`), and so does pocketty (`pkt/daemon/src/hc.rs:26-44`, it also removes `HC_TERMINAL_ID` and `HC_TERMINAL_SOCKET` from the child env). On error, `hc connect` writes a JSON error object to stderr; the app parses `error.message` and `error.hint` from it (`app/hc.rs:285-293`).
-- **Connect to the Unix socket directly** with the resolution in 1.1. Autostart is then drover's job.
+- **Connect to the Unix socket directly** with the resolution in 1.1. Autostart is then rodeo's job.
 
 Finding the binary: the app accepts a candidate only if `--version` prints `hc …`, because some window managers ship an unrelated `hc` (herbstclient). It also looks for `herdr-core` (`app/core_bin.rs:1-8`, `app/core_bin.rs:76-118`). Usual dirs: `~/.local/bin`, Homebrew, mise, Nix, cargo.
 
@@ -104,15 +104,15 @@ Frame: `[channel u32 LE][kind u8][len u32 LE][payload]`, payload at most 16 MiB 
 
 ### 1.6 Errors
 
-JSON-RPC error: `{"code":-32000,"message":"...","data":{"kind":"not_found","hint":"..."}}` (`core/rpc.rs:14-52`). Protocol errors: `parse_error` -32700, `invalid_request` -32600, `unknown_method` -32601, `invalid_params` -32602, `internal` -32603 (`core/rpc.rs:21-39`). Kinds drover will meet: `not_found`, `machine_unknown`, `unavailable` (incl. "lost, waiting for its new shell"), `finished`, `needs_framed`, `conflict`, `name_taken`, `spawn_failed`, `live`, `refused`, `needs_update`, `needs_login`, `blocked`, `invalid_params`, `denied`. Branch on `data.kind`, never on message text.
+JSON-RPC error: `{"code":-32000,"message":"...","data":{"kind":"not_found","hint":"..."}}` (`core/rpc.rs:14-52`). Protocol errors: `parse_error` -32700, `invalid_request` -32600, `unknown_method` -32601, `invalid_params` -32602, `internal` -32603 (`core/rpc.rs:21-39`). Kinds rodeo will meet: `not_found`, `machine_unknown`, `unavailable` (incl. "lost, waiting for its new shell"), `finished`, `needs_framed`, `conflict`, `name_taken`, `spawn_failed`, `live`, `refused`, `needs_update`, `needs_login`, `blocked`, `invalid_params`, `denied`. Branch on `data.kind`, never on message text.
 
 ### 1.7 Auth
 
-None. Anyone who can open the socket has full control. Trust is the 0700 dirs plus same-user processes (`herdr-core/docs/security.md:18-31`). Remote machines are reached by the core over SSH; drover never handles credentials (`herdr-core/docs/security.md:47-57`).
+None. Anyone who can open the socket has full control. Trust is the 0700 dirs plus same-user processes (`herdr-core/docs/security.md:18-31`). Remote machines are reached by the core over SSH; rodeo never handles credentials (`herdr-core/docs/security.md:47-57`).
 
 ---
 
-## 2. Methods drover needs
+## 2. Methods rodeo needs
 
 Method table with descriptions and error kinds: `core/api.rs:56-152`. Param and result types: `core/api/types.rs`. Full schema: `samples/hc-schema.json`.
 
@@ -152,7 +152,7 @@ Params (`core/api/types.rs:198-286`):
 | `on?` | another machine |
 | `env{}` | added on top of the core's env. hc strips the core's `TERM, TERM_PROGRAM, TERM_PROGRAM_VERSION, COLORTERM`, then defaults `TERM=xterm-256color`, `COLORTERM=truecolor`, and replaces `TERM_PROGRAM` unset or `herdr` with `ghostty` (`core/api.rs:20`, `core/api/run.rs:228-248`). It always sets `HC_TERMINAL_ID`, `HC_TERMINAL_SOCKET`, `PWD` (`core/api/run.rs:212-224`). |
 | `labels{}` | empty values are dropped; keys must be non-empty without `=` (`core/terminals.rs:261`, `core/terminals.rs:467-471`) |
-| `parent?`, `no_parent`, `no_notify`, `outlive_parent`, `rm`, `keep`, `wait`, `timeout?`, `caller?` | drover sends `keep: true` and no `caller`. Without `parent` or `caller`, the terminal has no parent (`core/api/run.rs:121-131`). |
+| `parent?`, `no_parent`, `no_notify`, `outlive_parent`, `rm`, `keep`, `wait`, `timeout?`, `caller?` | rodeo sends `keep: true` and no `caller`. Without `parent` or `caller`, the terminal has no parent (`core/api/run.rs:121-131`). |
 
 Result: the whole Terminal record (flattened) plus optional `first_message`, `wait`, `output` (`core/api/types.rs:782-795`). It returns once the program started; a spawn that fails or does not answer in 10 s returns `spawn_failed`; with `keep` the record stays live with `reason: "spawn_pending"`, else it is removed (`core/api/run.rs:180-209`).
 
@@ -238,7 +238,7 @@ Rules:
 - `seq` rises by one per event. Drop events with `seq <= ` the last applied or snapshot seq. `seq` restarts with each core process: take a new snapshot after reconnect (`api-doc:171-177`). The app's fold: `app/hc.rs:80-165`. pocketty's fold: `pkt/hc/src/terminals.rs:54-196`.
 - `heartbeat` every 15 s when nothing is queued (`core/server.rs:269-288`).
 - `missed` + fresh snapshot replaces a backlog for a subscriber that fell behind (`core/events.rs:147-155`). Plain-mode queue: 1024 lines (`core/events.rs:13-14`).
-- **Doc events go only to unfiltered subscribers.** A `terminal`, `children_of` or `labels` filter excludes them (`core/events.rs:34-41`, `core/events.rs:121-128`, `api-doc:195-204`). Verified: a `labels: {x: "1"}` subscription got no `doc` event; an unfiltered one did. drover must keep one unfiltered subscription.
+- **Doc events go only to unfiltered subscribers.** A `terminal`, `children_of` or `labels` filter excludes them (`core/events.rs:34-41`, `core/events.rs:121-128`, `api-doc:195-204`). Verified: a `labels: {x: "1"}` subscription got no `doc` event; an unfiltered one did. rodeo must keep one unfiltered subscription.
 - Snapshots carry terminals only, never docs. Read docs after subscribing, after reconnecting, after `missed`, and when a remote machine reconnects (that is reported locally as `missed`) (`api-doc:206-212`, `core/events.rs:172-202`).
 - A remote machine coming back re-sends its changed terminals as `created` and the gone ones as `removed`; forgetting a machine removes its terminals (`api-doc:142-146`).
 
@@ -246,12 +246,12 @@ Verified event order for run → attach 100x30 → RESIZE 120x40 → CLOSE → l
 
 ### 2.9 Agent status: what it is and where it comes from
 
-- Status comes **only** from the program's own OSC 7501 reports (Program Status Protocol). hc has no screen detection and no agent list (`herdr-core/AGENTS.md:34-36`, `herdr-core/README.md:116-120`, `api-doc:214-219`). A program that never reports has `status: null`, `reported: false`. Herdr TUI 0.9.5 detects agents from the screen and with hooks (`herdr/src/detect/`, `herdr/src/integration/claude_settings.rs`); under hc only programs that emit 7501 have a status. This is a parity gap, not something drover fixes.
+- Status comes **only** from the program's own OSC 7501 reports (Program Status Protocol). hc has no screen detection and no agent list (`herdr-core/AGENTS.md:34-36`, `herdr-core/README.md:116-120`, `api-doc:214-219`). A program that never reports has `status: null`, `reported: false`. Herdr TUI 0.9.5 detects agents from the screen and with hooks (`herdr/src/detect/`, `herdr/src/integration/claude_settings.rs`); under hc only programs that emit 7501 have a status. This is a parity gap, not something rodeo fixes.
 - `status.state` words: `idle, working, done, blocked, error` (stored as reported). `kind`: `permission | question | auth` (blocked only). `progress` 0-100. `app` e.g. `claude-code`, `codex`, `pi` (`core/status.rs:12-29`, `samples/herdr.d.ts:168`). `records` holds sub-records by id (`core/status.rs:98-120`).
 - `turn` goes up each time the root status leaves `working` (`core/status.rs:72-82`).
 - The app's displayed word (`app/model.rs:527-536`): `working` → working; `blocked` or `error` → blocked; otherwise **done** when `turn > herdr.seen` label (or, with no label, when the person has not looked since it stopped), else **idle**. Rollup for a tab or space: blocked > done > working > idle (`app/model.rs:91-100`, `app/model.rs:553-556`, `samples/herdr-app-AGENTS.md:150-153`).
 - Shared seen state is the `herdr.seen=<turn>` label; pinned is `herdr.pinned=1`. Rules: write `herdr.seen` only to raise it, once per turn, only while a person really looks; decide on the `turn` event; "mark unread" writes `turn - 1`; a terminal a client starts gets `herdr.seen=0`. A missing label is not 0 (`herdr-app/docs/labels.md:16-61`). App writer: `app/window.rs:1516-1545`.
-- Bells and notifications: **hc has no bell or notification event.** The app makes its "needs you" and "finished" toasts from status transitions (`app/model.rs:481-503`, `app/window.rs:2110-2120`). BEL and OSC 9/777 exist only inside an attach stream, so drover sees them only for attached panes.
+- Bells and notifications: **hc has no bell or notification event.** The app makes its "needs you" and "finished" toasts from status transitions (`app/model.rs:481-503`, `app/window.rs:2110-2120`). BEL and OSC 9/777 exist only inside an attach stream, so rodeo sees them only for attached panes.
 - Title: `title` event (from the core's screen, OSC 0/2). Live folder: `foreground.cwd` via `foreground` event. There is no OSC 7 cwd tracking in hc.
 
 ### 2.10 doc.get / doc.set
@@ -262,7 +262,7 @@ Verified event order for run → attach 100x30 → RESIZE 120x40 → CLOSE → l
 - Doc names follow terminal name rules: `Herdr App` is rejected with `invalid_params` (verified).
 - With `on`, the call is forwarded to that machine's core; that machine's doc changes arrive in the local stream as `doc` events with `machine` (`core/remote.rs:471-478`).
 
-### 2.11 Other calls drover may use
+### 2.11 Other calls rodeo may use
 
 - `machine.exec {argv | line, on?, cwd?, timeout?, input?}` → exit code and base64 output (`core/api.rs:113-115`). The app runs `git -C <cwd> rev-parse --show-toplevel --abbrev-ref HEAD` this way on remote machines to name spaces (`app/window.rs:4561-4581`). The Files mod lists folders with `exec` on the machine (`herdr-app/defaults/mods/files/main.js:15-40`).
 - `server.status` → `{core, version, pid, uptime_ms, holder, holders, live, finished, installed_by}` (`core/api/types.rs:135-151`).
@@ -288,7 +288,7 @@ struct SharedTab { #[serde(default)] id: String, #[serde(default)] name: String,
 ```
 
 - Every space field may be missing (defaults `""` / `[]`); `{}` parses as no spaces (`app/mirror.rs:297-305`).
-- **No `deny_unknown_fields`, and no catch-all.** Unknown fields are dropped when parsed, and the app writes the whole doc from its model, so any field the app does not know is lost at its next write (`app/mirror.rs:89-113`, `app/window.rs:1835-1838`). drover must not store anything extra in this doc.
+- **No `deny_unknown_fields`, and no catch-all.** Unknown fields are dropped when parsed, and the app writes the whole doc from its model, so any field the app does not know is lost at its next write (`app/mirror.rs:89-113`, `app/window.rs:1835-1838`). rodeo must not store anything extra in this doc.
 - **A value the app cannot parse breaks that machine's layout in the app.** `doc.get` result → `serde_json::from_value::<Document>` → on error `Outcome::Undecodable`, the slot becomes unavailable, and structural commands fail with "Layout unavailable" (`app/mirror_sync.rs:74-84`, `app/window.rs:1929-1944`, `app/window.rs:2353-2362`).
 
 `root` is a full `layout::Node` (`app/layout.rs:315-381`). Fields:
@@ -303,7 +303,7 @@ struct SharedTab { #[serde(default)] id: String, #[serde(default)] name: String,
 | `size` | `{"weight": f}` or `{"px": f}` | absent = weight 1 (`app/layout.rs:79-84`, `app/window/pane_size.rs:31-37`) |
 | `min`, `max` | px | |
 | `hidden` | bool | false |
-| `title`, `background`, `border`, `radius`, `shadow`, `padding`, `focus`, look fields (`theme, colors, font, font_size, ui_font, terminal_padding, terminal_opacity`), `gap`, `divider`, `movable`, `closable`, `resizable`, `floating`, `titlebar`, `traffic_lights`, `preview`, `terminal_menu`, `window_drag`, `cloned_from` | | layout-file features; the app does not put them in tab trees it creates. drover reads and keeps them unchanged; `closable: false` means pane.close does nothing (`app/window.rs:2993-2995`). |
+| `title`, `background`, `border`, `radius`, `shadow`, `padding`, `focus`, look fields (`theme, colors, font, font_size, ui_font, terminal_padding, terminal_opacity`), `gap`, `divider`, `movable`, `closable`, `resizable`, `floating`, `titlebar`, `traffic_lights`, `preview`, `terminal_menu`, `window_drag`, `cloned_from` | | layout-file features; the app does not put them in tab trees it creates. rodeo reads and keeps them unchanged; `closable: false` means pane.close does nothing (`app/window.rs:2993-2995`). |
 
 Content is untagged; the first variant that matches wins (`app/layout.rs:10-31`):
 
@@ -352,7 +352,7 @@ Mod names the app ships: `agents changes confirm files help machine-add menu new
 
 - **Reading** (`app/window.rs:1906-1990`): on a `doc` event, `missed`, reconnect, or a machine coming back, it reads the doc. If the version differs, it replaces that machine's spaces in its model with the doc (`app/mirror.rs:115-139`), then puts back its private view (active space, active tab per space, focus, previous focus, zoom, settled) where the ids still exist (`app/mirror.rs:196-216`).
 - **Writing** (`app/window.rs:1829-1861`): after each change it captures its model as a Document; if that differs from the last doc it read or wrote, it sends `doc.set` with that version. One request per machine at a time, no queue (`app/mirror_sync.rs:1`).
-- **Conflict: no merge.** On `conflict` it reads the current doc and replaces its model with it; its own change is dropped, with the toast "Layout changed elsewhere / The other screen's layout is shown." (`app/mirror_sync.rs:99-102`, `app/window.rs:1928`, `app/window.rs:1954-1960`, `samples/herdr-app-AGENTS.md:97-99`). So every drover write that lands between an app read and an app write throws away the app user's edit.
+- **Conflict: no merge.** On `conflict` it reads the current doc and replaces its model with it; its own change is dropped, with the toast "Layout changed elsewhere / The other screen's layout is shown." (`app/mirror_sync.rs:99-102`, `app/window.rs:1928`, `app/window.rs:1954-1960`, `samples/herdr-app-AGENTS.md:97-99`). So every rodeo write that lands between an app read and an app write throws away the app user's edit.
 - **Private, never in the doc**: focus, previous focus, zoom, active space, active tab, settled, recent spaces, seen attention (`app/mirror.rs:38-53`, `app/mirror.rs:228-242`, `samples/herdr-app-AGENTS.md:135`).
 - **Space order**: local machine first, then machines by name; inside a machine, doc order (`app/model.rs:176-191`).
 - **Terminals not in the doc** (`app/window.rs:2122-2152`, `app/window.rs:2154-2224`, `app/window.rs:4771-4777`): a live terminal with a non-empty `herdr.space` label and no pane is adopted, if that machine's doc is available. The app re-reads it with `terminal.get`, checks it is still live with the same labels, turns keep on, then: if the space is unknown, makes a new space with that id, `name ""`, and folder = its live cwd; else if `herdr.tab` names a known tab, splits that tab's last pane (row) without moving focus; else adds a tab (label id, or fresh `tb…` id). Terminals without `herdr.space`, and other machines' terminals not started for a space on that machine, stay out (`samples/herdr-app-AGENTS.md:136-149`).
@@ -377,26 +377,26 @@ Mod names the app ships: `agents changes confirm files help machine-add menu new
   - `Terminals`: a fold of snapshot + notices with `seq` dedupe and label-filter removal; `apply()` returns `Update::{Nothing, Changed, Removed, Reset, Doc{machine,name,version}}` (`pkt/hc/src/terminals.rs:1-137`).
   - `Terminal`, `Status`, `Foreground`, `Display`, `Ending`, `Hello`, `CoreInfo` serde types (`pkt/hc/src/model.rs:6-110`). `Terminal` needs `address, state, argv, cwd, cols, rows, created_ms`.
   - `HcError::{Io, Wire, Closed, Json, Remote{kind,message,hint}, NoChannel}`, `kind()` (`pkt/hc/src/error.rs`).
-- Gaps for drover:
+- Gaps for rodeo:
   1. No AUTOMATIC_INPUT (kind 6) in `Kind`; replies would go as DATA and count as activity (`pkt/hc/src/wire.rs:9-42`).
   2. An unknown frame kind from the core is a decode error that ends the connection (`pkt/hc/src/wire.rs:115`). Today the core only sends 0, 2 and (to observers that asked) 3.
   3. Core → client RESIZE frames are ignored (`pkt/hc/src/client.rs:253`).
   4. Frames for a channel whose reply is not yet routed are dropped (see 1.5); matters for `subscribe`.
   5. No call timeout (the app uses 10 s, `app/hc.rs:412-434`).
 - Tests (`pkt/hc/tests/`): live tests need `hc` on PATH; each starts an isolated core in a `/tmp/hc*` tempdir (`pkt/hc/tests/common/mod.rs:22-82`). `attach.rs`: hello, typed bytes and exit CLOSE, first paint carries modes, history, stalled stream does not block calls, attach to finished. `events.rs`: status order and details, blocked ends a turn, last active viewer sets size, kept terminal comes back after a signal, folding events equals `terminal.list`. Unit tests for the codec and event parsing (`pkt/hc/src/wire.rs:142-189`, `pkt/hc/src/model.rs:224-281`). No test covers `doc.*`.
-- Copy as is? Yes for the code (the user owns it; pocketty has no LICENSE file), with crate rename and the gaps above fixed in drover. It drags no pocketty-internal deps except the test dev-dep on `pocketty-terminal`.
+- Copy as is? Yes for the code (the user owns it; pocketty has no LICENSE file), with crate rename and the gaps above fixed in rodeo. It drags no pocketty-internal deps except the test dev-dep on `pocketty-terminal`.
 
 ### 4.2 `pocketty-terminal` (`pkt/terminal/`)
 
 - Size: 592 lines (`term.rs 235, input.rs 202, frame.rs 129, theme.rs 18, lib.rs 8`) plus 191 lines of tests and a binary fixture `tests/fixtures/herdr-frames.bin`.
 - Deps (`pkt/terminal/Cargo.toml`): `libghostty-vt = { version = "0.2.2", default-features = false }` (so **no kitty-graphics feature**; crates.io default enables it), `pocketty-screen` (path dep, `pkt/screen/`, 312 lines, no deps), `thiserror 2`. To copy it, copy `pocketty-screen` too, or render straight from libghostty.
 - libghostty-vt 0.2.2 is the newest on crates.io (checked with `cargo info`). Its `-sys` crate builds libghostty-vt from Ghostty source with **zig** at build time: it `git clone`s `ghostty-org/ghostty` at commit `a887df42c56f6de86c0fe6da9c4eeca37931e083` into `OUT_DIR` (needs `git` and network), unless `GHOSTTY_SOURCE_DIR` points at a checkout or `GHOSTTY_ZIG_SYSTEM_DIR` at a pre-fetched zig cache (`pocketty/vendor/libghostty-vt-sys/build.rs:6-7`, `build.rs:112-191`, `build.rs:355-395`, `README.md:5-23`). CPU defaults to `baseline`; override with `LIBGHOSTTY_VT_SYS_CPU`; optimize with `LIBGHOSTTY_VT_SYS_OPTIMIZE`. pocketty pins zig `0.15.2` in `pocketty/mise.toml` (`MISE_ZIG_VERSION` too). workbox has mise zig 0.15.2 and 0.16.0 installed, none global.
-- pocketty patches `libghostty-vt-sys` (`[patch.crates-io]`, `pocketty/Cargo.toml:23-24`). Diff against crates.io 0.2.2: only iOS CPU defaults (`apple_a12`, `apple_a14`) and iOS zig targets (commit `b88aa40`: "libghostty-rs has no iOS targets, and its baseline CPU fails on simdutf NEON code"). drover (Linux, macOS) can use the crates.io crate unpatched. Not verified here: a build on `aarch64-apple-darwin` with `baseline` CPU.
+- pocketty patches `libghostty-vt-sys` (`[patch.crates-io]`, `pocketty/Cargo.toml:23-24`). Diff against crates.io 0.2.2: only iOS CPU defaults (`apple_a12`, `apple_a14`) and iOS zig targets (commit `b88aa40`: "libghostty-rs has no iOS targets, and its baseline CPU fails on simdutf NEON code"). rodeo (Linux, macOS) can use the crates.io crate unpatched. Not verified here: a build on `aarch64-apple-darwin` with `baseline` CPU.
 - Threading: `Terminal` holds `libghostty_vt::Terminal<'static,'static>` and `Rc<RefCell<…>>` callbacks, so it is **not `Send`** (`pkt/terminal/src/term.rs:30-45`). Keep all VTs on one thread (the UI thread) and move bytes to it.
 - API (`pkt/terminal/src/term.rs`):
   - `Terminal::new(cols, rows, Theme) -> Result<Self, TermError>`; scrollback 10,000 lines (`term.rs:15`, `term.rs:48-69`). `Theme {foreground, background, cursor}` sets VT defaults (`theme.rs`).
   - `feed(&[u8])`, `resize(cols, rows, cell_px)`, `size()`, `frame() -> Frame`, `take_replies() -> Vec<u8>` (VT replies to send back to the program, as automatic input), `take_events() -> Vec<Event>` (`Bell`, `Title(String)`, `Clipboard(String)` from OSC 52), `title()`, `wants_mouse()`, `scroll(rows)`, `scroll_to_bottom()`, `scrolled_back()` (`term.rs:71-117`, `term.rs:203-227`).
-  - Keys: `key(&KeyInput) -> Vec<u8>`. `KeyInput {code, text, modifiers, action}` where `code` is a **W3C `KeyboardEvent.code` string** (`KeyA`, `Digit7`, `Enter`, `ArrowUp`, `F1`..`F12`, punctuation names). It maps to libghostty `key::Key` plus the unshifted codepoint, then `key::Encoder::set_options_from_terminal(&vt)` encodes for the program's current modes (legacy, kitty keyboard, modifyOtherKeys). An unknown `code` falls back to sending `text` as is (`term.rs:119-145`, `input.rs:66-178`). drover gets crossterm `KeyEvent`s, so it needs a crossterm → `code` map (no numpad, media keys, or F13+ today).
+  - Keys: `key(&KeyInput) -> Vec<u8>`. `KeyInput {code, text, modifiers, action}` where `code` is a **W3C `KeyboardEvent.code` string** (`KeyA`, `Digit7`, `Enter`, `ArrowUp`, `F1`..`F12`, punctuation names). It maps to libghostty `key::Key` plus the unshifted codepoint, then `key::Encoder::set_options_from_terminal(&vt)` encodes for the program's current modes (legacy, kitty keyboard, modifyOtherKeys). An unknown `code` falls back to sending `text` as is (`term.rs:119-145`, `input.rs:66-178`). rodeo gets crossterm `KeyEvent`s, so it needs a crossterm → `code` map (no numpad, media keys, or F13+ today).
   - `paste(&str)` wraps in bracketed paste when mode 2004 is on (`term.rs:147-160`). `mouse(&MouseInput)` encodes for the current tracking mode using `cell_px` (`term.rs:162-200`).
 - Cell access (`pkt/terminal/src/frame.rs:26-96`): `RenderState::update(&vt)` → row iterator → cell iterator. Per cell: `raw_cell().wide()` (narrow, wide, spacer), `style()` (bold, italic, faint, blink, inverse, invisible, strikethrough, overline, underline kind, underline color), `fg_color()` / `bg_color()` as resolved RGB, `graphemes_utf8()`. Cursor: visible, viewport x/y, visual style, blink. The `Frame` it builds has **RGB colors only**: default fg becomes the theme RGB and palette indexes are resolved (`frame.rs:52-58`). For a TUI that should follow the host terminal's palette, read `cell.style().fg_color` / `bg_color`, which are `StyleColor::{None, Palette(i), Rgb}` (`libghostty-vt-0.2.2/src/style.rs:31-44`), and map them to ratatui `Reset`, `Indexed(i)`, `Rgb`.
 - Tests (`pkt/terminal/tests/terminal.rs`): real Herdr frames, theme defaults, SGR mapping, DECSCUSR cursor shape, host query replies, title/bell/clipboard events, key encoding per mode, kitty keyboard protocol, soft keyboard text, bracketed paste, mouse only when tracking, local scrollback, resize reflow.
@@ -435,17 +435,17 @@ Mod names the app ships: `agents changes confirm files help machine-add menu new
 2. Relative or missing `cwd` resolves against the core's cwd, not the caller's or home (`core/exec.rs:121-130`). Send absolute paths; for remote spaces, the space `folder` or the remote home from `machine.exec`.
 3. A label-filtered subscription never sees doc events (2.8).
 4. Detaching the last non-observe viewer resizes the program to 200x120 (2.6). The app keeps every pane attached (3.7), so while the app runs, its size wins anyway.
-5. If drover runs inside an hc terminal (`HC_TERMINAL_ID` set and `HC_TERMINAL_SOCKET` equal to its socket), attaching to that terminal shows its own output forever; the core refuses only when `caller` is sent (`core/api.rs:421-430`, `core/client.rs:260-266`).
+5. If rodeo runs inside an hc terminal (`HC_TERMINAL_ID` set and `HC_TERMINAL_SOCKET` equal to its socket), attaching to that terminal shows its own output forever; the core refuses only when `caller` is sent (`core/api.rs:421-430`, `core/client.rs:260-266`).
 6. `terminal.kill` and `terminal.list` (3 s per remote machine) can block; run them off the input/render path.
 7. Any content kind or node `type` the app cannot parse makes the whole machine's layout unavailable in the app (3.2).
 
 ---
 
-## 6. Biggest risks for drover
+## 6. Biggest risks for rodeo
 
-1. **Doc write races lose app edits.** The app does not merge: a drover write between an app read and an app write makes the app drop its own change and show "Layout changed elsewhere" (3.7). drover must write only on real user actions, never to normalize, and never write fields or kinds the app does not parse.
+1. **Doc write races lose app edits.** The app does not merge: a rodeo write between an app read and an app write makes the app drop its own change and show "Layout changed elsewhere" (3.7). rodeo must write only on real user actions, never to normalize, and never write fields or kinds the app does not parse.
 2. **Hidden panes not attached → size churn.** plan.md says panes that are not visible are not attached. With no other viewer, each detach resizes the program to 200x120 and each reattach resizes it back; with herdr#5814 the core's screen can then be stale. Options: keep all panes in the current tab (or all tabs, like the app) attached and sized, or set `headless` in hc config, or accept the churn. Avoid `observe` as the workaround (herdr-core#111).
-3. **Status parity.** Only programs that emit OSC 7501 have a status; Herdr TUI 0.9.5 detects agents itself. drover will show less agent state than Herdr TUI for agents that do not report.
-4. **Kitty graphics pass-through** needs drover to pull APC `_G` sequences out of each stream, answer `a=q`, and place images on the host terminal with pane offsets and clipping; pocketty-terminal builds libghostty without kitty-graphics.
+3. **Status parity.** Only programs that emit OSC 7501 have a status; Herdr TUI 0.9.5 detects agents itself. rodeo will show less agent state than Herdr TUI for agents that do not report.
+4. **Kitty graphics pass-through** needs rodeo to pull APC `_G` sequences out of each stream, answer `a=q`, and place images on the host terminal with pane offsets and clipping; pocketty-terminal builds libghostty without kitty-graphics.
 5. **Build chain**: libghostty-vt-sys needs zig 0.15.2, git and network at build time; aarch64 macOS with the `baseline` CPU is not verified.
 6. **pocketty-hc gaps**: AUTOMATIC_INPUT, early-frame buffering for `subscribe`, call timeouts, typed wrappers.

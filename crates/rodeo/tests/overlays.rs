@@ -2,8 +2,8 @@ mod common;
 
 use common::{Harness, run};
 use crossterm::event::{KeyCode, KeyModifiers, MouseButton, MouseEventKind};
-use drover::overlay::Kind;
-use drover::view::Mode;
+use rodeo::overlay::Kind;
+use rodeo::view::Mode;
 
 fn kind(h: &Harness) -> Option<Kind> {
     h.app().view.overlay.as_ref().map(|o| o.kind())

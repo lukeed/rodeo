@@ -3,7 +3,7 @@ mod common;
 use common::{Harness, run};
 use config::ToastDelivery;
 use crossterm::event::Event;
-use drover::sound::Sound;
+use rodeo::sound::Sound;
 
 const REPORT: &str = r"printf '\033]7501;state=%s:app=claude-code\033\\'";
 

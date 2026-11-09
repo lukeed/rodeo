@@ -1,6 +1,6 @@
 # Herdr TUI v0.9.5: UI inventory
 
-This file lists every user-visible element and interaction of Herdr TUI v0.9.5, so drover can show the same elements and react to the mouse the same way. Source: `~/oss/thuic-ref/herdr` at tag `v0.9.5`. All paths are relative to that repo. Citations are `file:line`.
+This file lists every user-visible element and interaction of Herdr TUI v0.9.5, so rodeo can show the same elements and react to the mouse the same way. Source: `~/oss/thuic-ref/herdr` at tag `v0.9.5`. All paths are relative to that repo. Citations are `file:line`.
 
 ## 0. Where the UI lives
 

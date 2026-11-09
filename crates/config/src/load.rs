@@ -10,7 +10,7 @@ use crate::tab_bar::tab_bar_diagnostics;
 use crate::theme::{Appearance, Palette};
 use crate::window_title::{WindowTitle, window_title_diagnostic};
 
-pub const CHECK_COMMAND: &str = "drover config check";
+pub const CHECK_COMMAND: &str = "rodeo config check";
 
 const SECTIONS: &[&str] = &[
     "advanced",
@@ -327,7 +327,7 @@ impl Config {
             next.terminal.kitty_graphics = self.terminal.kitty_graphics;
             next.experimental.kitty_graphics = self.experimental.kitty_graphics;
             diagnostics.push(
-                "terminal.kitty_graphics changes require restarting drover; kept current setting"
+                "terminal.kitty_graphics changes require restarting rodeo; kept current setting"
                     .into(),
             );
         }

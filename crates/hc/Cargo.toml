@@ -1,5 +1,5 @@
 [package]
-name = "drover-hc"
+name = "rodeo-hc"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -25,7 +25,7 @@ tokio-util = { version = "0.7.19", features = ["codec"] }
 toml = { version = "1.2.1", default-features = false, features = ["std", "parse", "serde"] }
 
 [dev-dependencies]
-drover-hc = { path = ".", features = ["testing"] }
+rodeo-hc = { path = ".", features = ["testing"] }
 
 [lints]
 workspace = true

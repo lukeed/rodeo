@@ -342,87 +342,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "drover"
-version = "0.1.0"
-dependencies = [
- "base64",
- "crossterm",
- "drover-config",
- "drover-doc",
- "drover-hc",
- "drover-vt",
- "futures-util",
- "ratatui",
- "rustix",
- "serde_json",
- "terminput",
- "terminput-crossterm",
- "time",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "unicode-segmentation",
- "unicode-width",
-]
-
-[[package]]
-name = "drover-config"
-version = "0.1.0"
-dependencies = [
- "crossterm",
- "ratatui",
- "serde",
- "serde_ignored",
- "serde_json",
- "tempfile",
- "time",
- "toml",
- "toml_edit",
- "tracing",
-]
-
-[[package]]
-name = "drover-doc"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "drover-hc"
-version = "0.1.0"
-dependencies = [
- "base64",
- "bytes",
- "drover-hc",
- "futures-util",
- "rustix",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "toml",
-]
-
-[[package]]
-name = "drover-vt"
-version = "0.1.0"
-dependencies = [
- "base64",
- "crossterm",
- "libghostty-vt",
- "memchr",
- "png",
- "ratatui-core",
- "thiserror 2.0.21",
- "unicode-width",
-]
-
-[[package]]
 name = "either"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1370,6 +1289,87 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "rodeo"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "crossterm",
+ "futures-util",
+ "ratatui",
+ "rodeo-config",
+ "rodeo-doc",
+ "rodeo-hc",
+ "rodeo-vt",
+ "rustix",
+ "serde_json",
+ "terminput",
+ "terminput-crossterm",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
+name = "rodeo-config"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "tempfile",
+ "time",
+ "toml",
+ "toml_edit",
+ "tracing",
+]
+
+[[package]]
+name = "rodeo-doc"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rodeo-hc"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bytes",
+ "futures-util",
+ "rodeo-hc",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "toml",
+]
+
+[[package]]
+name = "rodeo-vt"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "crossterm",
+ "libghostty-vt",
+ "memchr",
+ "png",
+ "ratatui-core",
+ "thiserror 2.0.21",
+ "unicode-width",
+]
 
 [[package]]
 name = "rustc_version"

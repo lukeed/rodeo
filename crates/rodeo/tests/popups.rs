@@ -7,8 +7,8 @@ use common::{Harness, run};
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
-use drover::view::Mode;
 use ratatui::style::Modifier;
+use rodeo::view::Mode;
 
 fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
     std::fs::create_dir_all(dir).expect("a bin dir");
@@ -74,7 +74,7 @@ command = "printf 'in-popup\n'; read x; echo \"got-$x\" > popup.txt"
         let address = h.app().paste_target().expect("the popup terminal");
         assert_ne!(Some(address.clone()), h.focused_address());
         let record = h.outside.get(&address).await.expect("the popup record");
-        assert_eq!(record.label(drover::popup::LABEL), Some("1"));
+        assert_eq!(record.label(rodeo::popup::LABEL), Some("1"));
         assert!(record.label("herdr.space").is_none());
         assert_eq!((record.cols, record.rows), (37, 8));
         h.press(KeyCode::Char('b'), KeyModifiers::CONTROL).await;
@@ -265,12 +265,12 @@ fn quitting_ends_an_open_popup() {
         let address = h.app().paste_target().expect("the popup terminal");
         let record = h.outside.get(&address).await.expect("the popup record");
         let owner = format!("testhost:{}", std::process::id());
-        assert_eq!(record.label(drover::popup::OWNER), Some(owner.as_str()));
-        let _ = h.runner.sender().send(drover::app::Msg::Quit);
+        assert_eq!(record.label(rodeo::popup::OWNER), Some(owner.as_str()));
+        let _ = h.runner.sender().send(rodeo::app::Msg::Quit);
         tokio::time::timeout(common::WITHIN, h.runner.run())
             .await
-            .expect("drover quits");
-        assert!(ended(&h, &address).await, "the popup outlived drover");
+            .expect("rodeo quits");
+        assert!(ended(&h, &address).await, "the popup outlived rodeo");
     });
 }
 
@@ -278,8 +278,8 @@ async fn stray(h: &Harness, owner: &str) -> String {
     let params = hc::RunParams {
         argv: vec!["sleep".into(), "600".into()],
         labels: [
-            (drover::popup::LABEL.to_owned(), "1".to_owned()),
-            (drover::popup::OWNER.to_owned(), owner.to_owned()),
+            (rodeo::popup::LABEL.to_owned(), "1".to_owned()),
+            (rodeo::popup::OWNER.to_owned(), owner.to_owned()),
         ]
         .into(),
         rm: true,

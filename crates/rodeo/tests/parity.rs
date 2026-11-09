@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 
 use common::{Harness, Sink, run};
 use crossterm::event::{KeyCode, KeyModifiers};
-use drover::app::{HostInfo, Options};
-use drover::runtime::Runner;
 use ratatui::backend::TestBackend;
 use ratatui::style::Color;
+use rodeo::app::{HostInfo, Options};
+use rodeo::runtime::Runner;
 
 #[test]
 fn opening_a_space_from_navigate_mode_leaves_no_selection() {
@@ -30,7 +30,7 @@ fn opening_a_space_from_navigate_mode_leaves_no_selection() {
 fn selections_use_true_colors_like_herdr() {
     run(|| async {
         let h = Harness::start().await;
-        let style = drover::render::selection_style(h.app());
+        let style = rodeo::render::selection_style(h.app());
         assert_eq!(style.fg, Some(Color::Rgb(255, 255, 255)));
         assert_eq!(style.bg, Some(Color::Rgb(89, 89, 98)));
     });
@@ -86,12 +86,7 @@ fn a_restart_keeps_the_focused_pane_and_zoom() {
         let options = Options {
             env: h.core.env().clone(),
             config_path: h.config_path.clone(),
-            prefs_path: h
-                .core
-                .root()
-                .join("state")
-                .join("drover")
-                .join("prefs.json"),
+            prefs_path: h.core.root().join("state").join("rodeo").join("prefs.json"),
             loaded: config::Config::load(&h.config_path),
             host: HostInfo {
                 cell_px: (8, 16),
@@ -127,13 +122,13 @@ fn two_escapes_in_one_read_leave_copy_mode() {
         h.ready().await;
         h.prefix_char('[').await;
         h.press(KeyCode::Char('v'), KeyModifiers::NONE).await;
-        assert_eq!(h.app().view.mode, drover::view::Mode::Copy);
-        let mut splitter = drover::host_input::Splitter::default();
+        assert_eq!(h.app().view.mode, rodeo::view::Mode::Copy);
+        let mut splitter = rodeo::host_input::Splitter::default();
         let mut pieces = splitter.feed(b"\x1b\x1b");
         pieces.extend(splitter.flush());
         assert_eq!(pieces.len(), 2);
         for piece in pieces {
-            let drover::host_input::Piece::Event(event) = piece else {
+            let rodeo::host_input::Piece::Event(event) = piece else {
                 panic!("expected a key, got {piece:?}");
             };
             assert_eq!(
@@ -144,6 +139,6 @@ fn two_escapes_in_one_read_leave_copy_mode() {
             h.send(event);
         }
         h.pump().await;
-        assert_eq!(h.app().view.mode, drover::view::Mode::Terminal);
+        assert_eq!(h.app().view.mode, rodeo::view::Mode::Terminal);
     });
 }

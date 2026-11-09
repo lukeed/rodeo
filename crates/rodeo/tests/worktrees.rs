@@ -44,7 +44,7 @@ async fn fresh_after(h: &mut Harness, closed: &[String]) {
 fn menu_labels(h: &Harness) -> Vec<String> {
     let overlay = h.app().view.overlay.as_ref().expect("a menu");
     let any: &dyn std::any::Any = overlay.as_ref();
-    any.downcast_ref::<drover::overlay::context::ContextMenu>()
+    any.downcast_ref::<rodeo::overlay::context::ContextMenu>()
         .expect("a context menu")
         .labels()
         .to_vec()
@@ -56,7 +56,7 @@ fn group_menus_offer_group_items_and_close_the_group() {
         let mut h = Harness::start().await;
         let (parent, child) = group_of_two(&mut h).await;
         let closed = [parent.clone(), child.clone()];
-        let space = drover::overlay::MenuTarget::Space;
+        let space = rodeo::overlay::MenuTarget::Space;
         h.app_mut().context_menu(space(child), (5, 5));
         assert_eq!(
             menu_labels(&h),

@@ -17,11 +17,11 @@ use crate::panes::{Link, Pane};
 use crate::render::Cursor;
 use crate::view::Mode;
 
-pub const LABEL: &str = "drover.popup";
-pub const OWNER: &str = "drover.owner";
+pub const LABEL: &str = "rodeo.popup";
+pub const OWNER: &str = "rodeo.owner";
 const QUIT_WAIT: Duration = Duration::from_secs(2);
 const MAKE_TEMP: &str = r#"umask 077
-f=$(mktemp "${TMPDIR:-/tmp}/drover-scrollback.XXXXXX") || exit 1
+f=$(mktemp "${TMPDIR:-/tmp}/rodeo-scrollback.XXXXXX") || exit 1
 cat > "$f" || exit 1
 printf %s "$f""#;
 
@@ -309,7 +309,7 @@ impl App {
             .map(|t| t.address.clone())
             .collect();
         for address in strays {
-            tracing::info!(%address, "ending a popup left by a gone drover");
+            tracing::info!(%address, "ending a popup left by a gone rodeo");
             self.kill(address);
         }
     }

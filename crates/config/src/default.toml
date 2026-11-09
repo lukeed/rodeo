@@ -1,15 +1,15 @@
-# drover config
+# rodeo config
 #
-# drover reads ~/.config/drover/config.toml (or $XDG_CONFIG_HOME/drover/config.toml,
-# or the file named by DROVER_CONFIG_PATH). The format is the Herdr TUI 0.9.5
+# rodeo reads ~/.config/rodeo/config.toml (or $XDG_CONFIG_HOME/rodeo/config.toml,
+# or the file named by RODEO_CONFIG_PATH). The format is the Herdr TUI 0.9.5
 # config.toml format, so a Herdr config works as is.
 #
 # Every setting below shows its default value and is commented out.
 # Remove the leading "# " from a line to change that setting.
-# Run `drover config check` to see problems in this file.
-# Press prefix+shift+r in drover to load changes without a restart.
+# Run `rodeo config check` to see problems in this file.
+# Press prefix+shift+r in rodeo to load changes without a restart.
 
-# Herdr's first-run setup screen. drover reads this key and ignores it.
+# Herdr's first-run setup screen. rodeo reads this key and ignores it.
 # onboarding = true
 
 [theme]
@@ -51,26 +51,26 @@
 # The folder for new panes, tabs and spaces:
 #   "follow"  the folder of the focused pane or space
 #   "home"    your home folder
-#   "current" the folder drover started in
+#   "current" the folder rodeo started in
 #   any other text is a fixed path, for example "~/code"
 # new_cwd = "follow"
 
 # Show Kitty graphics from panes when your terminal supports them.
-# A change needs a restart of drover.
+# A change needs a restart of rodeo.
 # kitty_graphics = true
 
 [session]
-# hc keeps terminals and agents alive. drover reads these keys and ignores them.
+# hc keeps terminals and agents alive. rodeo reads these keys and ignores them.
 # resume_agents_on_restore = true
 # startup_per_agent_delay_ms = 100
 
 [server]
-# hc sets the size of terminals that no client shows. drover ignores these keys.
+# hc sets the size of terminals that no client shows. rodeo ignores these keys.
 # headless_cols = 120
 # headless_rows = 40
 
 [update]
-# drover does not update itself. These keys are read and ignored.
+# rodeo does not update itself. These keys are read and ignored.
 # channel = "stable"
 # version_check = true
 # manifest_check = true
@@ -87,7 +87,7 @@
 # other than shift, for example "ctrl+alt+n".
 # A value can be one binding or a list of bindings.
 # Use "" or [] to remove a binding.
-# Run `drover config reset-keys` to go back to the default keys.
+# Run `rodeo config reset-keys` to go back to the default keys.
 
 # The prefix key. A list gives more than one prefix key.
 # Press the prefix two times to send it to the pane.
@@ -198,10 +198,10 @@
 # How a collapsed sidebar looks: "compact" (a narrow status column) or "hidden".
 # sidebar_collapsed_mode = "compact"
 
-# At this terminal width or less, drover shows one pane at a time.
+# At this terminal width or less, rodeo shows one pane at a time.
 # mobile_width_threshold = 64
 
-# Use the mouse in drover. With false, your terminal gets mouse clicks.
+# Use the mouse in rodeo. With false, your terminal gets mouse clicks.
 # mouse_capture = true
 
 # Copy text when you select it with the mouse. With false, press ctrl+c to copy.
@@ -279,7 +279,7 @@
 # row_gap = 0
 
 # Notices when an agent in the background finishes or needs you.
-# delivery: "off", "herdr" (inside drover), "terminal" (your terminal), or "system".
+# delivery: "off", "herdr" (inside rodeo), "terminal" (your terminal), or "system".
 # [ui.toast]
 # delivery = "off"
 # delay_seconds = 1
@@ -310,14 +310,14 @@
 # scrollback_limit_bytes = 10000000
 
 [remote]
-# hc connects to other machines. drover reads this key and ignores it.
+# hc connects to other machines. rodeo reads this key and ignores it.
 # manage_ssh_config = true
 
 [experimental]
-# Let drover start inside a drover pane.
+# Let rodeo start inside a rodeo pane.
 # allow_nested = false
 
-# hc keeps pane history. drover reads this key and ignores it.
+# hc keeps pane history. rodeo reads this key and ignores it.
 # pane_history = false
 
 # Show the pane cursor to your terminal when the program hides it, so a

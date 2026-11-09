@@ -330,7 +330,7 @@ impl Builder<'_> {
             }
             if config.kind == CommandKind::PluginAction {
                 self.note(format!(
-                    "unsupported custom command: keys.command[{index}].type = \"plugin_action\"; drover has no plugins; disabling custom command"
+                    "unsupported custom command: keys.command[{index}].type = \"plugin_action\"; rodeo has no plugins; disabling custom command"
                 ));
                 continue;
             }

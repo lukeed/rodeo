@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use tracing_subscriber::EnvFilter;
 
-pub const LOG_ENV: &str = "DROVER_LOG";
+pub const LOG_ENV: &str = "RODEO_LOG";
 
 pub fn init(state: &Path) {
     if std::fs::create_dir_all(state).is_err() {
@@ -12,7 +12,7 @@ pub fn init(state: &Path) {
     let Ok(file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(state.join("drover.log"))
+        .open(state.join("rodeo.log"))
     else {
         return;
     };

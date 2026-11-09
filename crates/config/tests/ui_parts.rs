@@ -411,7 +411,7 @@ fn window_title_parse() {
 fn window_title_render() {
     let values = TitleValues {
         hostname: "box",
-        workspace: "drover",
+        workspace: "rodeo",
         tab: "2",
         pane: "",
         terminal_title: "vim",
@@ -421,7 +421,7 @@ fn window_title_render() {
         .unwrap();
     assert_eq!(
         title.render(&values).as_deref(),
-        Some("box: drover [2] {vim}")
+        Some("box: rodeo [2] {vim}")
     );
     let only_pane = WindowTitle::parse(" {pane} ").unwrap().unwrap();
     assert_eq!(only_pane.render(&values), None);

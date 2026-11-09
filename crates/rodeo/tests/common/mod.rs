@@ -14,10 +14,10 @@ use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
 use doc::Document;
-use drover::app::{App, HostInfo, Msg, Options};
-use drover::runtime::Runner;
 use hc::TestCore;
 use ratatui::backend::TestBackend;
+use rodeo::app::{App, HostInfo, Msg, Options};
+use rodeo::runtime::Runner;
 
 pub const WITHIN: Duration = Duration::from_secs(20);
 
@@ -73,7 +73,7 @@ impl Harness {
         let core = TestCore::start().await;
         let launch = folder.map_or_else(|| core.root().to_path_buf(), |f| core.root().join(f));
         std::fs::create_dir_all(&launch).expect("a launch folder");
-        let dir = core.root().join("config").join("drover");
+        let dir = core.root().join("config").join("rodeo");
         std::fs::create_dir_all(&dir).expect("config dir");
         let config_path = dir.join("config.toml");
         std::fs::write(&config_path, text).expect("config file");
@@ -81,7 +81,7 @@ impl Harness {
         let options = Options {
             env: core.env().clone(),
             config_path: config_path.clone(),
-            prefs_path: core.root().join("state").join("drover").join("prefs.json"),
+            prefs_path: core.root().join("state").join("rodeo").join("prefs.json"),
             loaded,
             host: HostInfo {
                 cell_px: (8, 16),
@@ -117,7 +117,7 @@ impl Harness {
                 .core
                 .root()
                 .join("state")
-                .join("drover")
+                .join("rodeo")
                 .join("second.json"),
             loaded: config::Config::load(&self.config_path),
             host: HostInfo {
@@ -285,7 +285,7 @@ impl Harness {
                 && h.app()
                     .panes
                     .iter()
-                    .any(|p| p.link == drover::panes::Link::Attached)
+                    .any(|p| p.link == rodeo::panes::Link::Attached)
                 && h.screen().contains('$')
         })
         .await;

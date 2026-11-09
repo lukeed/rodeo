@@ -1,5 +1,5 @@
 [package]
-name = "drover-doc"
+name = "rodeo-doc"
 description = "The herdr-app layout doc: types, queries and edits"
 version.workspace = true
 edition.workspace = true

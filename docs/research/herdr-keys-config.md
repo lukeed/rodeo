@@ -392,7 +392,7 @@ Column "Reload" values:
 - `launch`: read once when the process starts.
 - `per use`: read from disk each time it is used.
 
-Column "Owner": `UI` = presentation, belongs to drover. `RT` = old Herdr runtime/server concern (session, server, update, remote, integrations, pane creation, persistence); in drover this belongs to hc. `both` = UI-facing but resolved on the server in Herdr.
+Column "Owner": `UI` = presentation, belongs to rodeo. `RT` = old Herdr runtime/server concern (session, server, update, remote, integrations, pane creation, persistence); in rodeo this belongs to hc. `both` = UI-facing but resolved on the server in Herdr.
 
 ### 2.1 Top level
 

@@ -2,12 +2,12 @@ use std::collections::BTreeMap;
 
 use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use doc::{Document, Node, Tab};
-use drover::app::{App, ConnState, Git, HostInfo, Options};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Modifier;
+use rodeo::app::{App, ConnState, Git, HostInfo, Options};
 
 const W: u16 = 100;
 const H: u16 = 30;
@@ -60,7 +60,7 @@ fn agent(address: &str, state: &str, labels: &[(&str, &str)]) -> hc::Terminal {
 
 fn app_with(config: &str) -> App {
     let dir = std::env::temp_dir().join(format!(
-        "drover-sidebar-{}-{}",
+        "rodeo-sidebar-{}-{}",
         std::process::id(),
         rand_suffix()
     ));
@@ -135,7 +135,7 @@ fn add_remote(app: &mut App, state: &str, why: Option<&str>) {
 fn frame(app: &mut App) -> Buffer {
     let mut terminal = Terminal::new(TestBackend::new(W, H)).expect("a terminal");
     terminal
-        .draw(|frame| drover::render::draw(app, frame))
+        .draw(|frame| rodeo::render::draw(app, frame))
         .expect("a frame");
     terminal.backend().buffer().clone()
 }
@@ -352,7 +352,7 @@ fn long_lists_scroll_by_wheel_track_and_thumb() {
     assert_eq!(app.view.sidebar_scroll, 18);
     assert!(line(&buf, 13, 26).starts_with(" · space 29"));
     let (top, _) =
-        drover::sidebar::scroll::thumb(app.hits.sidebar.spaces_metrics, track).expect("a thumb");
+        rodeo::sidebar::scroll::thumb(app.hits.sidebar.spaces_metrics, track).expect("a thumb");
     mouse(&mut app, MouseEventKind::Down(MouseButton::Left), 24, top);
     mouse(&mut app, MouseEventKind::Drag(MouseButton::Left), 24, 2);
     mouse(&mut app, MouseEventKind::Up(MouseButton::Left), 24, 2);

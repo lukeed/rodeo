@@ -18,7 +18,7 @@ impl Tmux {
             .root()
             .file_name()
             .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
-        let socket = format!("drover-e2e-{}-{root}", std::process::id());
+        let socket = format!("rodeo-e2e-{}-{root}", std::process::id());
         let mut command = vec!["env".to_owned(), "-i".to_owned()];
         for (key, value) in core.env().iter() {
             command.push(format!(
@@ -28,7 +28,7 @@ impl Tmux {
             ));
         }
         command.push("TERM=xterm-256color".to_owned());
-        command.push(env!("CARGO_BIN_EXE_drover").to_owned());
+        command.push(env!("CARGO_BIN_EXE_rodeo").to_owned());
         let line = command
             .iter()
             .map(|part| format!("'{}'", part.replace('\'', r"'\''")))
@@ -180,7 +180,7 @@ async fn until_stored(client: &hc::Client, count: usize) -> doc::Document {
 }
 
 #[tokio::test]
-async fn drover_starts_splits_types_and_detaches() {
+async fn rodeo_starts_splits_types_and_detaches() {
     let fixture = Fixture::start().await;
     let tmux = &fixture.tmux;
     let client = fixture.core.client().await;
@@ -205,16 +205,16 @@ async fn drover_starts_splits_types_and_detaches() {
     assert!(terminals.iter().all(|t| t.keep));
     until_stored(&client, 3).await;
     tmux.keys(&["C-b", "q"]);
-    tmux.until("drover to exit", Tmux::dead).await;
+    tmux.until("rodeo to exit", Tmux::dead).await;
     let terminals = live_terminals(&client).await;
-    assert_eq!(terminals.len(), 3, "terminals outlive drover");
+    assert_eq!(terminals.len(), 3, "terminals outlive rodeo");
     let stored = client.doc_get(doc::NAME, None).await.expect("doc.get");
     let doc = doc::Document::parse(&stored.value).expect("a doc");
     assert_eq!(doc.addresses().len(), 3);
 }
 
 #[tokio::test]
-async fn drover_shows_the_same_layout_after_a_restart() {
+async fn rodeo_shows_the_same_layout_after_a_restart() {
     let fixture = Fixture::start().await;
     let tmux = &fixture.tmux;
     tmux.until("a prompt", |t| t.text().contains('$')).await;
@@ -222,7 +222,7 @@ async fn drover_shows_the_same_layout_after_a_restart() {
     tmux.until("two framed panes", |t| t.text().matches('┌').count() == 2)
         .await;
     tmux.keys(&["C-b", "q"]);
-    tmux.until("drover to exit", Tmux::dead).await;
+    tmux.until("rodeo to exit", Tmux::dead).await;
     tmux.run(&["respawn-pane", "-t", "e2e"]);
     tmux.until("the same two panes", |t| {
         !t.dead() && t.text().matches('┌').count() == 2 && t.text().contains('$')
