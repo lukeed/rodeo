@@ -203,7 +203,7 @@ On the stream (`api-doc:62-111`):
 
 ### 2.7 terminal.put
 
-`terminal.put {terminal, name, data: base64}` → `{path, bytes}` (`core/api/types.rs:566-582`). At most 8 MiB raw (`core/put.rs:6`, `core/api.rs:520-528`). Live terminals only (`finished` otherwise). The file lands in `<state dir>/files/<tN>/<clean name>`, with `-2`, `-3` suffixes when taken; the name keeps only `[A-Za-z0-9._-]` and loses leading dots; it is removed with the terminal record (`core/put.rs:36-66`, `core/runtime.rs:775-783`). It types nothing: paste the returned path yourself. The app pastes dropped paths as one bracketed paste of shell-quoted paths (`app/terminal.rs:579-591`; HANDOFF: `'<path>' `). Routed with `machine/t7`, so the path is on that machine.
+`terminal.put {terminal, name, data: base64}` → `{path, bytes}` (`core/api/types.rs:566-582`). At most 8 MiB raw (`core/put.rs:6`, `core/api.rs:520-528`). Live terminals only (`finished` otherwise). The file lands in `<state dir>/files/<tN>/<clean name>`, with `-2`, `-3` suffixes when taken; the name keeps only `[A-Za-z0-9._-]` and loses leading dots; it is removed with the terminal record (`core/put.rs:36-66`, `core/runtime.rs:775-783`). It types nothing: paste the returned path yourself. The app pastes dropped paths as one bracketed paste of shell-quoted paths (`app/terminal.rs:579-591`; seen on the user's Mac: `'<path>' `). Routed with `machine/t7`, so the path is on that machine.
 
 ### 2.8 events.subscribe
 
