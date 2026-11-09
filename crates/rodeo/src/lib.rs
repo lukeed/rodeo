@@ -3,6 +3,7 @@ pub mod agents;
 pub mod app;
 pub mod appearance;
 pub mod backend;
+pub mod brand;
 pub mod cli;
 pub mod clipboard;
 pub mod graphics;

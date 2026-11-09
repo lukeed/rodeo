@@ -23,7 +23,7 @@ impl<W: Write> HostBackend<W> {
     }
 }
 
-fn host(color: Color) -> HostColor {
+pub(crate) fn host(color: Color) -> HostColor {
     match color {
         Color::Reset => HostColor::Reset,
         Color::Black => HostColor::Black,
@@ -47,7 +47,7 @@ fn host(color: Color) -> HostColor {
     }
 }
 
-fn attributes(modifier: Modifier) -> impl Iterator<Item = Attribute> {
+pub(crate) fn attributes(modifier: Modifier) -> impl Iterator<Item = Attribute> {
     let underline = UnderlineStyle::of(modifier).map(|style| match style {
         UnderlineStyle::Single => Attribute::Underlined,
         UnderlineStyle::Double => Attribute::DoubleUnderlined,
