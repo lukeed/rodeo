@@ -1,6 +1,10 @@
+use std::io::IsTerminal;
 use std::process::ExitCode;
 
+use ratatui::style::Color;
+
 use rodeo::app::{Msg, Options};
+use rodeo::brand::Ink;
 use rodeo::cli::{self, Command, USAGE};
 use rodeo::runtime::Runner;
 use rodeo::{host, logging};
@@ -16,11 +20,11 @@ fn main() -> ExitCode {
     let paths = config::Paths::from_env();
     match command {
         Command::Help => {
-            println!("{USAGE}");
+            println!("{}", cli::help(ink(&paths)));
             ExitCode::SUCCESS
         }
         Command::Version => {
-            println!("rodeo {}", env!("CARGO_PKG_VERSION"));
+            println!("{}", cli::version(ink(&paths)));
             ExitCode::SUCCESS
         }
         Command::DefaultConfig => {
@@ -31,6 +35,17 @@ fn main() -> ExitCode {
         Command::ResetKeys => reset_keys(&paths),
         Command::Run { session } => run(&paths, session.as_deref()),
     }
+}
+
+fn ink(paths: &config::Paths) -> Option<Ink> {
+    let no_color = std::env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty());
+    (std::io::stdout().is_terminal() && !no_color).then(|| Ink {
+        text: Color::Reset,
+        accent: config::Config::load(&paths.config)
+            .config
+            .palette(None)
+            .accent,
+    })
 }
 
 fn check(paths: &config::Paths) -> ExitCode {

@@ -1,5 +1,10 @@
 use std::ffi::OsString;
 
+use ratatui::style::{Modifier, Style};
+use ratatui::text::{Line, Span};
+
+use crate::brand::{self, Ink};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     Run { session: Option<String> },
@@ -10,9 +15,9 @@ pub enum Command {
     ResetKeys,
 }
 
-pub const USAGE: &str = "rodeo: a terminal UI for herdr-core
+pub const TITLE: &str = "a terminal UI for herdr-core";
 
-usage:
+pub const USAGE: &str = "usage:
   rodeo [--session <name>]   open rodeo on an hc session
   rodeo --default-config     print the default config
   rodeo config check         check the config file
@@ -20,6 +25,29 @@ usage:
   rodeo --help | --version
 
 Detach with the detach key (prefix+q). Terminals keep running in hc.";
+
+pub fn help(ink: Option<Ink>) -> String {
+    let wordmark = brand::wordmark(ink.unwrap_or(Ink::PLAIN));
+    format!("{}\n\n{USAGE}", lockup(&[wordmark, Line::from(TITLE)], ink))
+}
+
+pub fn version(ink: Option<Ink>) -> String {
+    let name = Style::new()
+        .fg(ink.unwrap_or(Ink::PLAIN).text)
+        .add_modifier(Modifier::BOLD);
+    let line = Line::from(vec![
+        Span::styled("rodeo", name),
+        Span::raw(format!(" {}", env!("CARGO_PKG_VERSION"))),
+    ]);
+    lockup(&[line], ink)
+}
+
+fn lockup(beside: &[Line<'_>], ink: Option<Ink>) -> String {
+    brand::ansi(
+        &brand::lockup(beside, ink.unwrap_or(Ink::PLAIN)),
+        ink.is_some(),
+    )
+}
 
 pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Command, String> {
     let args: Vec<String> = args
@@ -74,6 +102,80 @@ mod tests {
 
     fn run(args: &[&str]) -> Result<Command, String> {
         parse(args.iter().map(OsString::from))
+    }
+
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+    #[test]
+    fn plain_help_and_version_show_the_hat_shape() {
+        let hat = [
+            "    ██▄▄██",
+            "█▄  ██████  ▄█",
+            " ▀▀▀▀▀▀▀▀▀▀▀▀ ",
+            "     ████",
+            "     ████",
+            "     ████",
+        ];
+        let help = [
+            hat[0].to_owned(),
+            hat[1].to_owned(),
+            format!("{}   rodeo▍", hat[2]),
+            format!("{}        {TITLE}", hat[3]),
+            hat[4].to_owned(),
+            hat[5].to_owned(),
+            String::new(),
+            USAGE.to_owned(),
+        ];
+        assert_eq!(super::help(None), help.join("\n"));
+        let version = [
+            hat[0].to_owned(),
+            hat[1].to_owned(),
+            format!("{}   rodeo {VERSION}", hat[2]),
+            hat[3].to_owned(),
+            hat[4].to_owned(),
+            hat[5].to_owned(),
+        ];
+        assert_eq!(super::version(None), version.join("\n"));
+    }
+
+    #[test]
+    fn colored_version_paints_the_hat_and_name() {
+        let ink = Ink {
+            text: ratatui::style::Color::Reset,
+            accent: ratatui::style::Color::Rgb(232, 103, 60),
+        };
+        let accent = "\x1b[38;2;232;103;60m";
+        let out = super::version(Some(ink));
+        let lines: Vec<&str> = out.lines().collect();
+        assert_eq!(lines[0], "    ██▄▄██");
+        assert_eq!(lines[1], "█▄  \x1b[48;2;232;103;60m▀▀▀▀▀▀\x1b[49m  ▄█");
+        assert_eq!(
+            lines[2],
+            format!(" ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m {VERSION}")
+        );
+        for line in &lines[3..] {
+            assert_eq!(*line, format!("     {accent}████\x1b[0m"));
+        }
+        assert_eq!(lines.len(), 6);
+    }
+
+    #[test]
+    fn colored_help_paints_the_wordmark() {
+        let ink = Ink {
+            text: ratatui::style::Color::Reset,
+            accent: ratatui::style::Color::Blue,
+        };
+        let out = help(Some(ink));
+        let lines: Vec<&str> = out.lines().collect();
+        assert_eq!(
+            lines[2],
+            " ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m\x1b[38;5;4m▍\x1b[0m"
+        );
+        assert_eq!(
+            lines[3],
+            format!("     \x1b[38;5;4m████\x1b[39m        {TITLE}")
+        );
+        assert!(out.ends_with(USAGE));
     }
 
     #[test]

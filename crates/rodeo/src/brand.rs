@@ -233,7 +233,9 @@ impl Pen {
         bg: Color,
     ) -> std::io::Result<()> {
         if self.modifier != modifier {
-            queue!(out, SetAttribute(Attribute::Reset))?;
+            if *self != Self::default() {
+                queue!(out, SetAttribute(Attribute::Reset))?;
+            }
             for attribute in attributes(modifier) {
                 queue!(out, SetAttribute(attribute))?;
             }
@@ -371,7 +373,7 @@ mod tests {
         buf.set_line(0, 0, &wordmark(ink), 8);
         assert_eq!(
             ansi(&buf, true),
-            "\x1b[0m\x1b[1mrodeo\x1b[0m\x1b[38;2;232;103;60m▍\x1b[0m"
+            "\x1b[1mrodeo\x1b[0m\x1b[38;2;232;103;60m▍\x1b[0m"
         );
     }
 }
