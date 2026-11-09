@@ -486,17 +486,18 @@ fn machines_get_rows_states_and_nested_spaces() {
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
     assert_eq!(rows[0], " machines                │");
-    assert_eq!(rows[2], " ▾ Local                 │");
+    assert_eq!(rows[2], " ▾ Local ────────────────│");
     assert_eq!(rows[3], "   ● repo               ▾│");
     assert_eq!(rows[4], "     main ↑2 ↓1          │");
     assert_eq!(rows[5], "     └─ · feat           │");
     assert_eq!(rows[6], "   · notes               │");
-    assert_eq!(rows[7], " ▾ box                  ●│");
+    assert_eq!(rows[7], " ▾ box ● ────────────────│");
     assert_eq!(rows[8], "   ● api                 │");
     assert_eq!(rows[14], " new · Local         menu│");
     assert_eq!(rows[18], " ● Local · repo          │");
     assert_eq!(rows[20], " ● box · api             │");
-    assert_eq!(buf[(24, 7)].fg, app.palette.green);
+    assert_eq!(buf[(7, 7)].fg, app.palette.green);
+    assert_eq!(buf[(9, 7)].fg, app.palette.surface_dim);
     assert!(buf[(3, 7)].modifier.contains(Modifier::BOLD));
     click(&mut app, 5, 7);
     assert_eq!(app.view.space.as_deref(), Some("box/r1"));
@@ -504,11 +505,11 @@ fn machines_get_rows_states_and_nested_spaces() {
     assert_eq!(rows[14], " new · box           menu│");
     click(&mut app, 5, 7);
     let rows = column(&frame(&mut app), 26);
-    assert_eq!(rows[7], " ▸ box                  ●│");
+    assert_eq!(rows[7], " ▸ box ● ────────────────│");
     assert_eq!(rows[8], "                         │");
     click(&mut app, 1, 2);
     let rows = column(&frame(&mut app), 26);
-    assert_eq!(rows[2], " ▸ Local                 │");
+    assert_eq!(rows[2], " ▸ Local ────────────────│");
     assert_eq!(app.view.space.as_deref(), Some("box/r1"));
 }
 
@@ -525,14 +526,15 @@ fn offline_machines_dim_their_spaces_and_explain_errors() {
     app.after_docs();
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
-    assert_eq!(rows[7], " ▾ box             ! auth│");
+    assert_eq!(rows[7], " ▾ box ! auth ───────────│");
     assert_eq!(rows[8], "   · api                 │");
-    assert_eq!(buf[(19, 7)].fg, app.palette.red);
+    assert_eq!(buf[(7, 7)].fg, app.palette.red);
     assert!(buf[(5, 8)].modifier.contains(Modifier::DIM));
-    mouse(&mut app, MouseEventKind::Moved, 20, 7);
+    mouse(&mut app, MouseEventKind::Moved, 9, 7);
     let buf = frame(&mut app);
-    assert!(buf[(20, 7)].modifier.contains(Modifier::REVERSED));
-    mouse(&mut app, MouseEventKind::Down(MouseButton::Left), 20, 7);
+    assert!(buf[(9, 7)].modifier.contains(Modifier::REVERSED));
+    assert!(!buf[(14, 7)].modifier.contains(Modifier::REVERSED));
+    mouse(&mut app, MouseEventKind::Down(MouseButton::Left), 9, 7);
     let notice = app.notice.clone().expect("a diagnostic");
     assert_eq!(notice.title, "box: hc machine login box");
     assert_eq!(notice.body, "Permission denied (publickey)");
@@ -547,7 +549,7 @@ fn offline_machines_dim_their_spaces_and_explain_errors() {
         ..hc::MachineView::default()
     }]);
     let rows = column(&frame(&mut app), 26);
-    assert_eq!(rows[7], " ▾ box     ◐ reconnecting│");
+    assert_eq!(rows[7], " ▾ box ◐ reconnecting ───│");
 }
 
 #[test]

@@ -106,20 +106,40 @@ pub fn machine_row(
     } else {
         p.text
     };
-    put(
+    let reserve = if signal.is_empty() {
+        0
+    } else {
+        signal_width + 1
+    };
+    let mut x = put(
         buf,
         rect.x,
         rect.y,
-        rect.width.saturating_sub(signal_width + 1),
+        rect.width.saturating_sub(reserve),
         &format!(" {marker} {}", machine.label),
         Style::new().fg(fg).add_modifier(Modifier::BOLD),
     );
-    let badge = put_right(
+    let mut badge = Rect::new(x, rect.y, 0, 1);
+    if !signal.is_empty() {
+        let start = (x + 1).min(rect.right());
+        x = put(
+            buf,
+            start,
+            rect.y,
+            rect.right() - start,
+            &signal,
+            badge_style(machine, Style::new().fg(color), ctx),
+        );
+        badge = Rect::new(start, rect.y, x - start, 1);
+    }
+    let rule = (x + 1).min(rect.right());
+    put(
         buf,
-        rect,
+        rule,
         rect.y,
-        &signal,
-        badge_style(machine, Style::new().fg(color), ctx),
+        rect.right() - rule,
+        &"─".repeat(usize::from(rect.right() - rule)),
+        Style::new().fg(p.surface_dim),
     );
     hits.machines.push(MachineHit {
         rect,
