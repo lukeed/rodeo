@@ -1,3 +1,10 @@
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="rodeo" width="96" height="96">
+  </picture>
+</div>
+
 # rodeo
 
 > Herdr TUI, on top of herdr-core.
