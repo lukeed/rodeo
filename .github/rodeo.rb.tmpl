@@ -1,0 +1,44 @@
+class Rodeo < Formula
+  desc "Keyboard-first terminal UI for herdr-core, sharing panes with the Herdr app"
+  homepage "https://rodeo.tools"
+  version "{{version}}"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-aarch64-apple-darwin.tar.gz"
+      sha256 "{{sha256 aarch64-apple-darwin}}"
+    end
+    on_intel do
+      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-x86_64-apple-darwin.tar.gz"
+      sha256 "{{sha256 x86_64-apple-darwin}}"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "{{sha256 aarch64-unknown-linux-musl}}"
+    end
+    on_intel do
+      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "{{sha256 x86_64-unknown-linux-musl}}"
+    end
+  end
+
+  def install
+    bin.install "rodeo"
+  end
+
+  def caveats
+    <<~EOS
+      rodeo needs hc (herdr-core) 0.1.18 or newer on your PATH.
+      Homebrew does not ship it. Install it with:
+        curl -fsSL https://releases.herdr.dev/core/install.sh | sh
+    EOS
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/rodeo --version")
+  end
+end
