@@ -256,11 +256,11 @@ fn sound_file_checks() {
     std::fs::write(temp.path().join("done.mp3"), b"id3").unwrap();
     std::fs::create_dir(temp.path().join("folder.mp3")).unwrap();
     let loaded = Config::parse(
-        "[ui.sound]\ndone_path = \"done.mp3\"\nrequest_path = \"folder.mp3\"\npath = \"DONE.MP3\"\n",
+        "[ui.sound]\ndone_path = \"done.mp3\"\nrequest_path = \"folder.mp3\"\npath = \"QUIET.MP3\"\n",
         temp.path(),
     );
     assert_eq!(loaded.diagnostics.len(), 2, "{:?}", loaded.diagnostics);
-    assert!(loaded.diagnostics[0].starts_with("missing sound file: ui.sound.path = DONE.MP3"));
+    assert!(loaded.diagnostics[0].starts_with("missing sound file: ui.sound.path = QUIET.MP3"));
     assert!(loaded.diagnostics[1].starts_with("invalid sound file: ui.sound.request_path"));
     let sound = loaded.config.ui.sound;
     assert_eq!(
