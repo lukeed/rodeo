@@ -23,6 +23,7 @@ const PIXELS: [&str; 12] = [
     ".....aaaa.....",
 ];
 
+pub const RUST: Color = Color::Rgb(0xe8, 0x67, 0x3c);
 pub const HAT_WIDTH: u16 = 14;
 pub const HAT_HEIGHT: u16 = 6;
 const GAP: u16 = 3;

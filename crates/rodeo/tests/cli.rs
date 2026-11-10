@@ -3,7 +3,8 @@ use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 const BIN: &str = env!("CARGO_BIN_EXE_rodeo");
-const ACCENT: &str = "\x1b[38;2;137;180;250m";
+const RUST: &str = "\x1b[38;2;232;103;60m";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const BRIM: &str = " ▀▀▀▀▀▀▀▀▀▀▀▀ ";
 
 struct Root(PathBuf);
@@ -48,13 +49,19 @@ fn tmux(socket: &str, args: &[&str]) -> Output {
         .expect("tmux runs")
 }
 
-fn on_a_tty(name: &str, extra: &[&str]) -> String {
+fn on_a_tty(name: &str, extra: &[&str], arg: &str, ready: &str) -> String {
     let root = Root::new(name);
+    std::fs::create_dir_all(root.0.join("config/rodeo")).expect("a config dir");
+    std::fs::write(
+        root.0.join("config/rodeo/config.toml"),
+        "[theme]\nname = \"tokyo-night\"\n",
+    )
+    .expect("a config");
     let socket = format!("rodeo-cli-{name}-{}", std::process::id());
     let mut command = vec!["env".to_owned(), "-i".to_owned()];
     command.extend(root.env());
     command.extend(extra.iter().map(|&s| s.to_owned()));
-    command.extend([BIN.to_owned(), "--version".to_owned()]);
+    command.extend([BIN.to_owned(), arg.to_owned()]);
     let line = format!(
         "sh -c 'tmux wait-for go && {}; tmux wait-for -S done; exec sleep 60'",
         command.join(" ")
@@ -80,7 +87,7 @@ fn on_a_tty(name: &str, extra: &[&str]) -> String {
     let screen = loop {
         let out = tmux(&socket, &["capture-pane", "-p", "-e"]);
         let screen = String::from_utf8_lossy(&out.stdout).into_owned();
-        if screen.lines().nth(6).is_some_and(|l| l.contains("████")) {
+        if screen.contains(ready) {
             break screen;
         }
         assert!(begun.elapsed() < Duration::from_secs(20), "{screen:?}");
@@ -91,25 +98,18 @@ fn on_a_tty(name: &str, extra: &[&str]) -> String {
 }
 
 #[test]
-fn a_tty_gets_the_colored_hat() {
-    let screen = on_a_tty("color", &[]);
-    assert!(screen.contains(ACCENT), "{screen:?}");
+fn a_tty_gets_the_hat_in_brand_rust() {
+    let screen = on_a_tty("color", &[], "--help", "running in hc.");
+    assert!(screen.contains(&format!("{RUST}▍")), "{screen:?}");
     assert!(screen.contains("\x1b[1mrodeo"), "{screen:?}");
-    assert!(
-        screen.contains("\x1b[48;2;137;180;250m▀▀▀▀▀▀"),
-        "{screen:?}"
-    );
+    assert!(screen.contains("\x1b[48;2;232;103;60m▀▀▀▀▀▀"), "{screen:?}");
 }
 
 #[test]
 fn no_color_gets_the_plain_hat_on_a_tty() {
-    let screen = on_a_tty("nocolor", &["NO_COLOR=1"]);
+    let screen = on_a_tty("nocolor", &["NO_COLOR=1"], "--help", "running in hc.");
     assert!(!screen.contains("\x1b["), "{screen:?}");
-    let version = env!("CARGO_PKG_VERSION");
-    assert!(
-        screen.contains(&format!("{BRIM}   rodeo {version}")),
-        "{screen:?}"
-    );
+    assert!(screen.contains(&format!("{BRIM}   rodeo▍")), "{screen:?}");
     assert!(
         screen.starts_with("\n      ██▄▄██\n  █▄  ██████  ▄█\n"),
         "{screen:?}"
@@ -117,12 +117,16 @@ fn no_color_gets_the_plain_hat_on_a_tty() {
 }
 
 #[test]
+fn a_tty_gets_the_version_alone() {
+    let line = format!("rodeo {VERSION}");
+    let screen = on_a_tty("version", &[], "--version", &line);
+    assert_eq!(screen.trim_end(), line, "{screen:?}");
+}
+
+#[test]
 fn a_pipe_gets_plain_help_and_version() {
     let root = Root::new("pipe");
-    for (arg, beside) in [
-        ("--help", "rodeo▍".to_owned()),
-        ("--version", format!("rodeo {}", env!("CARGO_PKG_VERSION"))),
-    ] {
+    let run = |arg: &str| {
         let out = Command::new("env")
             .arg("-i")
             .args(root.env())
@@ -131,20 +135,16 @@ fn a_pipe_gets_plain_help_and_version() {
             .output()
             .expect("rodeo runs");
         assert!(out.status.success());
-        let text = String::from_utf8(out.stdout).expect("utf-8");
-        assert!(!text.contains('\x1b'), "{text:?}");
-        assert!(text.starts_with("\n      ██▄▄██\n"), "{text:?}");
-        assert!(
-            text.ends_with(".\n\n") || text.ends_with("████\n\n"),
-            "{text:?}"
-        );
-        let lines: Vec<&str> = text.split('\n').collect();
-        assert_eq!(lines[0], "");
-        assert_eq!(lines[1], "      ██▄▄██");
-        assert_eq!(lines[2], "  █▄  ██████  ▄█");
-        assert_eq!(lines[3], format!("  {BRIM}   {beside}"));
-        assert_eq!(lines[6], "       ████");
-        assert_eq!(lines[lines.len() - 2], "");
-        assert_eq!(lines[lines.len() - 1], "");
-    }
+        String::from_utf8(out.stdout).expect("utf-8")
+    };
+    let text = run("--help");
+    assert!(!text.contains('\x1b'), "{text:?}");
+    assert!(text.ends_with(".\n\n"), "{text:?}");
+    let lines: Vec<&str> = text.split('\n').collect();
+    assert_eq!(lines[0], "");
+    assert_eq!(lines[1], "      ██▄▄██");
+    assert_eq!(lines[2], "  █▄  ██████  ▄█");
+    assert_eq!(lines[3], format!("  {BRIM}   rodeo▍"));
+    assert_eq!(lines[6], "       ████");
+    assert_eq!(run("--version"), format!("rodeo {VERSION}\n"));
 }

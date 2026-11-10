@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 
-use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::style::Color;
+use ratatui::text::Line;
 
 use crate::brand::{self, Ink};
 
@@ -26,7 +26,11 @@ pub const USAGE: &str = "usage:
 
 Detach with the detach key (prefix+q). Terminals keep running in hc.";
 
-pub fn help(ink: Option<Ink>) -> String {
+pub fn help(color: bool) -> String {
+    let ink = color.then_some(Ink {
+        text: Color::Reset,
+        accent: brand::RUST,
+    });
     let wordmark = brand::wordmark(ink.unwrap_or(Ink::PLAIN));
     framed(&format!(
         "{}\n\n{USAGE}",
@@ -34,15 +38,8 @@ pub fn help(ink: Option<Ink>) -> String {
     ))
 }
 
-pub fn version(ink: Option<Ink>) -> String {
-    let name = Style::new()
-        .fg(ink.unwrap_or(Ink::PLAIN).text)
-        .add_modifier(Modifier::BOLD);
-    let line = Line::from(vec![
-        Span::styled("rodeo", name),
-        Span::raw(format!(" {}", env!("CARGO_PKG_VERSION"))),
-    ]);
-    framed(&lockup(&[line], ink))
+pub fn version() -> String {
+    format!("rodeo {}", env!("CARGO_PKG_VERSION"))
 }
 
 fn framed(text: &str) -> String {
@@ -124,16 +121,13 @@ mod tests {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
     #[test]
-    fn plain_version_is_framed_and_indented() {
-        let expected = format!(
-            "\n      ██▄▄██\n  █▄  ██████  ▄█\n   ▀▀▀▀▀▀▀▀▀▀▀▀    rodeo {VERSION}\n       ████\n       ████\n       ████\n"
-        );
-        assert_eq!(super::version(None), expected);
+    fn version_is_one_plain_line() {
+        assert_eq!(super::version(), format!("rodeo {VERSION}"));
     }
 
     #[test]
     fn plain_help_is_framed_and_indented() {
-        let out = super::help(None);
+        let out = super::help(false);
         let lines: Vec<&str> = out.split('\n').collect();
         assert_eq!(lines[0], "");
         assert_eq!(lines[1], "      ██▄▄██");
@@ -157,43 +151,18 @@ mod tests {
     }
 
     #[test]
-    fn colored_version_paints_the_hat_and_name() {
-        let ink = Ink {
-            text: ratatui::style::Color::Reset,
-            accent: ratatui::style::Color::Rgb(232, 103, 60),
-        };
-        let accent = "\x1b[38;2;232;103;60m";
-        let out = super::version(Some(ink));
+    fn colored_help_paints_the_brand_rust() {
+        let rust = "\x1b[38;2;232;103;60m";
+        let out = help(true);
         let lines: Vec<&str> = out.split('\n').collect();
-        assert_eq!(lines[0], "");
-        assert_eq!(lines[1], "      ██▄▄██");
         assert_eq!(lines[2], "  █▄  \x1b[48;2;232;103;60m▀▀▀▀▀▀\x1b[49m  ▄█");
         assert_eq!(
             lines[3],
-            format!("   ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m {VERSION}")
-        );
-        for line in &lines[4..7] {
-            assert_eq!(*line, format!("       {accent}████\x1b[0m"));
-        }
-        assert_eq!(lines[7], "");
-        assert_eq!(lines.len(), 8);
-    }
-
-    #[test]
-    fn colored_help_paints_the_wordmark() {
-        let ink = Ink {
-            text: ratatui::style::Color::Reset,
-            accent: ratatui::style::Color::Blue,
-        };
-        let out = help(Some(ink));
-        let lines: Vec<&str> = out.split('\n').collect();
-        assert_eq!(
-            lines[3],
-            "   ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m\x1b[38;5;4m▍\x1b[0m"
+            format!("   ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m{rust}▍\x1b[0m")
         );
         assert_eq!(
             lines[4],
-            format!("       \x1b[38;5;4m████\x1b[39m        {TITLE}")
+            format!("       {rust}████\x1b[39m        {TITLE}")
         );
         assert!(out.ends_with("running in hc.\n"));
     }
