@@ -11,7 +11,7 @@ How to cut a release, what each workflow makes, and the one-time setup they need
 
 The tag starts `.github/workflows/release.yml`. The tag must be `v` plus the `rodeo` package version, or the `cli` jobs stop.
 
-To run a release again for a tag that exists: `gh workflow run release.yml -f tag=v0.2.0`. It builds the tag's commit, keeps the GitHub release if there is one, and replaces its assets and their R2 copies. It moves `latest` in R2 only when the tag is the newest.
+To run a release again for a tag that exists: `gh workflow run release.yml --ref v0.2.0 -f tag=v0.2.0`. Run it from the tag: the `homebrew` job uses the `release` environment, which takes only `v*` tags. It builds the tag's commit, keeps the GitHub release if there is one, and replaces its assets and their R2 copies. It moves `latest` in R2 only when the tag is the newest.
 
 ## What `release.yml` makes
 
@@ -44,13 +44,14 @@ These install paths read the release:
 - Settings > Actions > General > Workflow permissions: "Read repository contents" is enough. Each release job asks for the write permissions it needs.
 - Settings > General > Releases: keep "immutable releases" off. The `release` job publishes the release, then uploads the archives and the packslip.
 - Settings > Rules: add a tag ruleset for `v*` so only you can create or move release tags.
+- Settings > Environments: add `release`, with "Selected branches and tags" and one tag rule, `v*`. It holds `HOMEBREW_TAP_SSH_KEY`.
 - If you make `lint` or `test` required checks, a pull request that changes only `www/` never reports them. Leave them optional, or drop `paths-ignore` from `ci.yml`.
 
 ### Secrets
 
 | Secret | Used by | What it is |
 | --- | --- | --- |
-| `HOMEBREW_TAP_TOKEN` | `release.yml` `homebrew` | A fine-grained token with "Contents: read and write" on `lukeed/homebrew-tap` only. |
+| `HOMEBREW_TAP_SSH_KEY` | `release.yml` `homebrew` | A secret of the `release` environment, not of the repo. It is the private half of an ed25519 deploy key with write access on `lukeed/homebrew-tap` only. The tap checkout uses it, so `git push` goes over SSH. `jactionlint` rejects a key that does not expire (`checkout-static-credentials`); the workflow ignores that rule on this line only, because the key reaches one repo and only `v*` tags can read it. To replace it: `ssh-keygen -t ed25519 -N "" -f key`, `gh repo deploy-key add key.pub -R lukeed/homebrew-tap --allow-write`, `gh secret set HOMEBREW_TAP_SSH_KEY -R lukeed/rodeo --env release < key`, delete the old deploy key, then delete `key`. |
 | `CLOUDFLARE_API_TOKEN` | `www.yml`, `release.yml` `r2` | A Cloudflare user API token with: Workers Scripts Write and Account Settings Read on the account; Workers Routes Write and Zone Read on the `lukeed.com` zone; Workers R2 Storage Bucket Item Read and Write on the `rodeo-releases` bucket only; Memberships Read and User Details Read. |
 | `CLOUDFLARE_ACCOUNT_ID` | `www.yml`, `release.yml` `r2` | The Cloudflare account ID. |
 
