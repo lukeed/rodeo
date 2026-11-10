@@ -5,8 +5,6 @@ group: Get started
 order: 1
 ---
 
-> rodeo has no tagged release yet. Until the first one, [build it from source](#from-source). The installers below start to work when the first release ships.
-
 ## Before you start
 
 rodeo is a client of [herdr-core](https://github.com/herdrdev/herdr-core). It needs `hc` 0.1.18 or newer on your PATH, on Linux or macOS. If you use the Herdr desktop app, you have `hc` already. Else, install it:
