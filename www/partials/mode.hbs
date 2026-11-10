@@ -1,0 +1,6 @@
+{{#expect name, enter, bar}}
+<div class="mode">
+  <div class="mh"><b>{{ name }}</b>{{#if enter}}<kbd>{{ enter }}</kbd>{{#else}}<span>default</span>{{/if}}</div>
+  {{{ $slot }}}
+  {{#if bar}}<div class="modebar" aria-hidden="true"><span class="badge{{#if name === 'resize'}} mauve{{/if}}">{{ name.toUpperCase() }}</span>{{#each bar as seg}}<span class="seg"><b>{{ seg[0] }}</b>{{ seg[1] }}</span>{{/each}}</div>{{/if}}
+</div>
