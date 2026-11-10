@@ -55,7 +55,7 @@ export default {
         "content-type": sum ? TEXT : "application/gzip",
         "cache-control": "public, max-age=31536000, immutable",
       });
-      if (res.ok && !sum && req.method === "GET") count(req, env, ctx, "archive", { version, target });
+      if (res.ok && !sum && req.method === "GET") count(req, env, ctx, "download", { version, target });
       return res;
     }
 
@@ -63,7 +63,9 @@ export default {
     let wantsScript = pathname === "/install.sh" || (pathname === "/" && CLI.test(agent));
 
     if (wantsScript && isRead) {
-      count(req, env, ctx, "download", { piped: pathname === "/", platform: platform(agent) });
+      // Reading the installer is an attempt, not a download: the archive it then fetches is the
+      // install, and counting both as a download counts one install twice. A HEAD is neither.
+      if (req.method === "GET") count(req, env, ctx, "installer", { piped: pathname === "/", platform: platform(agent) });
       return new Response(req.method === "HEAD" ? null : script, {
         headers: SCRIPT_HEADERS,
       });
