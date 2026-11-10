@@ -9,11 +9,32 @@ import type { Mock } from "bun:test";
 type Sent = { url: string; init?: RequestInit };
 
 const SCRIPT = readFileSync(join(import.meta.dirname, "install.sh"), "utf8");
+const ARCHIVE = "rodeo-x86_64-unknown-linux-musl.tar.gz";
+
+let stored = new Map<string, string>([
+  ["latest", "v0.1.0\n"],
+  [`v0.1.0/${ARCHIVE}`, "gzip bytes"],
+  [`v0.1.0/${ARCHIVE}.sha256`, `abc123  ${ARCHIVE}\n`],
+]);
+
+let reads: string[] = [];
 
 let env = {
   CROWNE_SITE: "site_123",
   CROWNE_KEY: "crw_test_abc",
   ASSETS: { fetch: async (request: Request) => new Response(`asset ${request.method} ${new URL(request.url).pathname}`) },
+  RELEASES: {
+    async head(key: string) {
+      reads.push(`head ${key}`);
+      let text = stored.get(key);
+      return text === undefined ? null : { size: text.length, httpEtag: `"etag-${key}"` };
+    },
+    async get(key: string) {
+      reads.push(`get ${key}`);
+      let text = stored.get(key);
+      return text === undefined ? null : { size: text.length, httpEtag: `"etag-${key}"`, body: new Blob([text]).stream() };
+    },
+  },
 };
 
 let mock: Mock<typeof fetch> | undefined;
@@ -62,6 +83,7 @@ afterEach(() => {
   mock?.mockRestore();
   mock = undefined;
   waits = [];
+  reads = [];
 });
 
 describe("install script", () => {
@@ -151,6 +173,93 @@ describe("download event", () => {
     expect(await (await call("/install.sh", {}, { CROWNE_SITE: "" })).text()).toBe(SCRIPT);
     expect(sent).toEqual([]);
     expect(waits).toEqual([]);
+  });
+});
+
+describe("releases", () => {
+  test("names the latest release, cached for a minute", async () => {
+    let res = await call("/download/latest");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(await res.text()).toBe("v0.1.0\n");
+  });
+
+  test("serves an archive from the bucket, cached for good", async () => {
+    upstream(() => new Response(null, { status: 202 }));
+    let res = await call(`/download/v0.1.0/${ARCHIVE}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/gzip");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("content-length")).toBe("10");
+    expect(res.headers.get("etag")).toBe(`"etag-v0.1.0/${ARCHIVE}"`);
+    expect(await res.text()).toBe("gzip bytes");
+    expect(reads).toEqual([`get v0.1.0/${ARCHIVE}`]);
+  });
+
+  test("serves the sha256 beside its archive as text", async () => {
+    let res = await call(`/download/v0.1.0/${ARCHIVE}.sha256`);
+    expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(await res.text()).toBe(`abc123  ${ARCHIVE}\n`);
+  });
+
+  test("answers HEAD from the object metadata alone", async () => {
+    upstream(() => new Response(null, { status: 202 }));
+    let res = await call(`/download/v0.1.0/${ARCHIVE}`, { method: "HEAD" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-length")).toBe("10");
+    expect(await res.text()).toBe("");
+    expect(reads).toEqual([`head v0.1.0/${ARCHIVE}`]);
+    expect(waits).toEqual([]);
+  });
+
+  test("answers 404, uncached, for a release or file the bucket does not have", async () => {
+    let sent = upstream(() => new Response(null, { status: 202 }));
+    for (let path of [`/download/v9.9.9/${ARCHIVE}`, "/download/v0.1.0/rodeo-sparc-sun-solaris.tar.gz"]) {
+      let res = await call(path);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+    }
+    expect(sent).toEqual([]);
+  });
+
+  test("never reads the bucket for a path outside the release layout", async () => {
+    let text = async (path: string, init?: RequestInit) => (await call(path, init)).text();
+    expect(await text("/download/")).toBe("asset GET /download/");
+    expect(await text("/download/v0.1.0/")).toBe("asset GET /download/v0.1.0/");
+    expect(await text("/download/main/rodeo-x.tar.gz")).toBe("asset GET /download/main/rodeo-x.tar.gz");
+    expect(await text(`/download/v0.1.0/${ARCHIVE}.zip`)).toBe(`asset GET /download/v0.1.0/${ARCHIVE}.zip`);
+    expect(await text("/download/v0.1.0/notes.txt")).toBe("asset GET /download/v0.1.0/notes.txt");
+    expect(await text(`/download/v0.1.0/${ARCHIVE}`, { method: "POST", body: "x" })).toBe(`asset POST /download/v0.1.0/${ARCHIVE}`);
+    expect(reads).toEqual([]);
+  });
+
+  test("counts an archive download with its version and target", async () => {
+    let sent = upstream(() => new Response(null, { status: 202 }));
+    await call(`/download/v0.1.0/${ARCHIVE}`, { headers: { "user-agent": "Homebrew/4.6.0" } });
+    await call(`/download/v0.1.0/${ARCHIVE}.sha256`);
+    await call("/download/latest");
+    await Promise.all(waits);
+    expect(sent.map((s) => s.url)).toEqual(["https://in.crowne.io/v1/events?site=site_123"]);
+    let [event] = JSON.parse(await new Response(sent[0].init?.body).text());
+    expect([event.n, event.u, event.p]).toEqual([
+      "archive",
+      `https://rodeo.lukeed.com/download/v0.1.0/${ARCHIVE}`,
+      { version: "v0.1.0", target: "x86_64-unknown-linux-musl" },
+    ]);
+  });
+
+  test("still serves the archive when crowne fails", async () => {
+    let warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      upstream(() => Promise.reject(new Error("offline")));
+      let res = await call(`/download/v0.1.0/${ARCHIVE}`);
+      expect(await res.text()).toBe("gzip bytes");
+      await Promise.all(waits);
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

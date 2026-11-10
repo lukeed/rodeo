@@ -8,9 +8,10 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    // The Worker runs on the crowne.io paths, the install script, and `/`, which serves either one by user agent.
-    "run_worker_first": ["/x/script.js", "/x", "/install.sh", "/"],
+    // The Worker runs on the crowne.io paths, the install script, the release downloads, and `/`, which serves either one by user agent.
+    "run_worker_first": ["/x/script.js", "/x", "/install.sh", "/download/*", "/"],
   },
+  "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "rodeo-releases" }],
   "rules": [{ "type": "Text", "globs": ["**/*.sh"], "fallthrough": true }],
   "vars": {
     // The crowne.io site id. The key is a secret: wrangler secret put CROWNE_KEY
