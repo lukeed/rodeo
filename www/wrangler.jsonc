@@ -13,8 +13,8 @@
   },
   "rules": [{ "type": "Text", "globs": ["**/*.sh"], "fallthrough": true }],
   "vars": {
-    // Placeholder for the crowne.io site id. The key is a secret: wrangler secret put CROWNE_KEY
-    "CROWNE_SITE": "REPLACE_WITH_CROWNE_SITE_ID",
+    // The crowne.io site id. The key is a secret: wrangler secret put CROWNE_KEY
+    "CROWNE_SITE": "01M71ZG3J8RVJE8C8TPP7QFT6X",
   },
-  "routes": [{ "pattern": "rodeo.tools", "custom_domain": true }],
+  "routes": [{ "pattern": "rodeo.lukeed.com", "custom_domain": true }],
 }

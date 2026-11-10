@@ -42,7 +42,7 @@ function upstream(reply: () => Response | Promise<Response>): Sent[] {
 function visit(path: string, init: RequestInit = {}): Request {
   let headers = new Headers(init.headers);
   if (!headers.has("cf-connecting-ip")) headers.set("cf-connecting-ip", "203.0.113.7");
-  return new Request("https://rodeo.tools" + path, { ...init, headers });
+  return new Request("https://rodeo.lukeed.com" + path, { ...init, headers });
 }
 
 let call = (path: string, init?: RequestInit, vars: Partial<typeof env> = {}) => worker.fetch(visit(path, init), { ...env, ...vars }, ctx);
@@ -114,8 +114,8 @@ describe("download event", () => {
     expect(sent.map((s) => s.url)).toEqual(["https://in.crowne.io/v1/events?site=site_123", "https://in.crowne.io/v1/events?site=site_123"]);
     let events = await Promise.all(sent.map(async (s) => JSON.parse(await new Response(s.init?.body).text())[0]));
     expect(events.map((e) => [e.n, e.u, e.p])).toEqual([
-      ["download", "https://rodeo.tools/", { piped: true, platform: "linux" }],
-      ["download", "https://rodeo.tools/install.sh", { piped: false, platform: "macos" }],
+      ["download", "https://rodeo.lukeed.com/", { piped: true, platform: "linux" }],
+      ["download", "https://rodeo.lukeed.com/install.sh", { piped: false, platform: "macos" }],
     ]);
     expect(new Headers(sent[0].init?.headers).get("authorization")).toBe("Bearer crw_test_abc");
   });
@@ -165,7 +165,7 @@ describe("analytics proxy", () => {
 
   test("sends events on with the key", async () => {
     let sent = upstream(() => Response.json({ accepted: 1 }, { status: 202 }));
-    let body = '[{"n":"pageview","u":"https://rodeo.tools/docs/keys/"}]';
+    let body = '[{"n":"pageview","u":"https://rodeo.lukeed.com/docs/keys/"}]';
     let res = await call("/x", { method: "POST", body });
     expect(res.status).toBe(202);
     expect(sent[0].url).toBe("https://in.crowne.io/v1/events?site=site_123");

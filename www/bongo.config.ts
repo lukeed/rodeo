@@ -10,7 +10,7 @@ export default {
   $site: {
     lang: "en",
     title: "rodeo",
-    url: "https://rodeo.tools/",
+    url: "https://rodeo.lukeed.com/",
     description:
       "rodeo is a keyboard-first terminal UI for herdr-core (hc). It shares spaces, tabs and panes with the Herdr desktop app.",
   },

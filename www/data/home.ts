@@ -13,7 +13,7 @@ export default {
     ["mauve", "The details", "Worktrees, popups, copy mode, image paste, links &amp; kitty graphics."],
   ],
   installs: [
-    ["curl", "curl -fsSL https://rodeo.tools/install.sh | sh"],
+    ["curl", "curl -fsSL https://rodeo.lukeed.com/install.sh | sh"],
     ["homebrew", "brew install lukeed/tap/rodeo"],
     ["mise", "mise use -g packslip:github.com/lukeed/rodeo"],
   ],

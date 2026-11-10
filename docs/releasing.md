@@ -25,7 +25,7 @@ The Linux builds use `cargo zigbuild` and are static musl binaries. `libghostty-
 
 These install paths read the release:
 
-- `curl -fsSL https://rodeo.tools | sh`: `www/install.sh` gets the archive and its `.sha256` from `/releases/download/<tag>/` or `/releases/latest/download/`.
+- `curl -fsSL https://rodeo.lukeed.com | sh`: `www/install.sh` gets the archive and its `.sha256` from `/releases/download/<tag>/` or `/releases/latest/download/`.
 - `mise use -g packslip:github.com/lukeed/rodeo`: reads the packslip.
 - `brew install lukeed/tap/rodeo`: reads the formula.
 
@@ -50,7 +50,7 @@ These install paths read the release:
 | Secret | Used by | What it is |
 | --- | --- | --- |
 | `HOMEBREW_TAP_TOKEN` | `release.yml` `homebrew` | A fine-grained token with "Contents: read and write" on `lukeed/homebrew-tap` only. |
-| `CLOUDFLARE_API_TOKEN` | `www.yml` | A Cloudflare API token from the "Edit Cloudflare Workers" template, scoped to the account and the `rodeo.tools` zone. |
+| `CLOUDFLARE_API_TOKEN` | `www.yml` | A Cloudflare API token from the "Edit Cloudflare Workers" template, scoped to the account and the `rodeo.lukeed.com` zone. |
 | `CLOUDFLARE_ACCOUNT_ID` | `www.yml` | The Cloudflare account ID. |
 
 ### packslip
@@ -59,4 +59,4 @@ It needs no secret. It signs with the `release` job's OIDC token (`id-token: wri
 
 ### Cloudflare
 
-The Worker reads `CROWNE_KEY` as a Worker secret. Set it once with `bunx wrangler secret put CROWNE_KEY` in `www/`, and replace the `CROWNE_SITE` placeholder in `www/wrangler.jsonc`. The `rodeo.tools` zone must be in the same Cloudflare account for the custom domain route.
+The Worker reads `CROWNE_KEY` as a Worker secret. Set it once with `bunx wrangler secret put CROWNE_KEY` in `www/`. The site id is `CROWNE_SITE` in `www/wrangler.jsonc`. The `lukeed.com` zone must be in the same Cloudflare account for the custom domain route.

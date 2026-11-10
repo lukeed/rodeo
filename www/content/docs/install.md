@@ -21,7 +21,7 @@ You do not need to start `hc` yourself. rodeo starts the core when it is not run
 ## The install script
 
 ```sh
-$ curl -fsSL https://rodeo.tools/install.sh | sh
+$ curl -fsSL https://rodeo.lukeed.com/install.sh | sh
 ```
 
 The script finds your system and CPU, downloads the matching archive from the GitHub releases of `lukeed/rodeo`, checks its sha256, and puts `rodeo` in `~/.local/bin`. It tells you when that folder is not on your PATH, and when `hc` is missing or too old.
@@ -34,10 +34,10 @@ Two variables change what it does:
 | `RODEO_INSTALL` | `~/.local/bin` | Put the binary in this folder. |
 
 ```sh
-$ curl -fsSL https://rodeo.tools/install.sh | RODEO_VERSION=v0.1.0 sh
+$ curl -fsSL https://rodeo.lukeed.com/install.sh | RODEO_VERSION=v0.1.0 sh
 ```
 
-Read the script before you run it: `curl -fsSL https://rodeo.tools/install.sh` prints it.
+Read the script before you run it: `curl -fsSL https://rodeo.lukeed.com/install.sh` prints it.
 
 The checksum comes from the same place as the archive. It finds a broken download, not a hostile one. For a signed release manifest, use packslip or mise.
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs the rodeo binary. Read it before you run it:
-#   curl -fsSL https://rodeo.tools
+#   curl -fsSL https://rodeo.lukeed.com
 #
 #   RODEO_VERSION=v0.1.0   pin a release; defaults to the latest
 #   RODEO_INSTALL=~/bin    where the binary goes; defaults to ~/.local/bin
@@ -17,7 +17,7 @@ set -eu
 
 REPO="lukeed/rodeo"
 HC_MIN="0.1.18"
-SOURCE="https://rodeo.tools/docs/install/#from-source"
+SOURCE="https://rodeo.lukeed.com/docs/install/#from-source"
 
 main() {
 	dest=${RODEO_INSTALL:-$HOME/.local/bin}
@@ -67,7 +67,7 @@ If rodeo has not been released for your platform yet, build it from source:
 	say "next:"
 	say "  rodeo                  open rodeo on the default hc session"
 	say "  rodeo --session work   open it on another hc session"
-	say "  https://rodeo.tools/docs/"
+	say "  https://rodeo.lukeed.com/docs/"
 }
 
 detect_target() {

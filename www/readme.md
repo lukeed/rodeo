@@ -1,6 +1,6 @@
 # www
 
-The site at [rodeo.tools](https://rodeo.tools), built with [bongo](https://bongo.build) and served from Cloudflare Workers static assets.
+The site at [rodeo.lukeed.com](https://rodeo.lukeed.com), built with [bongo](https://bongo.build) and served from Cloudflare Workers static assets.
 
 ```sh
 bun install
@@ -39,11 +39,10 @@ Serving the script counts a `download` event, with `piped` and `platform`. The e
 
 ## Before deploying
 
-1. Replace the `CROWNE_SITE` placeholder in `wrangler.jsonc` with the crowne.io site id.
-2. Set the key as a secret: `bunx wrangler secret put CROWNE_KEY`.
-3. Point `rodeo.tools` at the Worker, which the `routes` entry claims as a custom domain.
+1. Set the crowne.io key as a secret: `bunx wrangler secret put CROWNE_KEY`. The site id is `CROWNE_SITE` in `wrangler.jsonc`.
+2. Point `rodeo.lukeed.com` at the Worker, which the `routes` entry claims as a custom domain.
 
-Without both values the Worker still serves everything; it counts nothing.
+Without the key the Worker still serves everything; it counts nothing.
 
 ## Fonts
 

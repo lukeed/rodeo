@@ -97,7 +97,7 @@ describe("install.sh", () => {
     let out = run({ hc: "0.1.18", drop: [ARCHIVE] });
     expect(out.code).toBe(1);
     expect(out.err).toContain(`could not download ${ARCHIVE} from the latest release`);
-    expect(out.err).toContain("https://rodeo.tools/docs/install/#from-source");
+    expect(out.err).toContain("https://rodeo.lukeed.com/docs/install/#from-source");
   });
 
   test("says how to get hc when it is not on the PATH", () => {
