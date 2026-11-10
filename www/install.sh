@@ -124,8 +124,7 @@ fetch() {
 	fi
 }
 
-# The checksum is served from the same host as the archive, so it catches a
-# truncated download rather than a hostile one. A missing tool is not fatal.
+# The checksum sits beside the archive: it catches a broken download, not a hostile one.
 verify() {
 	want=$(cut -d' ' -f1 <"$1/$2.sha256")
 	if command -v sha256sum >/dev/null 2>&1; then

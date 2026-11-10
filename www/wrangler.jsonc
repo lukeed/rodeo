@@ -8,14 +8,12 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    // The Worker runs only on these: crowne.io's two paths, the install script,
-    // and `/`, where it chooses between the script and the home page by user agent.
+    // The Worker runs on the crowne.io paths, the install script, and `/`, which serves either one by user agent.
     "run_worker_first": ["/x/script.js", "/x", "/install.sh", "/"],
   },
   "rules": [{ "type": "Text", "globs": ["**/*.sh"], "fallthrough": true }],
   "vars": {
-    // The crowne.io site id: replace this placeholder once the site exists.
-    // The key is a secret: wrangler secret put CROWNE_KEY
+    // Placeholder for the crowne.io site id. The key is a secret: wrangler secret put CROWNE_KEY
     "CROWNE_SITE": "REPLACE_WITH_CROWNE_SITE_ID",
   },
   "routes": [{ "pattern": "rodeo.tools", "custom_domain": true }],
