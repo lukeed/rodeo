@@ -407,6 +407,52 @@ fn a_short_sidebar_drops_the_border() {
 }
 
 #[test]
+fn the_compact_sidebar_shows_the_mini_wordmark() {
+    let collapsed = "[ui]\nsidebar_start_collapsed = true\n";
+    for remote in [false, true] {
+        let mut app = sidebar_app(30, collapsed, remote);
+        let buf = frame(&mut app);
+        let sidebar = app.regions.sidebar;
+        assert_eq!(sidebar.width, 4);
+        let rows = rows(&buf, sidebar);
+        assert_eq!(rows[..2], [" r▍│", "───│"]);
+        let p = app.palette;
+        assert_eq!(buf[(1, 0)].fg, p.text);
+        assert!(buf[(1, 0)].modifier.contains(Modifier::BOLD));
+        assert_eq!(buf[(2, 0)].fg, p.accent);
+        for x in 0..3 {
+            assert_eq!(buf[(x, 0)].bg, p.sidebar_bg);
+            assert_eq!(buf[(x, 1)].fg, p.surface_dim);
+        }
+        let first = if remote {
+            assert_eq!(rows[2], "▾L │");
+            assert_eq!(app.hits.sidebar.machines[0].rect.y, 2);
+            3
+        } else {
+            2
+        };
+        assert_eq!(app.hits.sidebar.spaces[0].rect.y, first);
+    }
+}
+
+#[test]
+fn a_short_compact_sidebar_drops_the_border_then_the_mark() {
+    let collapsed = "[ui]\nsidebar_start_collapsed = true\n";
+    let mut app = sidebar_app(30, collapsed, false);
+    for (height, top, first) in [
+        (3, vec![" r▍│", "───│"], 2),
+        (2, vec![" r▍│"], 1),
+        (1, vec![], 0),
+    ] {
+        app.screen = Rect::new(0, 0, 100, height);
+        app.relayout();
+        let rows = sidebar_rows(&mut app);
+        assert_eq!(rows[..top.len()], top, "height {height}");
+        assert_eq!(app.hits.sidebar.spaces[0].rect.y, first, "height {height}");
+    }
+}
+
+#[test]
 fn a_mobile_connecting_screen_stays_below_the_lifecycle_banner() {
     let mut app = app(60, 14, "");
     assert!(app.regions.mobile);

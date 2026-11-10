@@ -155,7 +155,8 @@ enum Line<'a> {
 pub fn compact(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     let p = ctx.palette;
     let (top, divider, bottom) = compact_sections(area);
-    compact_spaces(buf, top, ctx, hits);
+    let rows = super::compact::header(buf, top, ctx);
+    compact_spaces(buf, rows, ctx, hits);
     if let Some(divider) = divider {
         put(
             buf,

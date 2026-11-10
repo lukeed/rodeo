@@ -110,7 +110,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Expanded sidebar: spaces section, agents section, section split, footer with `menu` button | match | |
 | Compact collapsed sidebar (4-column status rail), hidden mode | match | |
 | Multi-machine sidebar (machine headers, per-machine spaces, machine states) | hc | From `machine.list` and each machine's doc. |
-| Sidebar header | match | Deliberate difference: the expanded sidebar header is the `rodeo▍` wordmark (bold text, accent cursor) over a `─` border in the divider color, in both views, in place of Herdr's ` spaces` (one machine) and ` machines` (more machines) and the blank row under them. A short sidebar drops the border. |
+| Sidebar header | match | Deliberate difference: the expanded sidebar header is the `rodeo▍` wordmark (bold text, accent cursor) over a `─` border in the divider color, in both views, in place of Herdr's ` spaces` (one machine) and ` machines` (more machines) and the blank row under them. A short sidebar drops the border. The collapsed compact sidebar shows ` r▍` over a `───` border above its numbered rows. |
 | Agent state glyphs, `dots` and `symbols` styles, colors | match | |
 | Sidebar tokens and rules (`ui.sidebar.*`) | match | `branch` and `git_status` come from `machine.exec git` on the space's machine. `machine`, `workspace`, `tab`, `pane`, `agent`, `terminal_title`, `terminal_title_stripped`, `state_icon`, `state_text`: match. |
 | Pane metadata token `$name` | hc | Reads the hc label `name` on the pane's terminal. |

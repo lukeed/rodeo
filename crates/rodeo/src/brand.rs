@@ -102,6 +102,14 @@ pub fn wordmark(ink: Ink) -> Line<'static> {
     ])
 }
 
+pub fn mini_wordmark(ink: Ink) -> Line<'static> {
+    Line::from(vec![
+        Span::raw(" "),
+        Span::styled("r", Style::new().fg(ink.text).add_modifier(Modifier::BOLD)),
+        Span::styled("▍", Style::new().fg(ink.accent)),
+    ])
+}
+
 pub fn splash(buf: &mut Buffer, area: Rect, ink: Ink, notes: &[Line<'_>], keep: Keep) {
     let fits = |width: usize| width <= usize::from(area.width);
     let notes_width = notes.iter().map(Line::width).max().unwrap_or(0);
@@ -289,6 +297,20 @@ mod tests {
         let mut buf = Buffer::empty(Rect::new(0, 0, HAT_WIDTH, HAT_HEIGHT));
         hat(&mut buf, 0, 0, Ink::PLAIN);
         assert_eq!(rows(&buf), SHAPE);
+    }
+
+    #[test]
+    fn the_mini_wordmark_is_a_bold_r_and_an_accent_cursor() {
+        let ink = Ink {
+            text: Color::Rgb(1, 1, 1),
+            accent: Color::Rgb(2, 2, 2),
+        };
+        let mut buf = Buffer::empty(Rect::new(0, 0, 3, 1));
+        buf.set_line(0, 0, &mini_wordmark(ink), 3);
+        assert_eq!(rows(&buf), [" r▍"]);
+        assert_eq!(buf[(1, 0)].fg, ink.text);
+        assert!(buf[(1, 0)].modifier.contains(Modifier::BOLD));
+        assert_eq!(buf[(2, 0)].fg, ink.accent);
     }
 
     #[test]

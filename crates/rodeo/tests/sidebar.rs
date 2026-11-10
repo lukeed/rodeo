@@ -431,14 +431,31 @@ fn the_compact_sidebar_numbers_rows() {
     let mut app = app_with("[ui]\nsidebar_start_collapsed = true\n");
     let buf = frame(&mut app);
     let rows = column(&buf, 4);
-    assert_eq!(rows[0], "1 ●│");
-    assert_eq!(rows[1], "2 ●│");
-    assert_eq!(rows[2], "3 ·│");
+    assert_eq!(rows[0], " r▍│");
+    assert_eq!(rows[1], "───│");
+    assert_eq!(rows[2], "1 ●│");
+    assert_eq!(rows[3], "2 ●│");
+    assert_eq!(rows[4], "3 ·│");
     assert_eq!(rows[15], "───│");
     assert_eq!(rows[16], "1 ●│");
     assert_eq!(rows[17], "2 ●│");
     assert_eq!(rows[29], " » │");
-    assert_eq!(buf[(0, 0)].bg, app.palette.active_row_bg);
+    assert_eq!(buf[(0, 2)].bg, app.palette.active_row_bg);
+    assert_eq!(buf[(1, 0)].fg, app.palette.text);
+    assert!(buf[(1, 0)].modifier.contains(Modifier::BOLD));
+    assert_eq!(buf[(2, 0)].fg, app.palette.accent);
+    assert_eq!(buf[(0, 1)].fg, app.palette.surface_dim);
+    let hits: Vec<(u16, &str)> = app
+        .hits
+        .sidebar
+        .spaces
+        .iter()
+        .map(|h| (h.rect.y, h.key.as_str()))
+        .collect();
+    assert_eq!(hits, [(2, "s1"), (3, "s2"), (4, "s3")]);
+    click(&mut app, 1, 3);
+    assert_eq!(app.view.space.as_deref(), Some("s2"));
+    let _ = frame(&mut app);
     click(&mut app, 1, 29);
     let rows = column(&frame(&mut app), 26);
     assert_eq!(rows[0], " rodeo▍                  │");
@@ -568,10 +585,14 @@ fn the_compact_machines_view() {
     add_remote(&mut app, "connected", None);
     let buf = frame(&mut app);
     let rows = column(&buf, 4);
-    assert_eq!(rows[0], "▾L │");
-    assert_eq!(rows[1], " 1●│");
-    assert_eq!(rows[4], "▾2●│");
-    assert_eq!(rows[5], " 1·│");
+    assert_eq!(rows[0], " r▍│");
+    assert_eq!(rows[1], "───│");
+    assert_eq!(rows[2], "▾L │");
+    assert_eq!(rows[3], " 1●│");
+    assert_eq!(rows[6], "▾2●│");
+    assert_eq!(rows[7], " 1·│");
+    assert_eq!(app.hits.sidebar.machines[0].rect.y, 2);
+    assert_eq!(app.hits.sidebar.spaces[0].rect.y, 3);
     assert_eq!(rows[16], "L●│".replace("L●│", "L● │"));
     assert_eq!(rows[29], " » │");
 }

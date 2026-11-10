@@ -4,11 +4,13 @@ use ratatui::style::{Modifier, Style};
 
 use super::{AgentHit, Ctx, Hits, SpaceHit, compact_sections, ordered_agents, put};
 use crate::agents::State;
+use crate::brand::{Ink, mini_wordmark};
 
 pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     let p = ctx.palette;
     let (top, divider, bottom) = compact_sections(area);
-    spaces(buf, top, ctx, hits);
+    let rows = header(buf, top, ctx);
+    spaces(buf, rows, ctx, hits);
     if let Some(divider) = divider {
         put(
             buf,
@@ -30,6 +32,22 @@ pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
         put(buf, toggle.x, toggle.y, 1, "»", style);
         hits.toggle = Some(toggle);
     }
+}
+
+pub fn header(buf: &mut Buffer, top: Rect, ctx: &Ctx<'_>) -> Rect {
+    if top.height < 2 || top.width == 0 {
+        return top;
+    }
+    let mark = mini_wordmark(Ink::of(ctx.palette));
+    buf.set_line(top.x, top.y, &mark, top.width);
+    let border = top.height > 2;
+    if border {
+        let line = "─".repeat(usize::from(top.width));
+        let style = Style::new().fg(ctx.palette.surface_dim);
+        put(buf, top.x, top.y + 1, top.width, &line, style);
+    }
+    let used = 1 + u16::from(border);
+    Rect::new(top.x, top.y + used, top.width, top.height - used)
 }
 
 fn spaces(buf: &mut Buffer, top: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
