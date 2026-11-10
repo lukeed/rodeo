@@ -36,7 +36,7 @@ Everything is a static asset except these paths, listed in `run_worker_first`:
 - `/` serves the install script to a command line (`curl`, `wget`, …) and the home page to a browser.
 - `/download/latest` and `/download/<tag>/<archive>` serve the release files from the private `rodeo-releases` R2 bucket, bound as `RELEASES`. `latest` holds the newest tag and is cached for a minute. A tag's files are cached for good. A file the bucket does not have is a 404 that is not cached. Other paths under `/download/` go to the static assets.
 
-Serving the script counts a `download` event, with `piped` and `platform`. Serving an archive counts an `archive` event, with `version` and `target`. An event never blocks the response: a failed event is logged and dropped.
+Serving the install script counts an `installer` event, with `piped` and `platform`. Serving an archive counts a `download` event, with `version` and `target`. One install is one of each: the installer is the attempt, and the download is the install. A `HEAD` and a checksum count as neither. An event never blocks the response: a failed event is logged and dropped.
 
 ## Before deploying
 

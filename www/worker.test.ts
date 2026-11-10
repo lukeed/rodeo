@@ -127,8 +127,8 @@ describe("install script", () => {
   });
 });
 
-describe("download event", () => {
-  test("counts a download, with whether it was piped and the platform", async () => {
+describe("installer event", () => {
+  test("counts a fetch of the installer, with whether it was piped and the platform", async () => {
     let sent = upstream(() => new Response(null, { status: 202 }));
     await call("/", { headers: { "user-agent": "curl/8.7.1 (x86_64-pc-linux-gnu)" } });
     await call("/install.sh", { headers: { "user-agent": "curl/8.4.0 (Darwin)" } });
@@ -136,10 +136,18 @@ describe("download event", () => {
     expect(sent.map((s) => s.url)).toEqual(["https://in.crowne.io/v1/events?site=site_123", "https://in.crowne.io/v1/events?site=site_123"]);
     let events = await Promise.all(sent.map(async (s) => JSON.parse(await new Response(s.init?.body).text())[0]));
     expect(events.map((e) => [e.n, e.u, e.p])).toEqual([
-      ["download", "https://rodeo.lukeed.com/", { piped: true, platform: "linux" }],
-      ["download", "https://rodeo.lukeed.com/install.sh", { piped: false, platform: "macos" }],
+      ["installer", "https://rodeo.lukeed.com/", { piped: true, platform: "linux" }],
+      ["installer", "https://rodeo.lukeed.com/install.sh", { piped: false, platform: "macos" }],
     ]);
     expect(new Headers(sent[0].init?.headers).get("authorization")).toBe("Bearer crw_test_abc");
+  });
+
+  test("a HEAD of the installer counts nothing, as a HEAD of an archive does not", async () => {
+    let sent = upstream(() => new Response(null, { status: 202 }));
+    await call("/install.sh", { method: "HEAD" });
+    await call("/", { method: "HEAD", headers: { "user-agent": "curl/8.7.1" } });
+    await Promise.all(waits);
+    expect(sent).toEqual([]);
   });
 
   test("never waits for crowne to answer", async () => {
@@ -234,7 +242,7 @@ describe("releases", () => {
     expect(reads).toEqual([]);
   });
 
-  test("counts an archive download with its version and target", async () => {
+  test("counts a download with its version and target", async () => {
     let sent = upstream(() => new Response(null, { status: 202 }));
     await call(`/download/v0.1.0/${ARCHIVE}`, { headers: { "user-agent": "Homebrew/4.6.0" } });
     await call(`/download/v0.1.0/${ARCHIVE}.sha256`);
@@ -243,7 +251,7 @@ describe("releases", () => {
     expect(sent.map((s) => s.url)).toEqual(["https://in.crowne.io/v1/events?site=site_123"]);
     let [event] = JSON.parse(await new Response(sent[0].init?.body).text());
     expect([event.n, event.u, event.p]).toEqual([
-      "archive",
+      "download",
       `https://rodeo.lukeed.com/download/v0.1.0/${ARCHIVE}`,
       { version: "v0.1.0", target: "x86_64-unknown-linux-musl" },
     ]);
