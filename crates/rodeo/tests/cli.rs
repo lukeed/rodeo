@@ -62,10 +62,16 @@ fn on_a_tty(name: &str, extra: &[&str], arg: &str, ready: &str) -> String {
     command.extend(root.env());
     command.extend(extra.iter().map(|&s| s.to_owned()));
     command.extend([BIN.to_owned(), arg.to_owned()]);
-    let line = format!(
-        "sh -c 'tmux wait-for go && {}; tmux wait-for -S done; exec sleep 60'",
-        command.join(" ")
+    let quote = |part: &str| format!("'{}'", part.replace('\'', r"'\''"));
+    let inner = format!(
+        "tmux wait-for go && {}; tmux wait-for -S done; exec sleep 60",
+        command
+            .iter()
+            .map(|part| quote(part))
+            .collect::<Vec<_>>()
+            .join(" ")
     );
+    let line = format!("sh -c {}", quote(&inner));
     let started = tmux(
         &socket,
         &[

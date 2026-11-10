@@ -52,7 +52,10 @@ fn via(h: &Harness) -> String {
     }
     line.push("sh".to_owned());
     line.push("-c".to_owned());
-    line.join(" ")
+    line.iter()
+        .map(|part| format!("'{}'", part.replace('\'', r"'\''")))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 struct Second {
