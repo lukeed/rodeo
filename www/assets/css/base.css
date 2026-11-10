@@ -223,15 +223,13 @@ footer img {
   height: 20px;
 }
 
-footer nav {
+footer .own {
   margin-left: auto;
-  display: flex;
-  gap: 20px;
+  white-space: nowrap;
 }
 
-footer nav a {
+footer .own a {
   color: var(--muted);
-  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
@@ -261,21 +259,8 @@ footer nav a {
     font-size: 13px;
   }
 
-  .top .links .ext {
-    display: none;
-  }
-
   .hfoot {
     height: 100px;
     margin-top: 64px;
-  }
-
-  footer .wrap {
-    flex-wrap: wrap;
-  }
-
-  footer nav {
-    margin-left: 0;
-    width: 100%;
   }
 }
