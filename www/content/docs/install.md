@@ -79,7 +79,7 @@ The Linux builds link against musl, so they run on any distribution.
 You need [mise](https://mise.jdx.dev) for the pinned Rust and zig versions:
 
 ```sh
-$ git clone https://git.nexthub.sh/lukeed/rodeo.git
+$ git clone https://github.com/lukeed/rodeo.git
 $ cd rodeo
 $ mise install
 $ cargo build --release
