@@ -6,14 +6,12 @@ use super::spaces::{self, Group, List, Row};
 use super::{Ctx, Hits, put, put_right, sections};
 
 pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
-    let p = ctx.palette;
     hits.divider = Some(Rect::new(area.right() - 1, area.y, 1, area.height));
     let (top, bottom) = sections(area, ctx.split);
     if area.height >= 6 && top.width > 0 {
         hits.section_divider = Some(Rect::new(bottom.x, bottom.y, bottom.width, 1));
     }
-    let bold = Style::new().fg(p.overlay0).add_modifier(Modifier::BOLD);
-    put(buf, top.x, top.y, top.width, " spaces", bold);
+    header(buf, top, ctx);
     let group = Group::new(None, true, ctx.snapshot.spaces.iter().collect(), ctx);
     let rows = (0..group.entries.len())
         .map(|pos| Row::Space { group: 0, pos })
@@ -27,6 +25,13 @@ pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     footer(buf, top, ctx, hits, None);
     super::agents::render(buf, bottom, ctx, hits);
     collapse_toggle(buf, area, ctx, hits);
+}
+
+pub fn header(buf: &mut Buffer, top: Rect, ctx: &Ctx<'_>) {
+    if top.height > 0 && top.width > 1 {
+        let wordmark = crate::brand::wordmark(crate::brand::Ink::of(ctx.palette));
+        buf.set_line(top.x + 1, top.y, &wordmark, top.width - 1);
+    }
 }
 
 pub fn footer(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits, machine: Option<&str>) {

@@ -1,4 +1,4 @@
-use doc::Document;
+use doc::{Document, Node, Tab};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
@@ -330,6 +330,49 @@ fn a_narrow_connecting_screen_cuts_the_status_at_the_edge() {
         )
     );
     assert!(rows.iter().any(|r| r.contains("rodeo▍")));
+}
+
+fn machines_app() -> App {
+    let mut app = empty(100, 30, "");
+    let mut doc = Document::default();
+    let tab = Tab::new("tb1", "", Node::terminal("p1", "t1"));
+    doc.new_space("s1", "", "/w", tab).expect("a space");
+    let slot = &mut app.machines.iter_mut().next().expect("local").slot;
+    slot.read_done(Ok((doc.to_value(), 2)));
+    app.machines.update(vec![hc::MachineView {
+        name: "box".into(),
+        state: "online".into(),
+        ..hc::MachineView::default()
+    }]);
+    app.after_docs();
+    app.relayout();
+    app
+}
+
+#[test]
+fn the_machines_sidebar_header_is_the_wordmark() {
+    let mut app = machines_app();
+    let buf = frame(&mut app);
+    let sidebar = app.regions.sidebar;
+    let header = rows(&buf, Rect::new(sidebar.x, sidebar.y, sidebar.width, 2));
+    let width = usize::from(sidebar.width) - 8;
+    assert_eq!(header[0], format!(" rodeo▍{}│", " ".repeat(width)));
+    assert_eq!(header[1].trim_end_matches('│').trim(), "");
+    let p = app.palette;
+    assert_wordmark(&buf, sidebar.x + 1, sidebar.y, p.text, p.accent);
+}
+
+#[test]
+fn the_single_machine_sidebar_header_is_the_wordmark() {
+    let mut app = empty(100, 30, "");
+    let buf = frame(&mut app);
+    let sidebar = app.regions.sidebar;
+    let header = rows(&buf, Rect::new(sidebar.x, sidebar.y, sidebar.width, 2));
+    let width = usize::from(sidebar.width) - 8;
+    assert_eq!(header[0], format!(" rodeo▍{}│", " ".repeat(width)));
+    assert_eq!(header[1].trim_end_matches('│').trim(), "");
+    let p = app.palette;
+    assert_wordmark(&buf, sidebar.x + 1, sidebar.y, p.text, p.accent);
 }
 
 #[test]

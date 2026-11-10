@@ -186,7 +186,7 @@ async fn rodeo_starts_splits_types_and_detaches() {
     let client = fixture.core.client().await;
     tmux.until("the sidebar and a prompt", |t| {
         let text = t.text();
-        text.contains(" spaces") && text.contains(" agents") && text.contains('$')
+        text.contains(" rodeo▍") && text.contains(" agents") && text.contains('$')
     })
     .await;
     let screen = tmux.capture();

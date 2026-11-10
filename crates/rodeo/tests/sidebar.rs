@@ -175,7 +175,7 @@ fn spaces_show_tokens_groups_and_the_footer() {
     let mut app = app();
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
-    assert_eq!(rows[0], " spaces                  │");
+    assert_eq!(rows[0], " rodeo▍                  │");
     assert_eq!(rows[2], " ● repo                 ▾│");
     assert_eq!(rows[3], "   main ↑2 ↓1            │");
     assert_eq!(rows[4], "   └─ ● feat             │");
@@ -432,7 +432,7 @@ fn the_compact_sidebar_numbers_rows() {
     assert_eq!(buf[(0, 0)].bg, app.palette.active_row_bg);
     click(&mut app, 1, 29);
     let rows = column(&frame(&mut app), 26);
-    assert_eq!(rows[0], " spaces                  │");
+    assert_eq!(rows[0], " rodeo▍                  │");
 }
 
 #[test]
@@ -485,7 +485,7 @@ fn machines_get_rows_states_and_nested_spaces() {
     );
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
-    assert_eq!(rows[0], " machines                │");
+    assert_eq!(rows[0], " rodeo▍                  │");
     assert_eq!(rows[2], " ▾ Local ────────────────│");
     assert_eq!(rows[3], "   ● repo               ▾│");
     assert_eq!(rows[4], "     main ↑2 ↓1          │");
@@ -576,7 +576,7 @@ fn a_lost_core_shows_the_lifecycle_banner() {
     assert_eq!(x, W - 23);
     assert_eq!(buf[(x, y)].fg, app.palette.yellow);
     assert_eq!(buf[(x - 1, y)].bg, app.palette.surface0);
-    assert_eq!(line(&buf, 0, 26), " machines                │");
+    assert_eq!(line(&buf, 0, 26), " rodeo▍                  │");
     assert!(app.hits.covers.contains(&Rect::new(x - 1, y, W - x + 1, 1)));
 }
 

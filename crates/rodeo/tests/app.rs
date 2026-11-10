@@ -41,7 +41,7 @@ fn an_empty_doc_gets_a_space_with_a_running_shell() {
         assert_eq!(terminal.label("herdr.seen"), Some("0"));
         assert_eq!(terminal.cwd, space.folder);
         let screen = h.screen();
-        assert!(screen.contains(" spaces"), "{screen}");
+        assert!(screen.contains(" rodeo▍"), "{screen}");
         assert!(screen.contains(" agents"), "{screen}");
     });
 }

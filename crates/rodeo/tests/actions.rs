@@ -221,6 +221,6 @@ fn hits_match_the_drawn_frame() {
     let row: String = (0..120)
         .map(|x| buffer[(x, 0)].symbol().to_owned())
         .collect();
-    assert!(row.starts_with(" spaces"), "{row}");
+    assert!(row.starts_with(" rodeo▍"), "{row}");
     assert!(row.contains("logs"), "{row}");
 }

@@ -123,7 +123,7 @@ fn a_second_core_shows_as_a_machine() {
             .expect("a terminal on box");
         h.until("the machines sidebar", |h| {
             let screen = h.screen();
-            screen.contains(" machines") && screen.contains(" ▾ box")
+            screen.contains(" rodeo▍") && screen.contains(" ▾ box")
         })
         .await;
         h.until("the remote space", |h| {

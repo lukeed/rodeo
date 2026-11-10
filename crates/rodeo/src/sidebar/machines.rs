@@ -2,7 +2,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 
-use super::expanded::{collapse_toggle, footer};
+use super::expanded::{collapse_toggle, footer, header};
 use super::spaces::{self, Group, List, Row};
 use super::{
     AgentHit, Ctx, Hits, MachineHit, Metrics, SpaceHit, compact_sections, ordered_agents, put,
@@ -33,14 +33,12 @@ fn badge_style(machine: &MachineRow, base: Style, ctx: &Ctx<'_>) -> Style {
 }
 
 pub fn expanded(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
-    let p = ctx.palette;
     hits.divider = Some(Rect::new(area.right() - 1, area.y, 1, area.height));
     let (top, bottom) = sections(area, ctx.split);
     if area.height >= 6 && top.width > 0 {
         hits.section_divider = Some(Rect::new(bottom.x, bottom.y, bottom.width, 1));
     }
-    let bold = Style::new().fg(p.overlay0).add_modifier(Modifier::BOLD);
-    put(buf, top.x, top.y, top.width, " machines", bold);
+    header(buf, top, ctx);
     let mut groups = Vec::new();
     let mut rows = Vec::new();
     for machine in &ctx.snapshot.machines {
