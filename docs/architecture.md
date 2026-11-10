@@ -54,6 +54,8 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 - `layout` computes the regions (desktop: sidebar, tab bar, pane surface; mobile: header, pane surface) and each tab's pane rects from the doc tree, with Herdr's border, gap and outer border rules, using `doc`'s integer weight splits.
 - Each render function draws one region into the ratatui buffer and records hit rects for the mouse in a `Hits` value the input side reads.
 - Pane content is drawn by `vt::Terminal::render` into the pane's inner rect.
+- While a shown pane (or the popup) is in a synchronized update (DEC mode 2026), rodeo skips the frame and draws as soon as the update ends, as Herdr does. After 1 s it ends the update itself, as Ghostty does.
+- Each frame, with its graphics and OSC output, goes to the host in one write inside `CSI ? 2026 h` / `l`.
 
 ## Input
 
