@@ -29,7 +29,7 @@ impl TestCore {
     pub async fn new() -> Self {
         let root = tempfile::Builder::new()
             .prefix("hc")
-            .tempdir_in("/tmp")
+            .tempdir_in(std::fs::canonicalize("/tmp").expect("/tmp resolves"))
             .expect("a temp dir for the test core");
         let path = root.path();
         let env = Env::new()
