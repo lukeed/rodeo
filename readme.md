@@ -27,17 +27,18 @@ rodeo is a keyboard-first terminal UI for [herdr-core](https://github.com/herdrd
 
 ## Install
 
-There are no releases yet, so build from source. You need [`mise`](https://mise.jdx.dev) for the pinned Rust & zig versions:
-
 ```sh
-$ git clone https://git.nexthub.sh/lukeed/rodeo.git
-$ cd rodeo
-$ mise install
-$ cargo build --release
-$ cargo install --path crates/rodeo --locked   # optional: put it on your PATH
+$ curl -fsSL https://rodeo.lukeed.com | sh
 ```
 
-The binary is `target/release/rodeo`, or `~/.cargo/bin/rodeo` after the optional step.
+Or pick your installer:
+
+```sh
+$ brew install lukeed/tap/rodeo
+$ mise use -g packslip:github.com/lukeed/rodeo
+```
+
+See the [install docs](https://rodeo.lukeed.com/docs/install/) for the details, or build from source (see [Development](#development)).
 
 ## Usage
 
@@ -76,9 +77,18 @@ Sessions, restore & remote machines belonged to Herdr's own server, so `hc` cove
 
 ## Development
 
+You need [`mise`](https://mise.jdx.dev) for the pinned Rust & zig versions:
+
 ```sh
-$ mise run check   # fmt, clippy & tests
+$ git clone https://github.com/lukeed/rodeo.git
+$ cd rodeo
+$ mise install
+$ cargo build --release
+$ cargo install --path crates/rodeo --locked   # optional: put it on your PATH
+$ mise run check                               # fmt, clippy & tests
 ```
+
+The binary is `target/release/rodeo`, or `~/.cargo/bin/rodeo` after the optional step.
 
 The tests start their own isolated `hc` core, so they never touch your terminals. Some of them also need `tmux`.
 
