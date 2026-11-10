@@ -367,6 +367,7 @@ impl App {
             return;
         }
         let before = self.view.focused_pane(&self.machines);
+        self.view.sidebar.picked = None;
         self.view.show_space(key);
         self.after_focus_change(before);
     }
@@ -377,6 +378,7 @@ impl App {
         };
         let space = tab.space_key();
         let before = self.view.focused_pane(&self.machines);
+        self.view.sidebar.picked = None;
         self.view.show_tab(&space, key);
         self.after_focus_change(before);
     }
@@ -387,6 +389,7 @@ impl App {
         };
         let (space, tab) = (pane.space_key(), pane.tab_key());
         let before = self.view.focused_pane(&self.machines);
+        self.view.sidebar.picked = None;
         self.view.show_tab(&space, &tab);
         self.view.focus.insert(tab, key.to_owned());
         self.after_focus_change(before);

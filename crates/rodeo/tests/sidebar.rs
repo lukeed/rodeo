@@ -117,14 +117,18 @@ fn app() -> App {
 }
 
 fn add_remote(app: &mut App, state: &str, why: Option<&str>) {
+    let mut doc = Document::default();
+    space(&mut doc, "r1", "api", "t9");
+    add_machine(app, state, why, &doc);
+}
+
+fn add_machine(app: &mut App, state: &str, why: Option<&str>, doc: &Document) {
     app.machines.update(vec![hc::MachineView {
         name: "box".into(),
         state: state.into(),
         why: why.map(str::to_owned),
         ..hc::MachineView::default()
     }]);
-    let mut doc = Document::default();
-    space(&mut doc, "r1", "api", "t9");
     let slot = &mut app.machines.get_mut(Some("box")).expect("box").slot;
     let _ = slot.command();
     slot.read_done(Ok((doc.to_value(), 4)));
@@ -629,4 +633,23 @@ fn workspace_steps_follow_the_sidebar_order() {
     assert_eq!(app.space_order(), ["s3", "s2"]);
     app.prefs.sidebar_collapsed = Some(true);
     assert_eq!(app.space_order(), ["s1", "s2", "s3"]);
+}
+
+#[test]
+fn a_picked_machine_gives_way_to_local_clicks() {
+    let mut app = app();
+    add_machine(&mut app, "connected", None, &Document::default());
+    let footer = |app: &mut App| column(&frame(app), 26)[14].clone();
+    assert_eq!(footer(&mut app), " new · Local         menu│");
+    click(&mut app, 5, 7);
+    assert_eq!(footer(&mut app), " new · box           menu│");
+    click(&mut app, 5, 2);
+    assert_eq!(footer(&mut app), " new · Local         menu│");
+    assert_eq!(app.view.space.as_deref(), Some("s1"));
+    click(&mut app, 5, 7);
+    assert_eq!(footer(&mut app), " new · box           menu│");
+    click(&mut app, 8, 3);
+    assert_eq!(footer(&mut app), " new · Local         menu│");
+    let buf = frame(&mut app);
+    assert_eq!(buf[(8, 3)].bg, app.palette.active_row_bg);
 }
