@@ -168,6 +168,18 @@ impl Harness {
         out
     }
 
+    pub fn host_cursor(&mut self) -> Option<(u16, u16)> {
+        self.runner.draw();
+        let backend = format!("{:?}", self.runner.terminal.backend());
+        let tail = &backend[backend.rfind(", cursor: ")?..];
+        if !tail.starts_with(", cursor: true") {
+            return None;
+        }
+        let pos = tail.split_once("pos: (")?.1.split_once(')')?.0;
+        let (x, y) = pos.split_once(", ")?;
+        Some((x.parse().ok()?, y.parse().ok()?))
+    }
+
     pub fn host_output(&self) -> String {
         String::from_utf8_lossy(&self.host.0.borrow()).into_owned()
     }

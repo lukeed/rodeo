@@ -559,7 +559,7 @@ pub fn render(app: &mut App, buf: &mut Buffer) -> Option<Cursor> {
         .render(geometry.inner, buf, &vt::RenderOptions::default());
     rendered
         .cursor
-        .filter(|_| app.view.host_focused && app.view.overlay.is_none())
+        .filter(|_| app.view.overlay.is_none())
         .map(|c| Cursor {
             x: c.x,
             y: c.y,

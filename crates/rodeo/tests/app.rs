@@ -1,7 +1,7 @@
 mod common;
 
 use common::{Harness, run};
-use crossterm::event::{KeyCode, KeyModifiers, MouseButton, MouseEventKind};
+use crossterm::event::{Event, KeyCode, KeyModifiers, MouseButton, MouseEventKind};
 use doc::{Kind, Size};
 use rodeo::view::Mode;
 
@@ -63,6 +63,27 @@ fn typing_reaches_the_shell_and_output_renders() {
                 .is_some_and(|w| w.ends_with(" / 1"))
         })
         .await;
+    });
+}
+
+#[test]
+fn typing_reaches_the_shell_across_a_host_focus_change() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        h.send(Event::FocusLost);
+        h.pump().await;
+        assert!(!h.app().view.host_focused);
+        assert!(h.host_cursor().is_some(), "the caret stays while away");
+        h.send(Event::FocusGained);
+        h.typed("echo back-$((40+2))\r").await;
+        h.until("the echo output", |h| h.screen().contains("back-42"))
+            .await;
+        assert!(h.app().view.host_focused);
+        let (_, row) = h.host_cursor().expect("a caret");
+        let screen = h.screen();
+        let line = screen.lines().nth(usize::from(row)).unwrap_or_default();
+        assert!(line.contains('$'), "the caret is on the prompt: {line:?}");
     });
 }
 

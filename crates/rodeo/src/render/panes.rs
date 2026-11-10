@@ -273,7 +273,6 @@ fn terminal(
         && copy.is_none()
         && app.view.mode != Mode::Copy
         && app.view.overlay.is_none()
-        && app.view.host_focused
         && !term.is_scrolled_back();
     let drawn = rendered.cursor.map(|c| Cursor {
         x: c.x,
