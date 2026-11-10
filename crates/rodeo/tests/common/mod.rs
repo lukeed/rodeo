@@ -199,6 +199,7 @@ impl Harness {
     }
 
     pub async fn pump(&mut self) {
+        self.runner.draw();
         let _ = tokio::time::timeout(Duration::from_millis(200), self.runner.step()).await;
     }
 
