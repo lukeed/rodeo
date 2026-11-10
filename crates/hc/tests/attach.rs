@@ -248,14 +248,6 @@ async fn history_comes_first_only_when_asked() {
     let t = run(&client, "seq 1 300; printf done; sleep 30", &[])
         .await
         .address;
-    let mut plain = client
-        .attach(&AttachOptions::new(&t, 80, 24))
-        .await
-        .expect("attach");
-    let mut screen = Screen::default();
-    screen.shows(&mut plain, "done").await;
-    assert!(!screen.text().contains("\n150\r"));
-
     let mut asked = client
         .attach(&AttachOptions {
             history: 1000,
@@ -267,6 +259,14 @@ async fn history_comes_first_only_when_asked() {
     screen.shows(&mut asked, "done").await;
     let raw = screen.text();
     assert!(raw.contains("\n150\r") && raw.contains("\n2\r"), "{raw}");
+
+    let mut plain = client
+        .attach(&AttachOptions::new(&t, 80, 24))
+        .await
+        .expect("attach");
+    let mut screen = Screen::default();
+    screen.shows(&mut plain, "done").await;
+    assert!(!screen.text().contains("\n150\r"));
 }
 
 #[tokio::test]
