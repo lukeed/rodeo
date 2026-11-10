@@ -443,6 +443,26 @@ mod tests {
     }
 
     #[test]
+    fn focus_reports_parse_however_the_host_splits_them() {
+        let out = Piece::Event(Event::FocusLost);
+        let back = Piece::Event(Event::FocusGained);
+        let k = key(KeyCode::Char('k'), KeyModifiers::NONE);
+        let splits: [&[&[u8]]; 5] = [
+            &[b"\x1b[O\x1b[Ik"],
+            &[b"\x1b[O", b"\x1b[I", b"k"],
+            &[b"\x1b[O\x1b", b"[Ik"],
+            &[b"\x1b[O\x1b[", b"I", b"k"],
+            &[b"\x1b", b"[", b"O", b"\x1b", b"[", b"I", b"k"],
+        ];
+        for chunks in splits {
+            let mut s = Splitter::default();
+            let pieces: Vec<Piece> = chunks.iter().flat_map(|c| s.feed(c)).collect();
+            assert_eq!(pieces, [out.clone(), back.clone(), k.clone()], "{chunks:?}");
+            assert!(!s.pending(), "{chunks:?}");
+        }
+    }
+
+    #[test]
     fn colors_parse_in_both_forms() {
         assert_eq!(
             parse_color("rgb:cccc/dddd/eeee"),
