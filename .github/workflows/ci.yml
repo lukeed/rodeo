@@ -46,7 +46,8 @@ jobs:
           - os: ubuntu-latest
             hc_target: linux-x86_64
             hc_sha256: 5b2f97cb4b2a9d7a6b2cc5942628203ed9fbb7cc0c2b4b09ad8a6f5648e246b7
-          - os: macos-latest
+          # macos-26 ships Xcode 26.4, whose SDK zig 0.15.2 (pinned by libghostty-vt-sys) cannot link against.
+          - os: macos-15
             hc_target: macos-aarch64
             hc_sha256: 77d8af092e25ae650f4424d6dad27514f6916a11d807fb0752858cd27c21e4fc
     runs-on: ${{ matrix.os }}

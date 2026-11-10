@@ -22,7 +22,7 @@ To run a release again for a tag that exists: `gh workflow run release.yml --ref
 | `r2` | Each archive and `.sha256` in the `rodeo-releases` R2 bucket at `<tag>/<file>`, then `latest`, a text object with the tag. It uploads through the R2 S3 API with `curl --aws-sigv4`, because that API honors the token's bucket scope and the REST API that `wrangler r2` calls does not. It moves `latest` only to a newer tag, by `sort -V`. |
 | `homebrew` | `Formula/rodeo.rb` in `lukeed/homebrew-tap`, written from `.github/rodeo.rb.tmpl` with the version and the four sha256s, committed as `chore: rodeo <version>`. It runs after `r2`, because the formula downloads from `rodeo.lukeed.com`. |
 
-The Linux builds use `cargo zigbuild` and are static musl binaries. `libghostty-vt-sys` builds Ghostty with zig and maps the Rust target to a zig target itself, so they need no extra env. It builds for the `baseline` CPU unless `LIBGHOSTTY_VT_SYS_CPU` is set, so the binaries run on any CPU of their arch. The macOS x86_64 build cross-compiles on the arm64 runner. Only `aarch64-apple-darwin` and `x86_64-unknown-linux-musl` run `rodeo --version` in CI.
+The Linux builds use `cargo zigbuild` and are static musl binaries. `libghostty-vt-sys` builds Ghostty with zig and maps the Rust target to a zig target itself, so they need no extra env. It builds for the `baseline` CPU unless `LIBGHOSTTY_VT_SYS_CPU` is set, so the binaries run on any CPU of their arch. The macOS x86_64 build cross-compiles on the arm64 runner. The macOS jobs run on `macos-15`: `libghostty-vt-sys` needs zig 0.15.2, which cannot link against the Xcode 26.4 SDK of `macos-26`. Move them when a zig release that `libghostty-vt-sys` accepts fixes that. Only `aarch64-apple-darwin` and `x86_64-unknown-linux-musl` run `rodeo --version` in CI.
 
 These install paths read the release:
 
@@ -32,7 +32,7 @@ These install paths read the release:
 
 ## Other workflows
 
-- `ci.yml`: on pushes to `main` and on pull requests, except for changes only under `www/`. `lint` runs `jactionlint`, `cargo fmt --check` and clippy with `-D warnings`. `test` runs `cargo nextest run --workspace --locked` on `ubuntu-latest` and `macos-latest`, with `tmux` and the pinned, checksum-checked `hc`. To use a newer `hc`, change `HC_VERSION` and both `hc_sha256` values.
+- `ci.yml`: on pushes to `main` and on pull requests, except for changes only under `www/`. `lint` runs `jactionlint`, `cargo fmt --check` and clippy with `-D warnings`. `test` runs `cargo nextest run --workspace --locked` on `ubuntu-latest` and `macos-15`, with `tmux` and the pinned, checksum-checked `hc`. To use a newer `hc`, change `HC_VERSION` and both `hc_sha256` values.
 - `www.yml`: on pushes to `main` that change `www/`, the root `Cargo.toml` (the site shows the version), `crates/rodeo/src/cli.rs` (the site shows the usage), `mise.toml` (the bun pin) or the workflow itself. It runs `bun test`, `bun run build` and `bun run lint` in `www/`, then `wrangler deploy`.
 
 ## One-time setup
