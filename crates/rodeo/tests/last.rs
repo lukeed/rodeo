@@ -141,6 +141,9 @@ fn a_doc_emptied_elsewhere_stays_empty_until_the_user_asks() {
         let screen = h.screen();
         assert!(screen.contains(" spaces"), "{screen}");
         assert!(screen.contains("NAVIGATE"), "{screen}");
+        assert!(screen.contains("█▄  ▀▀▀▀▀▀  ▄█"), "{screen}");
+        assert!(screen.contains("rodeo▍"), "{screen}");
+        assert!(screen.contains("prefix+shift+n  new workspace"), "{screen}");
         assert_eq!(h.app().view.mode, Mode::Navigate);
         h.press(KeyCode::Char('N'), KeyModifiers::SHIFT).await;
         h.until_stored("a workspace on request", |d| d.spaces.len() == 1)

@@ -3,14 +3,21 @@ use ratatui::layout::Rect;
 use ratatui::style::Style;
 
 use crate::app::App;
-use crate::model::MachineStatus;
+use crate::model::{MachineRow, MachineStatus};
 use crate::sidebar::status_look;
 use crate::text::{truncate, width};
 
+pub fn shown(app: &App) -> bool {
+    offline_machine(app).is_some()
+}
+
+fn offline_machine(app: &App) -> Option<MachineRow> {
+    app.active_machine_row()
+        .filter(|m| m.status != MachineStatus::Online)
+}
+
 pub fn render(app: &App, buf: &mut Buffer, area: Rect, top: u16) -> Option<Rect> {
-    let machine = app
-        .active_machine_row()
-        .filter(|m| m.status != MachineStatus::Online)?;
+    let machine = offline_machine(app)?;
     if area.is_empty() {
         return None;
     }

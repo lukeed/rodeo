@@ -10,8 +10,10 @@ use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position, Rect};
 use ratatui::style::Style;
+use ratatui::text::Line;
 
 use crate::app::App;
+use crate::brand::{self, Ink, Keep};
 use crate::hits::Hits;
 use crate::overlay::{self, frame};
 use crate::sidebar;
@@ -48,6 +50,8 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
         cursor = panes::render(app, buf, &mut hits);
     } else if !online || app.machines.spaces().is_empty() && !app.machines.local().slot.is_ready() {
         unavailable(app, buf, regions.surface);
+    } else if app.machines.spaces().is_empty() {
+        empty(app, buf, regions.surface);
     }
     if let Some(popup) = crate::popup::render(app, buf) {
         cursor = Some(popup);
@@ -121,7 +125,6 @@ fn unavailable(app: &App, buf: &mut Buffer, area: Rect) {
     let p = &app.palette;
     buf.set_style(area, Style::new().bg(p.panel_bg));
     let style = Style::new().fg(p.overlay0).bg(p.panel_bg);
-    let room = usize::from(area.width.saturating_sub(1));
     let (text, detail) = if app.conn.is_online() {
         match app.machines.local().slot.state() {
             crate::sync::State::Undecodable(why) | crate::sync::State::Unreadable(why) => {
@@ -135,8 +138,34 @@ fn unavailable(app: &App, buf: &mut Buffer, area: Rect) {
             app.conn.error.clone(),
         )
     };
-    buf.set_stringn(area.x + 1, area.y, text, room, style);
-    if let Some(detail) = detail.filter(|_| area.height > 1) {
-        buf.set_stringn(area.x + 1, area.y + 1, detail, room, style);
+    let notes: Vec<Line> = std::iter::once(text)
+        .chain(detail)
+        .map(|note| Line::styled(note, style))
+        .collect();
+    let area = clear_of_chrome(app, buf.area, area);
+    brand::splash(buf, area, Ink::of(p), &notes, Keep::Always);
+}
+
+fn empty(app: &App, buf: &mut Buffer, area: Rect) {
+    let keys = app
+        .keymap
+        .label(config::Action::NewWorkspace)
+        .unwrap_or_else(|| "unset".to_owned());
+    let hint = Line::styled(
+        format!("{keys}  new workspace"),
+        Style::new().fg(app.palette.overlay0),
+    );
+    let area = clear_of_chrome(app, buf.area, area);
+    brand::splash(buf, area, Ink::of(&app.palette), &[hint], Keep::Optional);
+}
+
+fn clear_of_chrome(app: &App, screen: Rect, area: Rect) -> Rect {
+    let header = app.regions.header.map_or(0, |h| h.height);
+    let banners = u16::from(app.banner().is_some()) + u16::from(lifecycle::shown(app));
+    let top = (screen.y + header + banners).max(area.y);
+    let mut bottom = area.bottom();
+    if let Some(bar) = modebar::bar(app).filter(|bar| bar.intersects(area)) {
+        bottom = bottom.min(bar.y);
     }
+    Rect::new(area.x, top, area.width, bottom.saturating_sub(top))
 }
