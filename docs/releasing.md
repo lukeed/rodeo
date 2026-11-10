@@ -11,7 +11,7 @@ How to cut a release, what each workflow makes, and the one-time setup they need
 
 The tag starts `.github/workflows/release.yml`. The tag must be `v` plus the `rodeo` package version, or the `cli` jobs stop.
 
-To run a release again for a tag that exists: `gh workflow run release.yml -f tag=v0.2.0`. It builds the tag's commit, keeps the GitHub release if there is one, and replaces its assets.
+To run a release again for a tag that exists: `gh workflow run release.yml -f tag=v0.2.0`. It builds the tag's commit, keeps the GitHub release if there is one, and replaces its assets and their R2 copies. It moves `latest` in R2 only when the tag is the newest.
 
 ## What `release.yml` makes
 
@@ -19,15 +19,16 @@ To run a release again for a tag that exists: `gh workflow run release.yml -f ta
 | --- | --- |
 | `cli` | `rodeo-<target>.tar.gz` with `rodeo` alone at the archive root, and `rodeo-<target>.tar.gz.sha256` (`<hex>  <file>`), for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl`. |
 | `release` | The GitHub release with generated notes and every archive and `.sha256`. Then `jdx/packslip` attests the archives' build provenance, signs a release manifest with the job's OIDC identity, and uploads `packslip.sigstore.json`. The manifest names `rodeo` as the binary and `hc` 0.1.18 or newer as a required command. |
-| `homebrew` | `Formula/rodeo.rb` in `lukeed/homebrew-tap`, written from `.github/rodeo.rb.tmpl` with the version and the four sha256s, committed as `chore: rodeo <version>`. |
+| `r2` | Each archive and `.sha256` in the `rodeo-releases` R2 bucket at `<tag>/<file>`, then `latest`, a text object with the tag. It uploads through the R2 S3 API with `curl --aws-sigv4`, because that API honors the token's bucket scope and the REST API that `wrangler r2` calls does not. It moves `latest` only to a newer tag, by `sort -V`. |
+| `homebrew` | `Formula/rodeo.rb` in `lukeed/homebrew-tap`, written from `.github/rodeo.rb.tmpl` with the version and the four sha256s, committed as `chore: rodeo <version>`. It runs after `r2`, because the formula downloads from `rodeo.lukeed.com`. |
 
 The Linux builds use `cargo zigbuild` and are static musl binaries. `libghostty-vt-sys` builds Ghostty with zig and maps the Rust target to a zig target itself, so they need no extra env. It builds for the `baseline` CPU unless `LIBGHOSTTY_VT_SYS_CPU` is set, so the binaries run on any CPU of their arch. The macOS x86_64 build cross-compiles on the arm64 runner. Only `aarch64-apple-darwin` and `x86_64-unknown-linux-musl` run `rodeo --version` in CI.
 
 These install paths read the release:
 
-- `curl -fsSL https://rodeo.lukeed.com | sh`: `www/install.sh` gets the archive and its `.sha256` from `/releases/download/<tag>/` or `/releases/latest/download/`.
-- `mise use -g packslip:github.com/lukeed/rodeo`: reads the packslip.
-- `brew install lukeed/tap/rodeo`: reads the formula.
+- `curl -fsSL https://rodeo.lukeed.com | sh`: `www/install.sh` reads the tag from `https://rodeo.lukeed.com/download/latest`, or takes `RODEO_VERSION`, then gets the archive and its `.sha256` from `https://rodeo.lukeed.com/download/<tag>/`. The Worker serves both from R2. It does not use GitHub.
+- `mise use -g packslip:github.com/lukeed/rodeo`: reads the packslip from the GitHub release.
+- `brew install lukeed/tap/rodeo`: reads the formula, which downloads from `https://rodeo.lukeed.com/download/<tag>/`.
 
 ## Other workflows
 
@@ -50,13 +51,21 @@ These install paths read the release:
 | Secret | Used by | What it is |
 | --- | --- | --- |
 | `HOMEBREW_TAP_TOKEN` | `release.yml` `homebrew` | A fine-grained token with "Contents: read and write" on `lukeed/homebrew-tap` only. |
-| `CLOUDFLARE_API_TOKEN` | `www.yml` | A Cloudflare API token from the "Edit Cloudflare Workers" template, scoped to the account and the `rodeo.lukeed.com` zone. |
-| `CLOUDFLARE_ACCOUNT_ID` | `www.yml` | The Cloudflare account ID. |
+| `CLOUDFLARE_API_TOKEN` | `www.yml`, `release.yml` `r2` | A Cloudflare user API token with: Workers Scripts Write and Account Settings Read on the account; Workers Routes Write and Zone Read on the `lukeed.com` zone; Workers R2 Storage Bucket Item Read and Write on the `rodeo-releases` bucket only; Memberships Read and User Details Read. |
+| `CLOUDFLARE_ACCOUNT_ID` | `www.yml`, `release.yml` `r2` | The Cloudflare account ID. |
+
+One Actions variable goes with the token:
+
+| Variable | Used by | What it is |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN_ID` | `release.yml` `r2` | The ID of `CLOUDFLARE_API_TOKEN`. It is the R2 S3 access key ID; the secret key is the sha256 of the token. When you replace the token, change both. |
 
 ### packslip
 
 It needs no secret. It signs with the `release` job's OIDC token (`id-token: write`) and attests with `attestations: write`. Attestations on a private repo need GitHub Enterprise Cloud, so the repo must be public before the first release.
 
 ### Cloudflare
+
+The Worker serves releases from the `rodeo-releases` R2 bucket, bound as `RELEASES` in `www/wrangler.jsonc`. Make it once with `bunx wrangler r2 bucket create rodeo-releases`, and keep its `r2.dev` URL off.
 
 The Worker reads `CROWNE_KEY` as a Worker secret. Set it once with `bunx wrangler secret put CROWNE_KEY` in `www/`. The site id is `CROWNE_SITE` in `www/wrangler.jsonc`. The `lukeed.com` zone must be in the same Cloudflare account for the custom domain route.

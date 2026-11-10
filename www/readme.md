@@ -21,7 +21,7 @@ bun run lint       # seolint over public/
 | `partials/` | The nav, the footer, the installer tabs, `rodeo --help`, the mode bars, and `source.ts`, which prints a repo file as a code block. |
 | `assets/` | Styles, the client script, the font and images. `js/world.ts` draws the pixel scenes, `js/tui.ts` the rodeo screen. |
 | `data/` | `home.ts` holds the home page copy. `release.ts` reads the version from `Cargo.toml` and the help text from `crates/rodeo/src/cli.rs`. |
-| `worker.ts` | The analytics proxy and the install script. |
+| `worker.ts` | The analytics proxy, the install script and the release downloads. |
 
 The docs sidebar comes from each page's `group` and `order` frontmatter. The group names and their order live in `GROUPS` in `utils.ts`.
 
@@ -29,18 +29,20 @@ The Config page prints `crates/config/src/default.toml` at build time, and the `
 
 ## The Worker
 
-Everything is a static asset except four paths, listed in `run_worker_first`:
+Everything is a static asset except these paths, listed in `run_worker_first`:
 
 - `/x/script.js` and `/x` proxy [crowne.io](https://crowne.io), so a blocker is less likely to drop them.
 - `/install.sh` serves the install script.
 - `/` serves the install script to a command line (`curl`, `wget`, …) and the home page to a browser.
+- `/download/latest` and `/download/<tag>/<archive>` serve the release files from the private `rodeo-releases` R2 bucket, bound as `RELEASES`. `latest` holds the newest tag and is cached for a minute. A tag's files are cached for good. A file the bucket does not have is a 404 that is not cached. Other paths under `/download/` go to the static assets.
 
-Serving the script counts a `download` event, with `piped` and `platform`. The event never blocks the response: a failed event is logged and dropped.
+Serving the script counts a `download` event, with `piped` and `platform`. Serving an archive counts an `archive` event, with `version` and `target`. An event never blocks the response: a failed event is logged and dropped.
 
 ## Before deploying
 
 1. Set the crowne.io key as a secret: `bunx wrangler secret put CROWNE_KEY`. The site id is `CROWNE_SITE` in `wrangler.jsonc`.
 2. Point `rodeo.lukeed.com` at the Worker, which the `routes` entry claims as a custom domain.
+3. Create the bucket: `bunx wrangler r2 bucket create rodeo-releases`. Keep its `r2.dev` URL off. The release workflow fills it.
 
 Without the key the Worker still serves everything; it counts nothing.
 

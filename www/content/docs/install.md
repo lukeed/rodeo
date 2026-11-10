@@ -24,7 +24,7 @@ You do not need to start `hc` yourself. rodeo starts the core when it is not run
 $ curl -fsSL https://rodeo.lukeed.com/install.sh | sh
 ```
 
-The script finds your system and CPU, downloads the matching archive from the GitHub releases of `lukeed/rodeo`, checks its sha256, and puts `rodeo` in `~/.local/bin`. It tells you when that folder is not on your PATH, and when `hc` is missing or too old.
+The script finds your system and CPU, downloads the matching archive from `rodeo.lukeed.com`, checks its sha256, and puts `rodeo` in `~/.local/bin`. It tells you when that folder is not on your PATH, and when `hc` is missing or too old.
 
 Two variables change what it does:
 
@@ -63,7 +63,7 @@ $ packslip install github.com/lukeed/rodeo
 
 ## Release archives
 
-Each release has one archive per platform, with a `.sha256` file beside it. The archive holds the `rodeo` binary only.
+Each release has one archive per platform, with a `.sha256` file beside it. The archive holds the `rodeo` binary only. Get them from the GitHub release, or from `https://rodeo.lukeed.com/download/<tag>/<archive>`, which keeps a copy of each release. `https://rodeo.lukeed.com/download/latest` names the newest tag.
 
 | Platform | Archive |
 | --- | --- |
