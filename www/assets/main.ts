@@ -1,3 +1,4 @@
+import * as toc from "./js/toc";
 import * as tui from "./js/tui";
 import * as world from "./js/world";
 
@@ -46,5 +47,6 @@ if (band && panel) {
   new ResizeObserver(fit).observe(document.body);
 }
 
+toc.spy();
 tui.screens();
 world.worlds();

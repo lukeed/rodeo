@@ -106,6 +106,19 @@
   color: var(--dim);
 }
 
+.toc a:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc a[aria-current] {
+  color: var(--text);
+}
+
+.toc a[aria-current]::before {
+  color: var(--acc);
+}
+
 .toc a code {
   color: inherit;
 }
