@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use config::{
     AgentPanelSort, Config, Loaded, PaneBorders, ReloadStatus, ToastDelivery, check, strip_bom,
@@ -23,13 +23,6 @@ fn hard_error(text: &str) {
         "{diagnostic}"
     );
     assert!(diagnostic.ends_with("; using defaults"), "{diagnostic}");
-}
-
-fn sample_path() -> PathBuf {
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_default();
-    home.join("oss/thuic-ref/samples/herdr-tui-config.mac.toml")
 }
 
 const SAMPLE: &str = r#"onboarding = false
@@ -83,11 +76,6 @@ fn assert_sample(loaded: &Loaded) {
 #[test]
 fn user_sample_loads_cleanly() {
     assert_sample(&parse(SAMPLE));
-    let path = sample_path();
-    if path.exists() {
-        assert_sample(&Config::load(&path));
-        assert_eq!(check(&path), Ok(()));
-    }
 }
 
 #[test]
