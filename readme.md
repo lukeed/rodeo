@@ -5,23 +5,20 @@
   </picture>
 </div>
 
-> Herdr TUI, on top of herdr-core.
+> Round up your terminals.
 
-rodeo is a terminal UI for [herdr-core](https://github.com/herdrdev/herdr-core) (`hc`). It has the key binds and screen of Herdr TUI 0.9.5, and it shares its spaces, tabs & panes with the Herdr desktop app. Live, both ways.
+rodeo is a keyboard-first terminal UI for [herdr-core](https://github.com/herdrdev/herdr-core) (`hc`). It shares spaces, tabs & panes with the Herdr desktop app. Make a split in rodeo and it shows up in the app, and the other way around.
 
-Herdr TUI runs its own server, and the desktop app runs on `hc`. They share no terminals. I wanted Herdr TUI as it is, but on `hc`, so my terminal and my app see the same thing.
-
-So rodeo is a fresh build that only uses `hc`. `hc` owns every program. rodeo only owns the UI. Herdr TUI 0.9.5 is the spec, not the code source.
+`hc` owns every program. rodeo only owns the UI, so you can close it, open it again, or run two at once. Your terminals keep running the whole time.
 
 ## Features
 
-* Same key binds as Herdr TUI 0.9.5, prefix and all (`ctrl+b`)
-* Same screen: sidebar, tab bar, pane borders, mode bar, overlays, mouse
-* Shares the `herdr-app` layout with the desktop app & other rodeo clients
-* Reads your Herdr TUI config, as is
-* Agent states (blocked, working, done, idle) from `hc`, with toasts & sounds
+* Workspaces, tabs & splits, all from the keyboard (`ctrl+b` prefix) or the mouse
+* Shares its layout with the Herdr desktop app & other rodeo clients
+* Agent states (blocked, working, done, idle) at a glance, with toasts & sounds
 * Other machines through `hc`'s machine links
 * Worktrees, popups, copy mode, image paste, links & kitty graphics
+* Your Herdr TUI keys & config work as is (see below)
 
 ## Requirements
 
@@ -55,9 +52,7 @@ Press `prefix+?` to see every key bind.
 
 ## Config
 
-rodeo reads `~/.config/rodeo/config.toml`. It uses the same schema as Herdr TUI.
-
-On the first start, if that file doesn't exist and `~/.config/herdr/config.toml` does, rodeo copies it over once. It never touches the Herdr file.
+rodeo reads `~/.config/rodeo/config.toml`.
 
 ```sh
 $ rodeo --default-config   # print the full default config
@@ -65,15 +60,19 @@ $ rodeo config check       # check your config
 $ rodeo config reset-keys  # drop [keys] from your config (keeps a backup)
 ```
 
-## What's different
+## Coming from Herdr TUI?
 
-Most of Herdr TUI maps 1:1. Some parts belonged to Herdr's own server, so `hc` covers them now (sessions, restore, remote machines). A few are gone:
+rodeo started as Herdr TUI 0.9.5 on `hc`. Same key binds, same screen, same config schema. On the first start, if `~/.config/rodeo/config.toml` doesn't exist and `~/.config/herdr/config.toml` does, rodeo copies it over once. It never touches the Herdr file.
+
+Why? Herdr TUI runs its own server, and the desktop app runs on `hc`. They share no terminals. I wanted my terminal and my app to see the same thing.
+
+It'll drift from Herdr TUI over time. A few parts are already gone:
 
 * **Plugins:** no plugin model
 * **Self-update, release notes & onboarding:** rodeo doesn't update itself
 * **Agent integrations:** agents report their own state to `hc` (OSC 7501)
 
-[`docs/parity.md`](docs/parity.md) has the full list, row by row.
+Sessions, restore & remote machines belonged to Herdr's own server, so `hc` covers them now. [`docs/parity.md`](docs/parity.md) has the full list, row by row.
 
 ## Development
 
