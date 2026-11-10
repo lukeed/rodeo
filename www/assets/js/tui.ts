@@ -178,14 +178,27 @@ function modeBar(g: Grid, x: number, y: number, w: number, mode: Exclude<Mode, n
   }
 }
 
-type Space = { name: string; branch: string; git: [string, Color][]; st: Status };
+type Space = { name: string; branch: string; git: [string, Color][]; st: Status | null };
+type Machine = { label: string; online: boolean; spaces: Space[] };
 
-function spaces(m: Moment): Space[] {
+function machines(m: Moment): Machine[] {
   return [
-    { name: "rodeo", branch: "main", git: [["↑2", "green"]], st: "working" },
-    { name: "hc", branch: "main", git: [], st: m.hc },
-    { name: "site", branch: "design", git: [["↓1", "red"]], st: "idle" },
-    { name: "dotfiles", branch: "main", git: [], st: "idle" },
+    {
+      label: "Local",
+      online: false,
+      spaces: [
+        { name: "rodeo", branch: "main", git: [["↑2", "green"]], st: "working" },
+        { name: "site", branch: "design", git: [["↓1", "red"]], st: null },
+      ],
+    },
+    {
+      label: "devbox",
+      online: true,
+      spaces: [
+        { name: "hc", branch: "main", git: [], st: m.hc },
+        { name: "dotfiles", branch: "main", git: [], st: null },
+      ],
+    },
   ];
 }
 
@@ -244,40 +257,54 @@ function desktop(g: Grid, m: Moment) {
   g.put(1, 0, "rodeo", P.text, null, true);
   g.put(6, 0, "▍", P.acc);
   g.put(0, 1, "─".repeat(sw - 1), P.sdim);
-  let split = Math.max(14, Math.round(rows * 0.56));
+  let split = Math.floor(rows / 2);
   let y = 2;
-  spaces(m).forEach((sp, i) => {
-    let focused = i === 0;
-    let selected = m.mode === "NAVIGATE" && i === 1;
-    let bg = selected ? P.sel : focused ? P.row : null;
-    if (bg) {
-      g.shade(0, y, sw - 1, bg);
-      g.shade(0, y + 1, sw - 1, bg);
+  let index = 0;
+  for (let mc of machines(m)) {
+    let cx = g.put(1, y, "▾ " + mc.label, P.text, null, true);
+    if (mc.online) cx = g.put(cx + 1, y, "●", P.green);
+    g.put(cx + 1, y, "─".repeat(sw - 2 - cx), P.sdim);
+    y++;
+    for (let sp of mc.spaces) {
+      let focused = index === 0;
+      let selected = m.mode === "NAVIGATE" && index === 2;
+      let bg = selected ? P.sel : focused ? P.row : null;
+      if (bg) {
+        g.shade(2, y, sw - 3, bg);
+        g.shade(2, y + 1, sw - 3, bg);
+      }
+      let [icon, col] = sp.st ? STATE[sp.st] : ["·", P.o0];
+      g.put(3, y, icon, col);
+      g.put(5, y, sp.name, focused || selected ? P.text : P.sub0, null, focused || selected);
+      let bx = g.put(5, y + 1, sp.branch, focused ? P.mauve : P.o0);
+      for (let [txt, c] of sp.git) bx = g.put(bx + 1, y + 1, txt, P[c]);
+      y += 2;
+      index++;
     }
-    let [icon, col] = STATE[sp.st];
-    g.put(1, y, icon, col);
-    g.put(3, y, sp.name, focused || selected ? P.text : P.sub0, null, focused || selected);
-    let cx = g.put(3, y + 1, sp.branch, focused ? P.mauve : P.o0);
-    for (let [txt, c] of sp.git) cx = g.put(cx + 1, y + 1, txt, P[c]);
-    y += 3;
-  });
-  g.put(1, split - 1, "new", P.o0);
-  g.put(sw - 5, split - 1, "menu", P.o0);
+  }
+  let fx = g.put(1, split - 1, "new · Local", P.o0);
+  if (fx < sw - 6) g.put(sw - 5, split - 1, "menu", P.o0);
   g.put(0, split, "─".repeat(sw - 1), P.sdim);
   g.put(1, split + 1, "agents", P.o0, null, true);
   g.put(sw - 8, split + 1, "grouped", P.o0, null, true);
   let ay = split + 3;
-  let agents: [string, string, Status][] = [
-    ["rodeo", "claude", "working"],
-    ["hc", "codex", m.hc],
+  let agents: [string, string, string, Status][] = [
+    ["Local", "rodeo", "claude", "working"],
+    ["devbox", "hc", "codex", m.hc],
   ];
-  for (let [ws, agent, st] of agents) {
+  agents.forEach(([machine, ws, agent, st], i) => {
+    let focused = i === 0;
+    if (focused) {
+      g.shade(0, ay, sw - 1, P.row);
+      g.shade(0, ay + 1, sw - 1, P.row);
+    }
     let [icon, col] = STATE[st];
     g.put(1, ay, icon, col);
-    g.put(3, ay, ws, P.sub0, null, true);
+    let cx = g.put(3, ay, machine + " · ", P.o0);
+    g.put(cx, ay, ws, focused ? P.text : P.sub0, null, true);
     g.put(3, ay + 1, agent, P.o0);
-    ay += 3;
-  }
+    ay += 2;
+  });
   g.put(sw - 2, rows - 1, "«", P.o0);
   for (let j = 0; j < rows; j++) g.put(sw - 1, j, "│", P.sdim);
 
@@ -311,7 +338,7 @@ function desktop(g: Grid, m: Moment) {
   if (m.mode) modeBar(g, mx, rows - 1, mw, m.mode);
   if (m.toast) {
     let title = "codex finished";
-    let body = "hc · 2";
+    let body = "hc · 3";
     let w = Math.max(title.length, body.length) + 6;
     let h = 4;
     let x = cols - w - 1;
@@ -358,7 +385,7 @@ function mobile(g: Grid, m: Moment) {
     g.fill(0, bottom, cols, 1, P.s0);
     let cx = g.put(1, bottom, "●", P.blue, P.s0);
     cx = g.put(cx + 1, bottom, "codex done", P.text, P.s0, true);
-    g.put(cx, bottom, " · hc · 2", P.o1, P.s0);
+    g.put(cx, bottom, " · hc · 3", P.o1, P.s0);
   }
 }
 
@@ -474,7 +501,7 @@ async function screen(box: HTMLElement) {
   await document.fonts.load("13px 'Geist Mono'");
   await document.fonts.load("600 13px 'Geist Mono'");
   let t0: number | null = null;
-  let layout = { cols: 0, rows: 0, cw: 0, ch: 0, font: "", bold: "", dpr: 1, phone: false };
+  let layout = { cols: 0, rows: 0, cw: 0, ch: 0, pad: 0, font: "", bold: "", dpr: 1, phone: false };
 
   let setup = () => {
     let w = box.clientWidth;
@@ -486,20 +513,24 @@ async function screen(box: HTMLElement) {
     let cw = w / cols;
     let ch = Math.round(fs * 1.38);
     let rows = 30;
+    let pad = Math.round(ch / 2);
     let dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(cols * cw * dpr);
-    canvas.height = rows * ch * dpr;
+    canvas.height = (rows * ch + pad) * dpr;
     canvas.style.width = cols * cw + "px";
-    canvas.style.height = rows * ch + "px";
-    box.style.setProperty("--tui-h", rows * ch + "px");
-    layout = { cols, rows, cw, ch, font, bold: `650 ${fs}px "Geist Mono"`, dpr, phone };
+    canvas.style.height = rows * ch + pad + "px";
+    box.style.setProperty("--tui-h", rows * ch + pad + "px");
+    layout = { cols, rows, cw, ch, pad, font, bold: `650 ${fs}px "Geist Mono"`, dpr, phone };
   };
 
   let draw = (t: number) => {
-    let { cols, rows, cw, ch, font, bold, dpr, phone } = layout;
+    let { cols, rows, cw, ch, pad, font, bold, dpr, phone } = layout;
     let g = new Grid(cols, rows);
     (phone || cols <= 64 ? mobile : desktop)(g, moment(t));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = P.bg;
+    ctx.fillRect(0, 0, cols * cw, pad);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, pad * dpr);
     render(ctx, g, cw, ch, font, bold);
   };
 
@@ -529,7 +560,7 @@ async function screen(box: HTMLElement) {
     visible = entry.isIntersecting;
     if (visible && t0 == null) {
       t0 = performance.now();
-      if (dust) reveal(dust, box.clientWidth, layout.rows * layout.ch, "#0f0e0d");
+      if (dust) reveal(dust, box.clientWidth, layout.rows * layout.ch + layout.pad, "#0f0e0d");
       loop();
     } else if (visible && !was) loop();
   }).observe(box);
