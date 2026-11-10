@@ -935,3 +935,23 @@ fn machine_clicks_keep_navigate_in_step() {
         " new · Local         menu│"
     );
 }
+
+#[test]
+fn a_machine_still_loading_its_doc_is_not_ready() {
+    let mut app = app();
+    app.machines.update(vec![hc::MachineView {
+        name: "box".into(),
+        state: "connected".into(),
+        ..hc::MachineView::default()
+    }]);
+    app.after_docs();
+    let rows = column(&frame(&mut app), 26);
+    assert_eq!(rows[7], " ▾ box ◐ connecting ─────│");
+    click(&mut app, 5, 7);
+    let notice = app.notice.clone().expect("a not ready notice");
+    assert_eq!(notice.body, "box is not ready");
+    assert_eq!(
+        column(&frame(&mut app), 26)[14],
+        " new · Local         menu│"
+    );
+}

@@ -122,7 +122,8 @@ impl App {
                 SlotState::Undecodable(error) | SlotState::Unreadable(error) => {
                     (MachineStatus::Attention, false, Some(error.clone()))
                 }
-                _ => (MachineStatus::Online, false, None),
+                SlotState::Loading => (MachineStatus::Connecting, false, None),
+                SlotState::Ready => (MachineStatus::Online, false, None),
             },
             "connecting" => (MachineStatus::Connecting, false, why),
             "unreachable" => (MachineStatus::Reconnecting, false, why),
