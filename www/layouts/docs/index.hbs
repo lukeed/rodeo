@@ -11,7 +11,7 @@
         <li><a href="{{ link.path }}"{{#if link.current}} aria-current="page"{{/if}}>{{ link.title.toLowerCase() }}</a></li>
       {{/each}}
     </ol>
-    <div class="foot"><a href="/llms.txt" target="_blank" rel="noopener">llms.txt</a></div>
+    <div class="foot"><a class="ext" href="/llms.txt" target="_blank" rel="noopener">llms.txt{{#partial src="ext"}}</a></div>
   </nav>
   <main class="doc" id="main">
     <div class="dhead">

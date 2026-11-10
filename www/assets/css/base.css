@@ -107,6 +107,17 @@ code {
   white-space: nowrap;
 }
 
+.ext {
+  white-space: nowrap;
+}
+
+.ext svg {
+  width: 0.8em;
+  height: 0.8em;
+  margin-left: 0.35em;
+  vertical-align: -0.05em;
+}
+
 .cur {
   display: inline-block;
   width: 0.42em;
