@@ -1,4 +1,5 @@
 use std::io::IsTerminal;
+use std::os::fd::AsFd;
 use std::process::ExitCode;
 
 use rodeo::app::{Msg, Options};
@@ -183,8 +184,11 @@ fn run(paths: &config::Paths, session: Option<&str>) -> ExitCode {
 }
 
 async fn drive(options: Options) -> std::io::Result<()> {
-    let backend = rodeo::backend::HostBackend::new(std::io::stdout());
-    let mut runner = Runner::new(options, backend, Box::new(std::io::stdout()))?;
+    let pending = rodeo::backend::Pending::default();
+    let backend = rodeo::backend::HostBackend::new(pending.clone());
+    let stdout = std::fs::File::from(std::io::stdout().as_fd().try_clone_to_owned()?);
+    let host = rodeo::backend::Synced::new(pending, stdout);
+    let mut runner = Runner::new(options, backend, Box::new(host))?;
     rodeo::host_input::start(runner.sender());
     let signals = runner.sender();
     tokio::task::spawn_local(async move {

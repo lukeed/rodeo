@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::io::{self, Write};
+use std::rc::Rc;
 
 use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::style::{
@@ -12,6 +14,52 @@ use ratatui::buffer::Cell;
 use ratatui::layout::{Position, Size};
 use ratatui::style::{Color, Modifier};
 use vt::UnderlineStyle;
+
+const SYNC_BEGIN: &[u8] = b"\x1b[?2026h";
+const SYNC_END: &[u8] = b"\x1b[?2026l";
+
+#[derive(Clone, Default)]
+pub struct Pending(Rc<RefCell<Vec<u8>>>);
+
+impl Write for Pending {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.borrow_mut().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+pub struct Synced<W: Write> {
+    pending: Pending,
+    out: W,
+}
+
+impl<W: Write> Synced<W> {
+    pub fn new(pending: Pending, out: W) -> Self {
+        Self { pending, out }
+    }
+}
+
+impl<W: Write> Write for Synced<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.pending.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        let body = std::mem::take(&mut *self.pending.0.borrow_mut());
+        if !body.is_empty() {
+            let mut frame = Vec::with_capacity(SYNC_BEGIN.len() + body.len() + SYNC_END.len());
+            frame.extend_from_slice(SYNC_BEGIN);
+            frame.extend_from_slice(&body);
+            frame.extend_from_slice(SYNC_END);
+            self.out.write_all(&frame)?;
+        }
+        self.out.flush()
+    }
+}
 
 pub struct HostBackend<W: Write> {
     out: W,
@@ -216,6 +264,59 @@ mod tests {
         assert!(out.contains("\x1b[58;2;255;0;0m"), "{out:?}");
         assert!(out.contains("\x1b[4mU"), "{out:?}");
         assert!(out.ends_with("N\x1b[39m\x1b[49m\x1b[59m\x1b[0m"), "{out:?}");
+    }
+
+    #[derive(Clone, Default)]
+    struct Writes(Rc<RefCell<Vec<Vec<u8>>>>);
+
+    impl Write for Writes {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.borrow_mut().push(buf.to_vec());
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_frame_and_its_extras_reach_the_host_in_one_synchronized_write() {
+        let pending = Pending::default();
+        let writes = Writes::default();
+        let mut host = Synced::new(pending.clone(), writes.clone());
+        let backend = HostBackend::new(pending);
+        let mut terminal = ratatui::Terminal::with_options(
+            backend,
+            ratatui::TerminalOptions {
+                viewport: ratatui::Viewport::Fixed(ratatui::layout::Rect::new(0, 0, 8, 2)),
+            },
+        )
+        .unwrap();
+        terminal.backend_mut().clear().unwrap();
+        terminal
+            .draw(|frame| {
+                frame.buffer_mut().set_string(0, 0, "frame", Style::new());
+                frame.set_cursor_position((1, 1));
+            })
+            .unwrap();
+        host.write_all(b"\x1b7extra\x1b8").unwrap();
+        assert!(writes.0.borrow().is_empty());
+        host.flush().unwrap();
+        let writes = writes.0.borrow();
+        assert_eq!(writes.len(), 1);
+        let out = String::from_utf8_lossy(&writes[0]);
+        assert!(out.starts_with("\x1b[?2026h\x1b[2J"), "{out:?}");
+        assert!(out.ends_with("\x1b7extra\x1b8\x1b[?2026l"), "{out:?}");
+        assert!(out.find("frame") < out.find("extra"), "{out:?}");
+    }
+
+    #[test]
+    fn an_empty_flush_writes_nothing() {
+        let writes = Writes::default();
+        let mut host = Synced::new(Pending::default(), writes.clone());
+        host.flush().unwrap();
+        assert!(writes.0.borrow().is_empty());
     }
 
     #[test]

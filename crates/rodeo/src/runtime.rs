@@ -122,7 +122,7 @@ where
         let bytes = self.app.take_output();
         if !bytes.is_empty() {
             let _ = self.out.write_all(&bytes);
-            let _ = self.out.flush();
         }
+        let _ = self.out.flush();
     }
 }
