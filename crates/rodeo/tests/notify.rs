@@ -88,6 +88,10 @@ fn terminal_delivery_writes_osc_and_plays_sounds() {
             ]
         );
         assert_eq!(sounds(&h), [Sound::Request, Sound::Done]);
+        h.until("the second notice on the host", |h| {
+            h.host_output().contains("\x1b]9;claude finished: ")
+        })
+        .await;
         let out = h.host_output();
         assert!(out.contains("\x1b]9;claude needs attention: "), "{out:?}");
         assert!(out.contains("\x1b]9;claude finished: "), "{out:?}");
