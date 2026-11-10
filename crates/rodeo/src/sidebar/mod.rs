@@ -179,6 +179,7 @@ impl<'a> Ctx<'a> {
 
     pub fn navigating(&self) -> bool {
         self.snapshot.spaces.iter().any(|s| s.selected)
+            || self.snapshot.machines.iter().any(|m| m.selected)
     }
 
     pub fn selection_bg(&self) -> Color {
@@ -322,13 +323,12 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
 }
 
 impl App {
-    pub fn picked_machine(&self) -> Option<Option<String>> {
-        picked(self, &self.snapshot()).map(|(machine, _)| machine)
+    pub fn is_picked(&self) -> bool {
+        picked(self, &self.snapshot()).is_some()
     }
 
     pub fn target_machine(&self) -> Option<String> {
-        self.picked_machine()
-            .unwrap_or_else(|| self.active_machine())
+        picked(self, &self.snapshot()).map_or_else(|| self.active_machine(), |(machine, _)| machine)
     }
 
     pub fn machine_space(&self, machine: Option<&str>) -> Option<String> {

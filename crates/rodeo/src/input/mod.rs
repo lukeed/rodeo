@@ -103,10 +103,7 @@ impl App {
             Request::Action(action) => self.run_action(action),
             Request::Rename { target, text } => self.finish_rename(target, text),
             Request::Close(target) => self.close(&target),
-            Request::Navigate => {
-                self.view.nav = self.view.space.clone();
-                self.view.mode = Mode::Navigate;
-            }
+            Request::Navigate => self.enter_navigate(),
             Request::Focus(crate::overlay::Focus::Space(space)) => self.focus_space(&space),
             Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
             Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),

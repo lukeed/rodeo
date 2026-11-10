@@ -19,6 +19,7 @@ pub mod links;
 pub mod logging;
 pub mod machines;
 pub mod model;
+pub mod nav;
 pub mod overlay;
 pub mod overlays;
 pub mod panes;

@@ -32,6 +32,19 @@ fn badge_style(machine: &MachineRow, base: Style, ctx: &Ctx<'_>) -> Style {
     }
 }
 
+fn paint_row(buf: &mut Buffer, rect: Rect, machine: &MachineRow, folded: bool, ctx: &Ctx<'_>) {
+    let shown = !folded
+        && ctx
+            .machine_spaces(machine.name.as_deref())
+            .iter()
+            .any(|s| s.focused);
+    if machine.selected {
+        buf.set_style(rect, Style::new().bg(ctx.selection_bg()));
+    } else if machine.active && !shown {
+        buf.set_style(rect, Style::new().bg(ctx.active_bg()));
+    }
+}
+
 pub fn expanded(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     hits.divider = Some(Rect::new(area.right() - 1, area.y, 1, area.height));
     let (top, bottom) = sections(area, ctx.split);
@@ -82,9 +95,7 @@ pub fn machine_row(
 ) {
     let p = ctx.palette;
     let folded = collapsed(machine, ctx);
-    if folded && machine.active {
-        buf.set_style(rect, Style::new().bg(p.active_row_bg));
-    }
+    paint_row(buf, rect, machine, folded, ctx);
     let (glyph, word, color) = status_look(machine.status, p);
     let signal = if machine.auth {
         "! auth".to_owned()
@@ -198,9 +209,10 @@ fn compact_spaces(buf: &mut Buffer, top: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
     let height = usize::from(top.height);
     let max = lines.len().saturating_sub(height);
     let mut start = ctx.scroll.min(max);
-    let selected = lines
-        .iter()
-        .position(|l| matches!(l, Line::Space(_, _, s) if s.selected));
+    let selected = lines.iter().position(|l| match l {
+        Line::Machine(_, m) => m.selected,
+        Line::Space(_, _, s) => s.selected,
+    });
     if ctx.reveal
         && let Some(row) = selected
     {
@@ -245,9 +257,7 @@ fn compact_machine(
 ) {
     let p = ctx.palette;
     let folded = collapsed(machine, ctx);
-    if machine.active && folded {
-        buf.set_style(rect, Style::new().bg(p.active_row_bg));
-    }
+    paint_row(buf, rect, machine, folded, ctx);
     let label = if machine.name.is_none() {
         "L".to_owned()
     } else {

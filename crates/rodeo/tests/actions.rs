@@ -4,7 +4,7 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::layout::Rect;
 use rodeo::app::{App, HostInfo, Options};
-use rodeo::view::Mode;
+use rodeo::view::{Mode, Nav};
 
 fn doc() -> Document {
     let mut doc = Document::default();
@@ -155,13 +155,14 @@ fn tabs_and_spaces_switch_move_and_rename() {
 #[test]
 fn modes_and_the_sidebar_toggle() {
     let mut app = app();
+    app.conn.state = rodeo::app::ConnState::Online;
     app.run_action(Action::WorkspacePicker);
     assert_eq!(app.view.mode, Mode::Navigate);
     app.run_action(Action::NavigateWorkspaceDown);
-    assert_eq!(app.view.nav.as_deref(), Some("sp2"));
+    assert_eq!(app.view.nav.as_ref().and_then(Nav::space), Some("sp2"));
     app.run_action(Action::NavigateWorkspaceDown);
     assert_eq!(
-        app.view.nav.as_deref(),
+        app.view.nav.as_ref().and_then(Nav::space),
         Some("sp1"),
         "the desktop list wraps"
     );

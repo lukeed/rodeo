@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{
+    Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
 use doc::{Document, Node, Tab};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -8,6 +10,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Modifier;
 use rodeo::app::{App, ConnState, Git, HostInfo, Options};
+use rodeo::view::{Mode, Nav};
 
 const W: u16 = 100;
 const H: u16 = 30;
@@ -652,4 +655,127 @@ fn a_picked_machine_gives_way_to_local_clicks() {
     assert_eq!(footer(&mut app), " new · Local         menu│");
     let buf = frame(&mut app);
     assert_eq!(buf[(8, 3)].bg, app.palette.active_row_bg);
+}
+
+fn key(app: &mut App, code: KeyCode) {
+    app.host_event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
+}
+
+fn navigate(app: &mut App) {
+    app.run_action(config::Action::WorkspacePicker);
+    let _ = frame(app);
+}
+
+fn at(app: &App) -> Nav {
+    app.view.nav.clone().expect("a navigate target")
+}
+
+fn space_nav(key: &str) -> Nav {
+    Nav::Space(key.into())
+}
+
+fn machine_nav(name: Option<&str>) -> Nav {
+    Nav::Machine(name.map(str::to_owned))
+}
+
+#[test]
+fn navigate_stops_on_machine_rows_in_sidebar_order() {
+    let mut app = app();
+    add_remote(&mut app, "connected", None);
+    navigate(&mut app);
+    assert_eq!(at(&app), space_nav("s1"));
+    let steps: Vec<Nav> = (0..6)
+        .map(|_| {
+            key(&mut app, KeyCode::Down);
+            at(&app)
+        })
+        .collect();
+    assert_eq!(
+        steps,
+        [
+            space_nav("s2"),
+            space_nav("s3"),
+            machine_nav(Some("box")),
+            space_nav("box/r1"),
+            machine_nav(None),
+            space_nav("s1"),
+        ]
+    );
+    key(&mut app, KeyCode::Up);
+    assert_eq!(at(&app), machine_nav(None));
+    let rows = column(&frame(&mut app), 26);
+    assert_eq!(rows[2], " ▾ Local ────────────────│");
+    let buf = frame(&mut app);
+    assert_eq!(buf[(3, 2)].bg, app.palette.selection_bg);
+    assert_eq!(buf[(3, 3)].bg, app.palette.active_row_bg);
+    app.view
+        .sidebar
+        .collapsed_machines
+        .insert(Some("box".into()));
+    key(&mut app, KeyCode::Up);
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    key(&mut app, KeyCode::Down);
+    assert_eq!(at(&app), machine_nav(None));
+    app.prefs.collapsed_groups.push("/w/repo/.git".into());
+    key(&mut app, KeyCode::Down);
+    key(&mut app, KeyCode::Down);
+    assert_eq!(at(&app), space_nav("s3"));
+}
+
+#[test]
+fn navigate_stops_on_a_machine_with_no_spaces() {
+    let mut app = app();
+    add_machine(&mut app, "connected", None, &Document::default());
+    navigate(&mut app);
+    key(&mut app, KeyCode::Up);
+    key(&mut app, KeyCode::Up);
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    key(&mut app, KeyCode::Up);
+    assert_eq!(at(&app), space_nav("s3"));
+}
+
+#[test]
+fn a_selected_machine_row_becomes_the_active_machine() {
+    let mut app = app();
+    add_machine(&mut app, "connected", None, &Document::default());
+    let footer = |app: &mut App| column(&frame(app), 26)[14].clone();
+    navigate(&mut app);
+    for _ in 0..3 {
+        key(&mut app, KeyCode::Down);
+    }
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    assert_eq!(footer(&mut app), " new · box           menu│");
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.view.mode, Mode::Navigate, "nothing to open on box");
+    key(&mut app, KeyCode::Esc);
+    assert_eq!(app.view.mode, Mode::Terminal);
+    assert_eq!(footer(&mut app), " new · box           menu│");
+    let buf = frame(&mut app);
+    assert_eq!(buf[(3, 7)].bg, app.palette.active_row_bg);
+    assert_eq!(buf[(3, 3)].bg, app.palette.sidebar_bg);
+    navigate(&mut app);
+    assert_eq!(at(&app), machine_nav(Some("box")), "navigate starts on it");
+    key(&mut app, KeyCode::Down);
+    assert_eq!(at(&app), machine_nav(None));
+    assert_eq!(footer(&mut app), " new · Local         menu│");
+}
+
+#[test]
+fn enter_on_a_machine_row_opens_its_last_space() {
+    let mut app = app();
+    add_remote(&mut app, "connected", None);
+    app.focus_space("box/r1");
+    let _ = frame(&mut app);
+    app.focus_space("s3");
+    let _ = frame(&mut app);
+    navigate(&mut app);
+    key(&mut app, KeyCode::Down);
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.view.mode, Mode::Terminal);
+    assert_eq!(app.view.space.as_deref(), Some("box/r1"));
+    navigate(&mut app);
+    key(&mut app, KeyCode::Down);
+    key(&mut app, KeyCode::Enter);
+    assert_eq!(app.view.space.as_deref(), Some("s3"));
 }

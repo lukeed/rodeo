@@ -111,7 +111,10 @@ impl App {
 
     fn target_space(&self) -> Option<String> {
         match self.view.mode {
-            Mode::Navigate => self.view.nav.clone().or_else(|| self.view.space.clone()),
+            Mode::Navigate => match &self.view.nav {
+                Some(nav) => nav.space().map(str::to_owned),
+                None => self.view.space.clone(),
+            },
             _ => self.view.space.clone(),
         }
     }
@@ -317,48 +320,12 @@ impl App {
         self.machines.spaces().iter().all(|s| s.machine == machine)
     }
 
-    fn enter_navigate(&mut self) {
-        self.view.nav = self.view.space.clone();
-        self.view.mode = Mode::Navigate;
-    }
-
     pub fn leave_mode(&mut self) {
         self.view.mode = if self.view.copy.is_some() {
             Mode::Copy
         } else {
             Mode::Terminal
         };
-    }
-
-    fn step_nav(&mut self, forward: bool) {
-        let keys = self.space_order();
-        if keys.is_empty() {
-            return;
-        }
-        let current = self.view.nav.as_ref().or(self.view.space.as_ref());
-        let at = current.and_then(|c| keys.iter().position(|k| k == c));
-        let mobile = self.regions.mobile;
-        let next = match (at, forward) {
-            (None, _) => 0,
-            (Some(i), true) if i + 1 < keys.len() => i + 1,
-            (Some(i), true) => {
-                if mobile {
-                    i
-                } else {
-                    0
-                }
-            }
-            (Some(0), false) => {
-                if mobile {
-                    0
-                } else {
-                    keys.len() - 1
-                }
-            }
-            (Some(i), false) => i - 1,
-        };
-        self.view.nav = Some(keys[next].clone());
-        self.view.reveal_space = true;
     }
 
     pub fn focus_space(&mut self, key: &str) {
@@ -469,9 +436,10 @@ impl App {
 
     fn new_tab(&mut self) {
         let machine = self.target_machine();
-        let space = match self.picked_machine() {
-            Some(_) => self.machine_space(machine.as_deref()),
-            None => self.view.space.clone(),
+        let space = if self.is_picked() {
+            self.machine_space(machine.as_deref())
+        } else {
+            self.view.space.clone()
         };
         let Some(space) = space else {
             self.new_workspace_on(machine, String::new());

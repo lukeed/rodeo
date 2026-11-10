@@ -71,6 +71,21 @@ pub enum Drag {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Nav {
+    Space(String),
+    Machine(Option<String>),
+}
+
+impl Nav {
+    pub fn space(&self) -> Option<&str> {
+        match self {
+            Self::Space(key) => Some(key),
+            Self::Machine(_) => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Press {
     Space(String),
     Tab(String),
@@ -96,7 +111,7 @@ pub struct View {
     pub zoomed: HashSet<String>,
     pub previous: Option<String>,
     pub mode: Mode,
-    pub nav: Option<String>,
+    pub nav: Option<Nav>,
     pub tab_scroll: usize,
     pub reveal_tab: bool,
     pub host_focused: bool,
@@ -215,12 +230,19 @@ impl View {
                     .or_insert_with(|| space.tab_key(first));
             }
         }
-        if self.nav.as_ref().is_some_and(|s| !spaces.contains(s)) {
+        let gone = match &self.nav {
+            Some(Nav::Space(key)) => !spaces.contains(key),
+            Some(Nav::Machine(name)) => machines.get(name.as_deref()).is_none(),
+            None => false,
+        };
+        if gone {
             self.nav = None;
         }
     }
 
     pub fn show_space(&mut self, space: &str) {
+        let machine = crate::ids::split(space).0.map(str::to_owned);
+        self.sidebar.last.insert(machine, space.to_owned());
         self.space = Some(space.to_owned());
         self.reveal_tab = true;
         self.reveal_space = true;

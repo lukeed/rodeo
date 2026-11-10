@@ -233,6 +233,16 @@ fn linked_worktrees_group_under_their_repo() {
     });
 }
 
+async fn pick_box(h: &mut Harness) {
+    h.prefix_char('w').await;
+    h.press(KeyCode::Down, KeyModifiers::NONE).await;
+    assert_eq!(
+        h.app().view.nav,
+        Some(rodeo::view::Nav::Machine(Some("box".into())))
+    );
+    h.press(KeyCode::Esc, KeyModifiers::NONE).await;
+}
+
 #[test]
 fn new_tabs_and_workspaces_follow_a_picked_machine() {
     run(|| async {
@@ -270,7 +280,7 @@ fn new_tabs_and_workspaces_follow_a_picked_machine() {
             h.screen().contains(" new · Local")
         })
         .await;
-        h.app_mut().view.sidebar.picked = Some((Some("box".into()), Some(local.clone())));
+        pick_box(&mut h).await;
         h.until("the footer names box", |h| {
             h.screen().contains(" new · box")
         })
@@ -283,10 +293,25 @@ fn new_tabs_and_workspaces_follow_a_picked_machine() {
         .await;
         assert_eq!(spaces_on(&h, None), [(local.clone(), 1)]);
         h.app_mut().focus_space(&local);
-        h.app_mut().view.sidebar.picked = Some((Some("box".into()), Some(local.clone())));
+        pick_box(&mut h).await;
         h.prefix(KeyCode::Char('N'), KeyModifiers::SHIFT).await;
         h.until("a second workspace on box", |h| {
             spaces_on(h, Some("box")).len() == 2
+        })
+        .await;
+        assert_eq!(spaces_on(&h, None), [(local.clone(), 1)]);
+        let second = spaces_on(&h, Some("box"))[1].0.clone();
+        h.until("its focus", |h| {
+            h.app().view.space.as_deref() == Some(second.as_str())
+        })
+        .await;
+        h.app_mut().focus_space(&local);
+        h.prefix_char('w').await;
+        h.press(KeyCode::Down, KeyModifiers::NONE).await;
+        h.press(KeyCode::Char('c'), KeyModifiers::NONE).await;
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        h.until("a tab in the last box workspace", |h| {
+            spaces_on(h, Some("box")) == [(first.clone(), 2), (second.clone(), 2)]
         })
         .await;
         assert_eq!(spaces_on(&h, None), [(local, 1)]);

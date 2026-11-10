@@ -4,7 +4,7 @@ use crate::model::{
     AgentRow, MachineRow, MachineStatus, PaneRow, Snapshot, SpaceRow, TabRow, Worktree,
 };
 use crate::sync::State as SlotState;
-use crate::view::Mode;
+use crate::view::{Mode, Nav};
 
 use super::{App, ConnState};
 
@@ -76,6 +76,10 @@ impl App {
 
     fn machine_rows(&self) -> Vec<MachineRow> {
         let active = self.active_machine();
+        let selected = match self.selected() {
+            Some(Nav::Machine(name)) => Some(name),
+            _ => None,
+        };
         self.machines
             .iter()
             .map(|m| {
@@ -94,6 +98,7 @@ impl App {
                         m.is_connected()
                     },
                     active: m.name == active,
+                    selected: selected == Some(&m.name),
                     status,
                     auth,
                     why,
@@ -127,17 +132,18 @@ impl App {
         }
     }
 
-    fn selected_space(&self) -> Option<String> {
-        (self.view.mode == Mode::Navigate)
-            .then(|| self.view.nav.clone())
-            .flatten()
+    fn selected(&self) -> Option<&Nav> {
+        self.view
+            .nav
+            .as_ref()
+            .filter(|_| self.view.mode == Mode::Navigate)
     }
 
     fn space_row(&self, index: usize, space: SpaceRef<'_>, stale: bool) -> SpaceRow {
         let key = space.key();
         let addresses: Vec<String> = space.tabs().flat_map(|t| t.addresses()).collect();
         let git = self.git.get(&key);
-        let selected = self.selected_space();
+        let selected = self.selected().and_then(Nav::space);
         let worktree = git.and_then(|g| {
             let common = g.common.as_deref()?;
             Some(Worktree {
@@ -163,7 +169,7 @@ impl App {
             folder: space.space.folder.clone(),
             state: self.rollup(&addresses),
             focused: !stale && self.view.space.as_deref() == Some(key.as_str()),
-            selected: !stale && selected.as_deref() == Some(key.as_str()),
+            selected: !stale && selected == Some(key.as_str()),
             branch: git.and_then(|g| g.branch.clone()),
             ahead: git.map_or(0, |g| g.ahead),
             behind: git.map_or(0, |g| g.behind),

@@ -12,6 +12,7 @@ pub struct MachineRow {
     pub state: String,
     pub connected: bool,
     pub active: bool,
+    pub selected: bool,
     pub status: MachineStatus,
     pub auth: bool,
     pub why: Option<String>,

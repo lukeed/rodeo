@@ -115,13 +115,7 @@ impl App {
         };
         match resolved {
             NavigateKey::Cancel => self.leave_navigate(),
-            NavigateKey::Open => {
-                let selected = self.view.nav.clone();
-                self.leave_navigate();
-                if let Some(space) = selected {
-                    self.focus_space(&space);
-                }
-            }
+            NavigateKey::Open => self.nav_open(),
             NavigateKey::Blocked => {}
             NavigateKey::Stay(action) => self.run_action(action),
             NavigateKey::Run(Action::SwitchWorkspace(index)) => {

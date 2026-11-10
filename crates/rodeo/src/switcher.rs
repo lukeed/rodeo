@@ -494,7 +494,12 @@ pub fn render(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) 
         return hits;
     }
     let nav = (app.view.mode == Mode::Navigate)
-        .then(|| app.view.nav.clone())
+        .then(|| {
+            app.view
+                .nav
+                .as_ref()
+                .and_then(|n| n.space().map(str::to_owned))
+        })
         .flatten();
     let tabs = tab_statuses(app);
     let p = &app.palette;
@@ -563,8 +568,7 @@ impl App {
             {
                 self.view.switcher_scroll = 0;
                 self.view.reveal_space = false;
-                self.view.nav = self.view.space.clone();
-                self.view.mode = Mode::Navigate;
+                self.enter_navigate();
                 return true;
             }
             return false;

@@ -96,14 +96,14 @@ fn first_row(list: &List<'_>, heights: &[u16], gaps: &[u16], room: u16, ctx: &Ct
     if !ctx.reveal || room == 0 {
         return ctx.scroll;
     }
-    let target = |want: fn(&SpaceRow) -> bool| {
+    let target = |space: fn(&SpaceRow) -> bool, machine: fn(&MachineRow) -> bool| {
         list.rows.iter().position(|row| match row {
-            Row::Space { group, pos } => want(list.groups[*group].space(*pos)),
-            Row::Machine(_) => false,
+            Row::Space { group, pos } => space(list.groups[*group].space(*pos)),
+            Row::Machine(m) => machine(m),
         })
     };
-    target(|s| s.selected)
-        .or_else(|| target(|s| s.focused))
+    target(|s| s.selected, |m| m.selected)
+        .or_else(|| target(|s| s.focused, |_| false))
         .map_or(ctx.scroll, |target| {
             scroll::reveal(heights, gaps, room, ctx.scroll, target)
         })
