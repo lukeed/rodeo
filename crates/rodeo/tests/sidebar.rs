@@ -678,6 +678,15 @@ fn machine_nav(name: Option<&str>) -> Nav {
     Nav::Machine(name.map(str::to_owned))
 }
 
+fn mode_bar(app: &mut App) -> String {
+    let row = line(&frame(app), H - 1, W);
+    row.chars()
+        .skip(26)
+        .collect::<String>()
+        .trim_end()
+        .to_owned()
+}
+
 #[test]
 fn navigate_stops_on_machine_rows_in_sidebar_order() {
     let mut app = app();
@@ -778,4 +787,131 @@ fn enter_on_a_machine_row_opens_its_last_space() {
     key(&mut app, KeyCode::Down);
     key(&mut app, KeyCode::Enter);
     assert_eq!(app.view.space.as_deref(), Some("s3"));
+}
+
+#[test]
+fn arrows_fold_machine_rows_and_groups() {
+    let mut app = app();
+    add_remote(&mut app, "connected", None);
+    navigate(&mut app);
+    assert_eq!(
+        mode_bar(&mut app),
+        " NAVIGATE  esc back  ↑/↓ move  ←/→ fold  tab pane  ? keybinds"
+    );
+    key(&mut app, KeyCode::Left);
+    assert_eq!(app.prefs.collapsed_groups, ["/w/repo/.git"]);
+    let saved = config::Preferences::load(&app.prefs_path);
+    assert_eq!(saved.collapsed_groups, ["/w/repo/.git"]);
+    key(&mut app, KeyCode::Left);
+    assert_eq!(
+        app.prefs.collapsed_groups,
+        ["/w/repo/.git"],
+        "already folded"
+    );
+    assert_eq!(at(&app), space_nav("s1"));
+    key(&mut app, KeyCode::Right);
+    assert_eq!(app.prefs.collapsed_groups, Vec::<String>::new());
+    key(&mut app, KeyCode::Right);
+    assert_eq!(
+        app.prefs.collapsed_groups,
+        Vec::<String>::new(),
+        "already open"
+    );
+    for _ in 0..3 {
+        key(&mut app, KeyCode::Down);
+    }
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    key(&mut app, KeyCode::Left);
+    assert_eq!(
+        column(&frame(&mut app), 26)[7],
+        " ▸ box ● ────────────────│"
+    );
+    key(&mut app, KeyCode::Left);
+    assert!(
+        app.view
+            .sidebar
+            .collapsed_machines
+            .contains(&Some("box".into()))
+    );
+    key(&mut app, KeyCode::Right);
+    assert_eq!(
+        column(&frame(&mut app), 26)[7],
+        " ▾ box ● ────────────────│"
+    );
+    assert_eq!(app.view.mode, Mode::Navigate);
+}
+
+#[test]
+fn left_on_a_space_jumps_to_its_machine_row() {
+    let mut app = app();
+    add_remote(&mut app, "connected", None);
+    navigate(&mut app);
+    key(&mut app, KeyCode::Down);
+    assert_eq!(at(&app), space_nav("s2"));
+    assert_eq!(
+        mode_bar(&mut app),
+        " NAVIGATE  esc back  ↑/↓ move  ← machine  tab pane  ? keybinds"
+    );
+    key(&mut app, KeyCode::Left);
+    assert_eq!(at(&app), machine_nav(None), "a nested child jumps to Local");
+    for _ in 0..5 {
+        key(&mut app, KeyCode::Down);
+    }
+    assert_eq!(at(&app), space_nav("box/r1"));
+    key(&mut app, KeyCode::Left);
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    assert_eq!(
+        column(&frame(&mut app), 26)[14],
+        " new · box           menu│"
+    );
+    key(&mut app, KeyCode::Down);
+    key(&mut app, KeyCode::Right);
+    assert_eq!(
+        at(&app),
+        space_nav("box/r1"),
+        "right keeps focus pane right"
+    );
+    assert_eq!(app.view.mode, Mode::Navigate);
+}
+
+#[test]
+fn h_still_moves_pane_focus_in_the_machine_view() {
+    let mut app = app();
+    add_remote(&mut app, "connected", None);
+    let mut doc = local_doc();
+    doc.spaces[2].tabs[0]
+        .root
+        .children_mut()
+        .expect("a row")
+        .push(Node::terminal("p7", "t7"));
+    let slot = &mut app.machines.iter_mut().next().expect("local").slot;
+    let _ = slot.command();
+    slot.read_done(Ok((doc.to_value(), 2)));
+    app.after_docs();
+    app.focus_pane("p7");
+    app.relayout();
+    navigate(&mut app);
+    key(&mut app, KeyCode::Char('h'));
+    assert_eq!(app.view.focused_pane(&app.machines).as_deref(), Some("ps3"));
+    assert_eq!(at(&app), space_nav("s3"));
+    key(&mut app, KeyCode::Right);
+    assert_eq!(app.view.focused_pane(&app.machines).as_deref(), Some("p7"));
+}
+
+#[test]
+fn one_machine_keeps_herdr_arrows() {
+    let mut app = app();
+    navigate(&mut app);
+    assert_eq!(
+        mode_bar(&mut app),
+        " NAVIGATE  esc back  ↑/↓ workspace  tab pane  ? keybinds"
+    );
+    key(&mut app, KeyCode::Down);
+    key(&mut app, KeyCode::Left);
+    assert_eq!(at(&app), space_nav("s2"));
+    key(&mut app, KeyCode::Up);
+    key(&mut app, KeyCode::Left);
+    assert_eq!(app.prefs.collapsed_groups, Vec::<String>::new());
+    key(&mut app, KeyCode::Up);
+    assert_eq!(at(&app), space_nav("s3"), "no machine rows to stop on");
 }

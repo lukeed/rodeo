@@ -110,6 +110,12 @@ impl App {
     }
 
     fn navigate_key(&mut self, key: KeyEvent) {
+        if key.modifiers.is_empty()
+            && matches!(key.code, KeyCode::Left | KeyCode::Right)
+            && self.nav_arrow(key.code == KeyCode::Right)
+        {
+            return;
+        }
         let Some(resolved) = self.keymap.resolve_navigate(key, false) else {
             return;
         };

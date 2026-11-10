@@ -2,10 +2,28 @@ use std::collections::HashSet;
 
 use crate::app::App;
 use crate::model::SpaceRow;
-use crate::sidebar::entries;
+use crate::sidebar::{entries, parent_key};
 use crate::view::{Mode, Nav};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NavHint {
+    Move,
+    Fold,
+    Host,
+}
+
 impl App {
+    pub fn nav_hint(&self) -> Option<NavHint> {
+        if !self.machine_view() {
+            return None;
+        }
+        Some(match self.nav_current() {
+            Some(Nav::Space(key)) if self.group_parent(&key).is_none() => NavHint::Host,
+            Some(_) => NavHint::Fold,
+            None => NavHint::Move,
+        })
+    }
+
     pub fn machine_view(&self) -> bool {
         if self.regions.mobile || self.regions.sidebar.is_empty() {
             return false;
@@ -129,6 +147,58 @@ impl App {
         self.leave_mode();
         if let Some(key) = target {
             self.focus_space(&key);
+        }
+    }
+
+    fn group_parent(&self, space: &str) -> Option<String> {
+        let snapshot = self.snapshot();
+        if snapshot.collapsed {
+            return None;
+        }
+        let row = snapshot.space(space)?;
+        let spaces: Vec<&SpaceRow> = snapshot
+            .spaces
+            .iter()
+            .filter(|s| s.machine == row.machine)
+            .collect();
+        let index = spaces.iter().position(|s| s.key == space)?;
+        parent_key(&spaces, index).map(str::to_owned)
+    }
+
+    pub fn nav_arrow(&mut self, right: bool) -> bool {
+        if !self.machine_view() {
+            return false;
+        }
+        match self.nav_current() {
+            Some(Nav::Machine(name)) => {
+                let folded = &mut self.view.sidebar.collapsed_machines;
+                if right {
+                    folded.remove(&name);
+                } else {
+                    folded.insert(name);
+                }
+                true
+            }
+            Some(Nav::Space(key)) => {
+                if let Some(group) = self.group_parent(&key) {
+                    let folded = self.prefs.collapsed_groups.contains(&group);
+                    if folded == right {
+                        self.toggle_group(&group);
+                    }
+                    return true;
+                }
+                if right {
+                    return false;
+                }
+                match self.host_row(&key) {
+                    Some(host) => {
+                        self.nav_select(host);
+                        true
+                    }
+                    None => false,
+                }
+            }
+            None => false,
         }
     }
 }

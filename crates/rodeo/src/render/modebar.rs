@@ -5,6 +5,7 @@ use ratatui::style::{Modifier, Style};
 
 use crate::app::App;
 use crate::hits::Hits;
+use crate::nav::NavHint;
 use crate::overlay::frame::contrast;
 use crate::text::width;
 use crate::view::Mode;
@@ -103,16 +104,35 @@ fn segments(app: &App, styles: &Styles) -> Vec<(String, Style)> {
             (rhs(app, Action::Help), key),
             (" keybinds".into(), base),
         ],
-        Mode::Navigate => vec![
-            (" NAVIGATE ".into(), badge),
-            (" esc back  ".into(), base),
-            ("↑/↓".into(), key),
-            (" workspace  ".into(), base),
-            ("tab".into(), key),
-            (" pane  ".into(), base),
-            (rhs(app, Action::Help), key),
-            (" keybinds".into(), base),
-        ],
+        Mode::Navigate => {
+            let mut out = vec![
+                (" NAVIGATE ".into(), badge),
+                (" esc back  ".into(), base),
+                ("↑/↓".into(), key),
+            ];
+            match app.nav_hint() {
+                None => out.push((" workspace  ".into(), base)),
+                Some(hint) => {
+                    out.push((" move  ".into(), base));
+                    let arrows = match hint {
+                        NavHint::Move => None,
+                        NavHint::Fold => Some(("←/→", " fold  ")),
+                        NavHint::Host => Some(("←", " machine  ")),
+                    };
+                    if let Some((keys, label)) = arrows {
+                        out.push((keys.into(), key));
+                        out.push((label.into(), base));
+                    }
+                }
+            }
+            out.extend([
+                ("tab".into(), key),
+                (" pane  ".into(), base),
+                (rhs(app, Action::Help), key),
+                (" keybinds".into(), base),
+            ]);
+            out
+        }
         Mode::Resize => vec![
             (" RESIZE ".into(), badge),
             ("  ".into(), base),
