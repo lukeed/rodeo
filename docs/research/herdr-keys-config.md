@@ -1,6 +1,6 @@
 # Herdr TUI v0.9.5: keybindings and config inventory
 
-Source: `~/oss/thuic-ref/herdr` at tag `v0.9.5` (commit `2ecf19a92fc3a7fff75b6ce3655ef04f4625ec01`). All `file:line` citations are relative to that repo. The code is the source of truth. Where the docs (`docs/preview/website/...`) or the generated reference (`docs/preview/website/src/data/config-reference.json`) add detail that agrees with the code, this file uses it.
+Source: [`herdrdev/herdr`](https://github.com/herdrdev/herdr/tree/v0.9.5) at tag `v0.9.5` (commit `2ecf19a92fc3a7fff75b6ce3655ef04f4625ec01`). All `file:line` citations are relative to that repo. The code is the source of truth. Where the docs (`docs/preview/website/...`) or the generated reference (`docs/preview/website/src/data/config-reference.json`) add detail that agrees with the code, this file uses it.
 
 Architecture note: in v0.9.5 all key handling for the TUI happens in the client shell (`src/client/shell/*`). `src/app/actions.rs` is server-side state logic (workspace/pane mutation, notifications, link/word detection). It has no key dispatch. The client shell turns a key into a `KeybindAction` (`src/input/keybindings.rs:20-73`) and then either changes local UI state or sends a socket API method to the server (`src/client/shell/actions.rs:4-180`, `:861-1119`).
 
@@ -681,4 +681,4 @@ The client saves UI changes made with the mouse or keys to `<state_dir>/client-s
 - Sound agent keys `open_code` and `github_copilot` do not match the canonical agent ids (`opencode`, `copilot`) used by `rows_by_agent` and `cjk_ime_agents`. Herdr has three agent-name lists that differ.
 - `clear_pane` is the only action with no doc comment in `KeysConfig` (`model.rs:412`).
 - Client preference files silently override `ui.sidebar_width`, `ui.sidebar_start_collapsed` and `ui.agent_panel_sort` after the user once changes them in the UI.
-- The user sample (`~/oss/thuic-ref/samples/herdr-tui-config.mac.toml`) uses legacy `[ui.toast] enabled = true` (= `delivery = "herdr"`) and direct `alt+[`/`alt+]` for tabs, which replaces the default `prefix+p`/`prefix+n`.
+- The user's own Herdr TUI config (inline as `SAMPLE` in `crates/config/tests/load.rs`) uses legacy `[ui.toast] enabled = true` (= `delivery = "herdr"`) and direct `alt+[`/`alt+]` for tabs, which replaces the default `prefix+p`/`prefix+n`.

@@ -4,7 +4,6 @@ This is the inventory of every key bind, visible element and config option in He
 
 - `herdr-keys-config.md`: key binds, modes, overlay keys, config options, config load and reload.
 - `herdr-ui.md`: screen regions, sidebar, tab bar, panes, overlays, mouse, themes, titles, notifications.
-- `hc-integration.md`: the hc protocol, the `herdr-app` doc, and the pocketty crates.
 
 Status words:
 

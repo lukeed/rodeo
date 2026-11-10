@@ -21,9 +21,9 @@ Also out of scope: Herdr TUI plugins.
 ### Source of truth: the `herdr-app` doc
 
 - Each core holds a JSON doc named `herdr-app` (`doc.get` / `doc.set`, version compare-and-swap, at most 1 MiB, `on` picks the machine). Shape: `spaces[] {id, name, folder, tabs[] {id, name, root}}`. `root` is a tree of `row` / `column` nodes with `block` leaves. A block holds `content`: `{terminal: "t12"}`, or other kinds such as `{mod: "x"}`.
-- Schema source: `herdr-app/src/layout.rs` and `herdr-app/src/mirror_sync.rs` in the refs. A live sample: `samples/herdr-app-doc.json`.
+- Schema source: the desktop app's `src/layout.rs` and `src/mirror_sync.rs`. A live sample: `crates/doc/tests/fixtures/herdr-app-doc.json`.
 - rodeo reads the doc, draws it, and writes every layout change back with `doc.set` and the version it read. On a version conflict, it reads again, applies its change to the new doc, and retries.
-- Terminals that rodeo starts get the labels the app uses: `herdr.space=<id>`, `herdr.tab=<id>`, `where`, and keep on (`samples/herdr-app-AGENTS.md`, section on core terminals).
+- Terminals that rodeo starts get the labels the app uses: `herdr.space=<id>`, `herdr.tab=<id>`, `where`, and keep on (the desktop app's generated `AGENTS.md`, section on core terminals).
 - An empty `name` means "the app picks the name" (the space folder name, the tab number). rodeo uses the same rule, so both show the same names.
 
 ### Mod blocks
@@ -48,7 +48,7 @@ Also out of scope: Herdr TUI plugins.
 
 ### Config
 
-- Path: `~/.config/rodeo/config.toml`. Schema: Herdr TUI's `config.toml`. A sample from the user's Mac: `samples/herdr-tui-config.mac.toml`.
+- Path: `~/.config/rodeo/config.toml`. Schema: Herdr TUI's `config.toml`. A sample from the user's Mac is inline as `SAMPLE` in `crates/config/tests/load.rs`.
 - Migration: on start, if rodeo's file does not exist and `~/.config/herdr/config.toml` does, copy it once. After that, rodeo reads only its own file and never writes Herdr's.
 
 ### Crates
@@ -68,7 +68,7 @@ The target is Herdr TUI at tag `v0.9.5` (refs `herdr/`): its key binds, its visi
 ## Testing
 
 - Unit: doc ↔ layout mapping, conflict retry, tree edits (split, close, move, resize), keymap, config parsing, config migration.
-- E2E: drive `rodeo` in tmux on workbox (`send-keys`, `capture-pane -p -e`) against a real hc. Use an isolated core for tests so they never touch the user's terminals. Isolate with `HOME`, `HC_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME` and `XDG_CONFIG_HOME` under one temp root, and stop with `hc server stop` (`docs/research/hc-integration.md` 1.2). See also `herdr-core/crates/herdr-core/tests/fake_tui.py` and followcat `scripts/parity/`.
+- E2E: drive `rodeo` in tmux on workbox (`send-keys`, `capture-pane -p -e`) against a real hc. Use an isolated core for tests so they never touch the user's terminals. Isolate with `HOME`, `HC_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME` and `XDG_CONFIG_HOME` under one temp root, a cleared env and `HC_SETTLE_MS=0`, as hc's own tests do. A custom `XDG_RUNTIME_DIR` also keeps the core out of systemd on Linux. Programs outlive a killed core, so stop it with `hc server stop` and the same env. See also hc's [`tests/fake_tui.py`](https://github.com/herdrdev/herdr-core/blob/master/crates/herdr-core/tests/fake_tui.py).
 - Integration with the app: the user's Mac app can add workbox as a machine (`hc machine add`, target `lukeed@workbox`). Then a change in rodeo must show in the app, and a change in the app must show in rodeo.
 - Parity check: run rodeo and `herdr` 0.9.5 on the same layout. The same keys must give the same result, and the same elements must show.
 
