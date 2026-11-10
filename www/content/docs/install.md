@@ -9,7 +9,7 @@ order: 1
 
 ## Before you start
 
-rodeo is a client of herdr-core. It needs `hc` 0.1.18 or newer on your PATH, on Linux or macOS. If you use the Herdr desktop app, you have `hc` already. Else, install it:
+rodeo is a client of [herdr-core](https://github.com/herdrdev/herdr-core). It needs `hc` 0.1.18 or newer on your PATH, on Linux or macOS. If you use the Herdr desktop app, you have `hc` already. Else, install it:
 
 ```sh
 $ curl -fsSL https://releases.herdr.dev/core/install.sh | sh
