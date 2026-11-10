@@ -55,7 +55,10 @@ fn on_a_tty(name: &str, extra: &[&str]) -> String {
     command.extend(root.env());
     command.extend(extra.iter().map(|&s| s.to_owned()));
     command.extend([BIN.to_owned(), "--version".to_owned()]);
-    let line = format!("sh -c 'read go && exec {}'", command.join(" "));
+    let line = format!(
+        "sh -c 'tmux wait-for go && {}; tmux wait-for -S done; exec sleep 60'",
+        command.join(" ")
+    );
     let started = tmux(
         &socket,
         &[
@@ -71,14 +74,13 @@ fn on_a_tty(name: &str, extra: &[&str]) -> String {
         ],
     );
     assert!(started.status.success(), "{started:?}");
-    tmux(&socket, &["set-option", "remain-on-exit", "on"]);
-    tmux(&socket, &["send-keys", "Enter"]);
+    tmux(&socket, &["wait-for", "-S", "go"]);
+    tmux(&socket, &["wait-for", "done"]);
     let begun = Instant::now();
     let screen = loop {
-        let dead = tmux(&socket, &["display-message", "-p", "#{pane_dead}"]);
         let out = tmux(&socket, &["capture-pane", "-p", "-e"]);
         let screen = String::from_utf8_lossy(&out.stdout).into_owned();
-        if String::from_utf8_lossy(&dead.stdout).trim() == "1" && screen.contains("████") {
+        if screen.lines().nth(6).is_some_and(|l| l.contains("████")) {
             break screen;
         }
         assert!(begun.elapsed() < Duration::from_secs(20), "{screen:?}");
