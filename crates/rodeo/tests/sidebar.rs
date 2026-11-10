@@ -176,6 +176,7 @@ fn spaces_show_tokens_groups_and_the_footer() {
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
     assert_eq!(rows[0], " rodeo▍                  │");
+    assert_eq!(rows[1], "─────────────────────────│");
     assert_eq!(rows[2], " ● repo                 ▾│");
     assert_eq!(rows[3], "   main ↑2 ↓1            │");
     assert_eq!(rows[4], "   └─ ● feat             │");
@@ -201,6 +202,14 @@ fn spaces_show_tokens_groups_and_the_footer() {
     assert_eq!(buf[(5, 4)].fg, app.palette.overlay0);
     assert_eq!(buf[(0, 2)].bg, app.palette.active_row_bg);
     assert_eq!(buf[(0, 4)].bg, app.palette.sidebar_bg);
+    assert_eq!(buf[(1, 0)].fg, app.palette.text);
+    assert!(buf[(1, 0)].modifier.contains(Modifier::BOLD));
+    assert_eq!(buf[(6, 0)].fg, app.palette.accent);
+    for x in 0..25 {
+        assert_eq!(buf[(x, 1)].fg, app.palette.surface_dim);
+    }
+    assert_eq!(app.hits.sidebar.spaces_body, Some(Rect::new(0, 2, 25, 12)));
+    assert_eq!(app.hits.sidebar.spaces[0].rect.y, 2);
 }
 
 #[test]
@@ -486,6 +495,7 @@ fn machines_get_rows_states_and_nested_spaces() {
     let buf = frame(&mut app);
     let rows = column(&buf, 26);
     assert_eq!(rows[0], " rodeo▍                  │");
+    assert_eq!(rows[1], "─────────────────────────│");
     assert_eq!(rows[2], " ▾ Local ────────────────│");
     assert_eq!(rows[3], "   ● repo               ▾│");
     assert_eq!(rows[4], "     main ↑2 ↓1          │");

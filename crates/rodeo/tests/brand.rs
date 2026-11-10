@@ -332,47 +332,78 @@ fn a_narrow_connecting_screen_cuts_the_status_at_the_edge() {
     assert!(rows.iter().any(|r| r.contains("rodeo▍")));
 }
 
-fn machines_app() -> App {
-    let mut app = empty(100, 30, "");
+fn sidebar_app(rows: u16, config: &str, remote: bool) -> App {
+    let mut app = empty(100, rows, config);
     let mut doc = Document::default();
     let tab = Tab::new("tb1", "", Node::terminal("p1", "t1"));
     doc.new_space("s1", "", "/w", tab).expect("a space");
     let slot = &mut app.machines.iter_mut().next().expect("local").slot;
     slot.read_done(Ok((doc.to_value(), 2)));
-    app.machines.update(vec![hc::MachineView {
-        name: "box".into(),
-        state: "online".into(),
-        ..hc::MachineView::default()
-    }]);
+    if remote {
+        app.machines.update(vec![hc::MachineView {
+            name: "box".into(),
+            state: "online".into(),
+            ..hc::MachineView::default()
+        }]);
+    }
     app.after_docs();
     app.relayout();
     app
 }
 
-#[test]
-fn the_machines_sidebar_header_is_the_wordmark() {
-    let mut app = machines_app();
-    let buf = frame(&mut app);
-    let sidebar = app.regions.sidebar;
-    let header = rows(&buf, Rect::new(sidebar.x, sidebar.y, sidebar.width, 2));
-    let width = usize::from(sidebar.width) - 8;
-    assert_eq!(header[0], format!(" rodeo▍{}│", " ".repeat(width)));
-    assert_eq!(header[1].trim_end_matches('│').trim(), "");
-    let p = app.palette;
-    assert_wordmark(&buf, sidebar.x + 1, sidebar.y, p.text, p.accent);
+fn sidebar_rows(app: &mut App) -> Vec<String> {
+    let buf = frame(app);
+    rows(&buf, app.regions.sidebar)
+}
+
+fn padded(text: &str, width: u16) -> String {
+    let fill = usize::from(width) - 1 - text.chars().count();
+    format!("{text}{}│", " ".repeat(fill))
 }
 
 #[test]
-fn the_single_machine_sidebar_header_is_the_wordmark() {
-    let mut app = empty(100, 30, "");
-    let buf = frame(&mut app);
-    let sidebar = app.regions.sidebar;
-    let header = rows(&buf, Rect::new(sidebar.x, sidebar.y, sidebar.width, 2));
-    let width = usize::from(sidebar.width) - 8;
-    assert_eq!(header[0], format!(" rodeo▍{}│", " ".repeat(width)));
-    assert_eq!(header[1].trim_end_matches('│').trim(), "");
-    let p = app.palette;
-    assert_wordmark(&buf, sidebar.x + 1, sidebar.y, p.text, p.accent);
+fn the_sidebar_header_is_the_wordmark_over_a_border() {
+    for remote in [false, true] {
+        let mut app = sidebar_app(30, "", remote);
+        let buf = frame(&mut app);
+        let sidebar = app.regions.sidebar;
+        let w = sidebar.width;
+        let header = rows(&buf, Rect::new(sidebar.x, sidebar.y, w, 2));
+        assert_eq!(header[0], padded(" rodeo▍", w));
+        assert_eq!(header[1], format!("{}│", "─".repeat(usize::from(w) - 1)));
+        let p = app.palette;
+        assert_wordmark(&buf, sidebar.x + 1, sidebar.y, p.text, p.accent);
+        for x in sidebar.x..sidebar.right() - 1 {
+            assert_eq!(buf[(x, sidebar.y + 1)].fg, p.surface_dim);
+        }
+        let body = app.hits.sidebar.spaces_body.expect("a body");
+        assert_eq!(body.y, sidebar.y + 2);
+        if remote {
+            assert_eq!(app.hits.sidebar.machines[0].rect.y, sidebar.y + 2);
+            assert_eq!(app.hits.sidebar.spaces[0].rect.y, sidebar.y + 3);
+        } else {
+            assert_eq!(app.hits.sidebar.spaces[0].rect.y, sidebar.y + 2);
+        }
+    }
+}
+
+#[test]
+fn a_short_sidebar_drops_the_border() {
+    let mut app = sidebar_app(8, "", false);
+    let rows = sidebar_rows(&mut app);
+    let w = app.regions.sidebar.width;
+    assert_eq!(rows[0], padded(" rodeo▍", w));
+    assert_eq!(rows[1], format!("{}│", "─".repeat(usize::from(w) - 1)));
+    assert!(rows[2].starts_with(" · w"), "{rows:#?}");
+    assert!(rows[3].starts_with(" new"), "{rows:#?}");
+    assert_eq!(app.hits.sidebar.spaces[0].rect.y, 2);
+    app.screen = Rect::new(0, 0, 100, 6);
+    app.relayout();
+    let rows = sidebar_rows(&mut app);
+    assert_eq!(rows[0], padded(" rodeo▍", w));
+    assert!(rows[1].starts_with(" · w"), "{rows:#?}");
+    assert!(rows[2].starts_with(" new"), "{rows:#?}");
+    assert_eq!(app.hits.sidebar.spaces[0].rect.y, 1);
 }
 
 #[test]

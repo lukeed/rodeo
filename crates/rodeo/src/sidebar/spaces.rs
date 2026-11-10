@@ -47,7 +47,9 @@ pub struct List<'a> {
     pub nested: bool,
 }
 
-const HEADER_ROWS: u16 = 2;
+pub fn header_rows(height: u16) -> u16 {
+    height.saturating_sub(2).clamp(1, 2)
+}
 
 fn lines_of(group: &Group<'_>, pos: usize, look: &Look, ctx: &Ctx<'_>) -> Vec<Vec<super::Span>> {
     let entry = group.entries[pos];
@@ -108,11 +110,12 @@ fn first_row(list: &List<'_>, heights: &[u16], gaps: &[u16], room: u16, ctx: &Ct
 }
 
 pub fn render(buf: &mut Buffer, area: Rect, list: &List<'_>, ctx: &Ctx<'_>, hits: &mut Hits) {
+    let header = header_rows(area.height);
     let body = Rect::new(
         area.x,
-        area.y + HEADER_ROWS.min(area.height),
+        area.y + header.min(area.height),
         area.width,
-        area.height.saturating_sub(HEADER_ROWS + 1),
+        area.height.saturating_sub(header + 1),
     );
     hits.spaces_body = Some(body);
     hits.footer = Some(area.bottom().saturating_sub(1));
