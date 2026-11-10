@@ -12,8 +12,29 @@ async function copy(button: HTMLElement, text: string) {
   setTimeout(() => (button.textContent = label), 1600);
 }
 
+/** Safari allows a clipboard write only during the click, so the fetch goes to ClipboardItem as a promise. */
+async function copyPage(button: HTMLElement, url: string) {
+  let label = button.textContent;
+  let text = fetch(url)
+    .then((res) => {
+      if (!res.ok) throw new Error(`${url}: ${res.status}`);
+      return res.text();
+    })
+    .then((body) => new Blob([body], { type: "text/plain" }));
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
+    button.textContent = "copied";
+  } catch {
+    button.textContent = "copy failed";
+  }
+  setTimeout(() => (button.textContent = label), 1600);
+}
+
 document.addEventListener("click", (event) => {
-  let button = (event.target as HTMLElement).closest<HTMLElement>("[data-copy]");
+  let target = event.target as HTMLElement;
+  let page = target.closest<HTMLElement>("[data-copy-page]");
+  if (page) return void copyPage(page, page.dataset.copyPage!);
+  let button = target.closest<HTMLElement>("[data-copy]");
   if (button) void copy(button, button.dataset.copy!);
 });
 

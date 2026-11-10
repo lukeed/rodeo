@@ -115,10 +115,33 @@
   padding-bottom: 20px;
 }
 
+.doc .dhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
 .doc .path {
   color: var(--dim);
   font-size: 13px;
-  margin-bottom: 14px;
+  margin: 0;
+}
+
+.doc .md {
+  display: flex;
+  gap: 8px;
+}
+
+.doc .md .copy {
+  font-size: 11.5px;
+  padding: 4px 8px;
+}
+
+.doc .md a.copy:hover {
+  text-decoration: none;
 }
 
 .doc .path b {

@@ -1,6 +1,7 @@
 {{#var links = $utils.nav($pages, $page.path)}}
 {{#var near = $utils.pager($pages, $page.path)}}
 {{#var heads = $page.headings.filter((head) => head.level === 2)}}
+{{#var md = $utils.url.ext($page.path, "md")}}
 <div class="dgrid">
   <nav class="side" aria-label="Docs">
     <div class="head">docs<span class="cur"></span></div>
@@ -13,7 +14,13 @@
     <div class="foot"><span>{{ $data.release.version }}</span><a href="https://github.com/lukeed/rodeo">source</a></div>
   </nav>
   <main class="doc" id="main">
-    <p class="path"><a href="/docs/install/">docs</a> / {{ $page.params.group.toLowerCase() }} / <b>{{ $page.title.toLowerCase() }}</b></p>
+    <div class="dhead">
+      <p class="path"><a href="/docs/install/">docs</a> / {{ $page.params.group.toLowerCase() }} / <b>{{ $page.title.toLowerCase() }}</b></p>
+      <div class="md">
+        <button class="copy" type="button" data-copy-page="{{ md }}" aria-label="Copy this page as Markdown">copy as markdown</button>
+        <a class="copy" href="{{ md }}" target="_blank" rel="noopener" aria-label="View this page as Markdown">view as markdown</a>
+      </div>
+    </div>
     <h1>{{ $page.title }}</h1>
     {{#if $page.summary}}<p class="intro">{{{ $utils.inline($page.summary) }}}</p>{{/if}}
     <article class="prose">
