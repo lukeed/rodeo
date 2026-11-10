@@ -207,6 +207,30 @@ fn mode_queries_follow_the_program() {
 }
 
 #[test]
+fn synchronized_output_follows_the_program_across_chunks() {
+    let mut t = term(10, 3);
+    assert!(!t.synchronized_output());
+    t.feed(b"\x1b[?20");
+    assert!(!t.synchronized_output());
+    t.feed(b"26hab");
+    assert!(t.synchronized_output());
+    t.feed(b"cd\x1b[?2026l");
+    assert!(!t.synchronized_output());
+    assert_eq!(screen(&t)[0], "abcd");
+}
+
+#[test]
+fn ending_synchronized_output_keeps_the_screen_and_parser() {
+    let mut t = term(10, 3);
+    t.feed(b"\x1b[?2026hab\x1b[3");
+    t.end_synchronized_output();
+    assert!(!t.synchronized_output());
+    t.feed(b"1mc\x1b[?2026h");
+    assert!(t.synchronized_output());
+    assert_eq!(screen(&t)[0], "abc");
+}
+
+#[test]
 fn cursor_state_follows_the_program() {
     let mut t = term(10, 3);
     t.feed(b"ab\r\ncd\x1b[5 q");

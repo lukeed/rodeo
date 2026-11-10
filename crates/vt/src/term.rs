@@ -307,6 +307,10 @@ impl Terminal {
         self.mode(Mode::SYNC_OUTPUT)
     }
 
+    pub fn end_synchronized_output(&mut self) {
+        let _ = self.vt.set_mode(Mode::SYNC_OUTPUT, false);
+    }
+
     pub fn cursor(&self) -> CursorState {
         let (shape, blinking) = self.renderer.borrow_mut().cursor_style(&self.vt);
         CursorState {
