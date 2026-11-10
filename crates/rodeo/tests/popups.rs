@@ -31,6 +31,27 @@ fn with_bin(h: &mut Harness, bin: &Path) {
     h.app_mut().env.set("PATH", path);
 }
 
+fn fake_clipboard(h: &mut Harness, image: bool) {
+    let bin = h.core.root().join("bin");
+    let png = r"printf '\211PNG\r\n\032\nfake'";
+    let empty = "echo 'no image' >&2; exit 1";
+    if cfg!(target_os = "macos") {
+        let body = if image {
+            format!(
+                r#"out=$(printf '%s\n' "$2" | sed -n 's/.*POSIX file "\(.*\)" with.*/\1/p'); {png} > "$out""#
+            )
+        } else {
+            empty.to_owned()
+        };
+        script(&bin, "osascript", &body);
+    } else {
+        script(&bin, "wl-paste", if image { png } else { empty });
+        h.app_mut().env.set("WAYLAND_DISPLAY", "wayland-test");
+        h.app_mut().env.remove("DISPLAY");
+    }
+    with_bin(h, &bin);
+}
+
 async fn until_file(
     h: &mut Harness,
     path: &Path,
@@ -132,11 +153,7 @@ fn ctrl_v_pastes_a_clipboard_image_path() {
         let mut h = Harness::start().await;
         h.ready().await;
         let root = h.core.root().to_path_buf();
-        let bin = root.join("bin");
-        script(&bin, "wl-paste", r"printf '\211PNG\r\n\032\nfake'");
-        with_bin(&mut h, &bin);
-        h.app_mut().env.set("WAYLAND_DISPLAY", "wayland-test");
-        h.app_mut().env.remove("DISPLAY");
+        fake_clipboard(&mut h, true);
         h.typed("read -r p; printf '%s' \"$p\" > got.txt\r").await;
         h.settle().await;
         h.press(KeyCode::Char('v'), KeyModifiers::CONTROL).await;
@@ -161,11 +178,7 @@ fn ctrl_v_without_an_image_reaches_the_pane() {
         let mut h = Harness::start().await;
         h.ready().await;
         let root = h.core.root().to_path_buf();
-        let bin = root.join("bin");
-        script(&bin, "wl-paste", "echo 'no image' >&2; exit 1");
-        with_bin(&mut h, &bin);
-        h.app_mut().env.set("WAYLAND_DISPLAY", "wayland-test");
-        h.app_mut().env.remove("DISPLAY");
+        fake_clipboard(&mut h, false);
         h.typed("stty raw -echo; head -c1 | od -An -tx1 > key.txt; stty sane\r")
             .await;
         h.settle().await;
