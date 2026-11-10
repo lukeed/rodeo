@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::time::Instant;
 
 use base64::Engine;
 use crossterm::Command;
@@ -252,6 +253,16 @@ impl App {
         }
     }
 
+    pub fn hold(&mut self, now: Instant) -> Option<Instant> {
+        let popup = self.popup.as_mut().and_then(|p| p.pane.as_mut());
+        self.panes
+            .iter_mut()
+            .filter(|p| p.shown)
+            .chain(popup)
+            .filter_map(|p| p.hold(now))
+            .min()
+    }
+
     pub(super) fn output(&mut self, address: &str, attach: u64, output: Option<Output>) {
         let Some(pane) = self.panes.get_mut(address) else {
             return;
@@ -261,8 +272,7 @@ impl App {
         }
         match output {
             Some(Output::Bytes(bytes)) => {
-                pane.term.feed(&bytes);
-                pane.reply();
+                pane.feed(&bytes);
                 let events = pane.term.take_events();
                 self.vt_events(address, events);
             }

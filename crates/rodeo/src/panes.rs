@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use vt::Terminal;
 
@@ -19,6 +20,7 @@ impl Link {
 }
 
 const QUEUE_LIMIT: usize = 1 << 20;
+const SYNC_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub struct Pane {
     pub address: String,
@@ -33,6 +35,7 @@ pub struct Pane {
     pub focus_sent: Option<bool>,
     pub notifications: Vec<(String, String)>,
     pub title: String,
+    synced: Option<Instant>,
 }
 
 impl Pane {
@@ -50,7 +53,28 @@ impl Pane {
             focus_sent: None,
             notifications: Vec::new(),
             title: String::new(),
+            synced: None,
         })
+    }
+
+    pub fn feed(&mut self, bytes: &[u8]) {
+        self.term.feed(bytes);
+        self.hold(Instant::now());
+        self.reply();
+    }
+
+    pub fn hold(&mut self, now: Instant) -> Option<Instant> {
+        if !self.term.synchronized_output() {
+            self.synced = None;
+            return None;
+        }
+        let until = *self.synced.get_or_insert(now) + SYNC_TIMEOUT;
+        if now < until {
+            return Some(until);
+        }
+        self.term.end_synchronized_output();
+        self.synced = None;
+        None
     }
 
     pub fn input(&mut self, bytes: &[u8]) {

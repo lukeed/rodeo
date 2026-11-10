@@ -422,8 +422,7 @@ impl App {
         };
         match output {
             Some(Output::Bytes(bytes)) => {
-                pane.term.feed(&bytes);
-                pane.reply();
+                pane.feed(&bytes);
                 for event in pane.term.take_events() {
                     match event {
                         vt::Event::Bell => self.out.push(0x07),

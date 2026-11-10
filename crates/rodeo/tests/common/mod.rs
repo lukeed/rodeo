@@ -152,6 +152,10 @@ impl Harness {
 
     pub fn screen(&mut self) -> String {
         self.runner.draw();
+        self.drawn()
+    }
+
+    pub fn drawn(&self) -> String {
         let buffer = self.runner.terminal.backend().buffer();
         let area = buffer.area;
         let mut out = String::new();

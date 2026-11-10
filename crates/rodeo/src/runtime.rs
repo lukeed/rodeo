@@ -58,13 +58,16 @@ where
     }
 
     pub async fn step(&mut self) -> bool {
-        let wait = if self.app.dirty {
-            self.last_draw
-                .map_or(Duration::ZERO, |at| FRAME.saturating_sub(at.elapsed()))
-        } else {
-            IDLE
+        let now = Instant::now();
+        let held = self.app.hold(now);
+        let wait = match (self.app.dirty, held) {
+            (false, _) => IDLE,
+            (true, Some(until)) => until.saturating_duration_since(now),
+            (true, None) => self
+                .last_draw
+                .map_or(Duration::ZERO, |at| FRAME.saturating_sub(at.elapsed())),
         };
-        if self.app.dirty && wait.is_zero() {
+        if self.app.dirty && held.is_none() && wait.is_zero() {
             self.draw();
             return !self.app.quit;
         }
@@ -83,7 +86,10 @@ where
             },
             () = tokio::time::sleep(wait) => {}
         }
-        if self.app.dirty && self.last_draw.is_none_or(|at| at.elapsed() >= FRAME) {
+        if self.app.dirty
+            && self.last_draw.is_none_or(|at| at.elapsed() >= FRAME)
+            && self.app.hold(Instant::now()).is_none()
+        {
             self.draw();
         }
         !self.app.quit
