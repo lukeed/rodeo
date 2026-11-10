@@ -6,22 +6,22 @@ class Rodeo < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-aarch64-apple-darwin.tar.gz"
+      url "https://rodeo.lukeed.com/download/v{{version}}/rodeo-aarch64-apple-darwin.tar.gz"
       sha256 "{{sha256 aarch64-apple-darwin}}"
     end
     on_intel do
-      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-x86_64-apple-darwin.tar.gz"
+      url "https://rodeo.lukeed.com/download/v{{version}}/rodeo-x86_64-apple-darwin.tar.gz"
       sha256 "{{sha256 x86_64-apple-darwin}}"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-aarch64-unknown-linux-musl.tar.gz"
+      url "https://rodeo.lukeed.com/download/v{{version}}/rodeo-aarch64-unknown-linux-musl.tar.gz"
       sha256 "{{sha256 aarch64-unknown-linux-musl}}"
     end
     on_intel do
-      url "https://github.com/lukeed/rodeo/releases/download/v{{version}}/rodeo-x86_64-unknown-linux-musl.tar.gz"
+      url "https://rodeo.lukeed.com/download/v{{version}}/rodeo-x86_64-unknown-linux-musl.tar.gz"
       sha256 "{{sha256 x86_64-unknown-linux-musl}}"
     end
   end
