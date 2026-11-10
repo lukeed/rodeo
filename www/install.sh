@@ -5,8 +5,9 @@
 #   RODEO_VERSION=v0.1.0   pin a release; defaults to the latest
 #   RODEO_INSTALL=~/bin    where the binary goes; defaults to ~/.local/bin
 #
-# This checks the published sha256, which catches a truncated download. For a
-# signed release manifest, install with packslip or mise instead:
+# It downloads from https://rodeo.lukeed.com/download/, a copy of each GitHub
+# release, and checks the published sha256, which catches a truncated
+# download. For a signed release manifest, use packslip or mise instead:
 #   packslip install github.com/lukeed/rodeo
 #   mise use -g packslip:github.com/lukeed/rodeo
 #
@@ -15,7 +16,7 @@
 
 set -eu
 
-REPO="lukeed/rodeo"
+BASE="https://rodeo.lukeed.com/download"
 HC_MIN="0.1.18"
 SOURCE="https://rodeo.lukeed.com/docs/install/#from-source"
 
@@ -23,24 +24,24 @@ main() {
 	dest=${RODEO_INSTALL:-$HOME/.local/bin}
 	target=$(detect_target)
 
-	if [ -n "${RODEO_VERSION-}" ]; then
-		base="https://github.com/$REPO/releases/download/$RODEO_VERSION"
-		label=$RODEO_VERSION
-	else
-		base="https://github.com/$REPO/releases/latest/download"
-		label="the latest release"
-	fi
-
 	archive="rodeo-$target.tar.gz"
 	tmp=$(mktemp -d)
 	trap 'rm -rf "$tmp"' EXIT INT TERM
 
-	say "downloading rodeo for $target from $label"
-	fetch "$base/$archive" "$tmp/$archive" || die "could not download $archive from $label.
+	if [ -n "${RODEO_VERSION-}" ]; then
+		version=$RODEO_VERSION
+	else
+		fetch "$BASE/latest" "$tmp/latest" || die "could not find the latest release at $BASE/latest"
+		version=$(cat "$tmp/latest")
+	fi
+	is_tag "$version" || die "\"$version\" is not a release tag, such as v0.1.0"
+
+	say "downloading rodeo $version for $target"
+	fetch "$BASE/$version/$archive" "$tmp/$archive" || die "could not download $archive for $version.
 
 If rodeo has not been released for your platform yet, build it from source:
   $SOURCE"
-	fetch "$base/$archive.sha256" "$tmp/$archive.sha256" || die "could not download $archive.sha256 from $label"
+	fetch "$BASE/$version/$archive.sha256" "$tmp/$archive.sha256" || die "could not download $archive.sha256 for $version"
 	verify "$tmp" "$archive"
 
 	tar -xzf "$tmp/$archive" -C "$tmp"
@@ -101,6 +102,12 @@ check_hc() {
 		say "rodeo needs hc $HC_MIN or newer, and this hc is $have. Update it with:"
 		say "  hc update"
 	fi
+}
+
+# The case rejects a newline first, since grep -x matches a single line.
+is_tag() {
+	case $1 in *[!0-9A-Za-z.+-]*) return 1 ;; esac
+	printf '%s\n' "$1" | grep -Eqx 'v[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*'
 }
 
 at_least() {

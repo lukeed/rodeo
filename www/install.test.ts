@@ -30,6 +30,7 @@ beforeAll(() => {
   sh(["tar", "-czf", join(release, ARCHIVE), "-C", stage, "rodeo"], root);
   let sum = new Bun.CryptoHasher("sha256").update(readFileSync(join(release, ARCHIVE))).digest("hex");
   writeFileSync(join(release, `${ARCHIVE}.sha256`), `${sum}  ${ARCHIVE}\n`);
+  writeFileSync(join(release, "latest"), "v0.1.0\n");
 });
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -64,9 +65,11 @@ describe("install.sh", () => {
     let out = run({ hc: "0.1.18" });
     expect(out.code).toBe(0);
     expect(out.urls).toEqual([
-      `https://github.com/lukeed/rodeo/releases/latest/download/${ARCHIVE}`,
-      `https://github.com/lukeed/rodeo/releases/latest/download/${ARCHIVE}.sha256`,
+      "https://rodeo.lukeed.com/download/latest",
+      `https://rodeo.lukeed.com/download/v0.1.0/${ARCHIVE}`,
+      `https://rodeo.lukeed.com/download/v0.1.0/${ARCHIVE}.sha256`,
     ]);
+    expect(out.err).toContain(`downloading rodeo v0.1.0 for ${TARGET}`);
     expect(out.err).toContain(`installed rodeo 9.9.9 to ${out.binary}`);
     expect(out.err).toContain("is not on your PATH");
     expect(out.err).not.toContain("needs hc");
@@ -74,9 +77,36 @@ describe("install.sh", () => {
   });
 
   test("pins a release with RODEO_VERSION", () => {
-    let out = run({ hc: "0.1.18", version: "v0.1.0" });
+    let out = run({ hc: "0.1.18", version: "v0.0.9" });
     expect(out.code).toBe(0);
-    expect(out.urls[0]).toBe(`https://github.com/lukeed/rodeo/releases/download/v0.1.0/${ARCHIVE}`);
+    expect(out.urls).toEqual([
+      `https://rodeo.lukeed.com/download/v0.0.9/${ARCHIVE}`,
+      `https://rodeo.lukeed.com/download/v0.0.9/${ARCHIVE}.sha256`,
+    ]);
+  });
+
+  test("refuses a RODEO_VERSION that is not a release tag", () => {
+    for (let version of ["0.1.0", "latest", "v0.1.0/../x", "v0.1.0 x"]) {
+      let out = run({ hc: "0.1.18", version });
+      expect(out.code).toBe(1);
+      expect(out.err).toContain(`"${version}" is not a release tag, such as v0.1.0`);
+      expect(out.urls).toEqual([]);
+    }
+  });
+
+  test("stops when it cannot find the latest release", () => {
+    let out = run({ hc: "0.1.18", drop: ["latest"] });
+    expect(out.code).toBe(1);
+    expect(out.err).toContain("could not find the latest release");
+    expect(out.urls).toEqual(["https://rodeo.lukeed.com/download/latest"]);
+  });
+
+  test("stops when the latest release is not a tag", () => {
+    let out = run({ hc: "0.1.18", files: { latest: "<html>oops</html>\n" } });
+    expect(out.code).toBe(1);
+    expect(out.err).toContain('"<html>oops</html>" is not a release tag');
+    expect(out.urls).toEqual(["https://rodeo.lukeed.com/download/latest"]);
+    expect(run({ hc: "0.1.18", files: { latest: "v0.1.0\n<html>\n" } }).code).toBe(1);
   });
 
   test("refuses an archive that does not match its checksum", () => {
@@ -96,7 +126,7 @@ describe("install.sh", () => {
   test("says how to build from source when there is no release", () => {
     let out = run({ hc: "0.1.18", drop: [ARCHIVE] });
     expect(out.code).toBe(1);
-    expect(out.err).toContain(`could not download ${ARCHIVE} from the latest release`);
+    expect(out.err).toContain(`could not download ${ARCHIVE} for v0.1.0`);
     expect(out.err).toContain("https://rodeo.lukeed.com/docs/install/#from-source");
   });
 
