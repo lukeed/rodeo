@@ -4,9 +4,12 @@
 {{#var md = $utils.url.ext($page.path, "md")}}
 <div class="dgrid">
   <nav class="side" aria-label="Docs">
-    <div class="head">docs<span class="cur"></span></div>
+    <div class="head">
+      <span>docs<span class="cur"></span></span>
+      <button class="mtog" type="button" data-menu aria-controls="dlist" aria-expanded="false">menu</button>
+    </div>
     <div class="rule"></div>
-    <ol>
+    <ol id="dlist">
       {{#each links as link}}
         <li><a href="{{ link.path }}"{{#if link.current}} aria-current="page"{{/if}}>{{ link.title.toLowerCase() }}</a></li>
       {{/each}}

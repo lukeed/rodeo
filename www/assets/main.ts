@@ -33,6 +33,11 @@ async function copyPage(button: HTMLElement, url: string) {
 
 document.addEventListener("click", (event) => {
   let target = event.target as HTMLElement;
+  let menu = target.closest<HTMLElement>("[data-menu]");
+  if (menu) {
+    let open = menu.closest(".side")!.classList.toggle("open");
+    return menu.setAttribute("aria-expanded", String(open));
+  }
   let page = target.closest<HTMLElement>("[data-copy-page]");
   if (page) return void copyPage(page, page.dataset.copyPage!);
   let button = target.closest<HTMLElement>("[data-copy]");
