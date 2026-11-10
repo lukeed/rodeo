@@ -63,11 +63,15 @@ impl<W: Write> Write for Synced<W> {
 
 pub struct HostBackend<W: Write> {
     out: W,
+    cursor: Position,
 }
 
 impl<W: Write> HostBackend<W> {
     pub fn new(out: W) -> Self {
-        Self { out }
+        Self {
+            out,
+            cursor: Position::ORIGIN,
+        }
     }
 }
 
@@ -119,6 +123,10 @@ pub(crate) fn attributes(modifier: Modifier) -> impl Iterator<Item = Attribute> 
     .chain(underline)
 }
 
+fn symbol_width(cell: &Cell) -> u16 {
+    u16::try_from(unicode_width::UnicodeWidthStr::width(cell.symbol())).unwrap_or(u16::MAX)
+}
+
 impl<W: Write> Backend for HostBackend<W> {
     type Error = io::Error;
 
@@ -158,6 +166,7 @@ impl<W: Write> Backend for HostBackend<W> {
                 underline = cell.underline_color;
             }
             queue!(out, Print(cell.symbol()))?;
+            self.cursor = Position::new(x.saturating_add(symbol_width(cell)), y);
         }
         queue!(
             out,
@@ -177,12 +186,15 @@ impl<W: Write> Backend for HostBackend<W> {
     }
 
     fn get_cursor_position(&mut self) -> io::Result<Position> {
-        crossterm::cursor::position().map(|(x, y)| Position { x, y })
+        // A host query would race the input thread for the reply and stall up to 2s.
+        Ok(self.cursor)
     }
 
     fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> io::Result<()> {
         let Position { x, y } = position.into();
-        execute!(self.out, MoveTo(x, y))
+        execute!(self.out, MoveTo(x, y))?;
+        self.cursor = Position::new(x, y);
+        Ok(())
     }
 
     fn clear(&mut self) -> io::Result<()> {
@@ -317,6 +329,35 @@ mod tests {
         let mut host = Synced::new(Pending::default(), writes.clone());
         host.flush().unwrap();
         assert!(writes.0.borrow().is_empty());
+    }
+
+    #[test]
+    fn clearing_never_asks_the_host_where_the_cursor_is() {
+        let viewport = ratatui::Viewport::Fixed(ratatui::layout::Rect::new(0, 0, 4, 2));
+        let mut terminal = ratatui::Terminal::with_options(
+            HostBackend::new(Vec::new()),
+            ratatui::TerminalOptions { viewport },
+        )
+        .unwrap();
+        terminal.backend_mut().set_cursor_position((2, 1)).unwrap();
+        let started = std::time::Instant::now();
+        terminal.clear().unwrap();
+        assert!(started.elapsed() < std::time::Duration::from_millis(100));
+        let out = String::from_utf8(terminal.backend().out.clone()).unwrap();
+        assert!(!out.contains("\x1b[6n"), "{out:?}");
+        assert!(out.ends_with("\x1b[2;3H"), "{out:?}");
+    }
+
+    #[test]
+    fn the_cursor_is_where_the_last_cell_ended() {
+        let mut backend = HostBackend::new(Vec::new());
+        let (a, wide) = (Cell::new("a"), Cell::new("中"));
+        backend
+            .draw([(0, 1, &a), (1, 1, &wide)].into_iter())
+            .unwrap();
+        assert_eq!(backend.get_cursor_position().unwrap(), Position::new(3, 1));
+        backend.set_cursor_position((7, 0)).unwrap();
+        assert_eq!(backend.get_cursor_position().unwrap(), Position::new(7, 0));
     }
 
     #[test]
