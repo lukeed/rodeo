@@ -1,0 +1,38 @@
+{{#var links = $utils.nav($pages, $page.path)}}
+{{#var near = $utils.pager($pages, $page.path)}}
+{{#var heads = $page.headings.filter((head) => head.level === 2)}}
+<div class="dgrid">
+  <nav class="side" aria-label="Docs">
+    <div class="head">docs<span class="cur"></span></div>
+    <div class="rule"></div>
+    <ol>
+      {{#each links as link}}
+        <li><a href="{{ link.path }}"{{#if link.current}} aria-current="page"{{/if}}>{{ link.title.toLowerCase() }}</a></li>
+      {{/each}}
+    </ol>
+    <div class="foot"><span>{{ $data.release.version }}</span><a href="https://github.com/lukeed/rodeo">source</a></div>
+  </nav>
+  <main class="doc" id="main">
+    <p class="path"><a href="/docs/install/">docs</a> / {{ $page.params.group.toLowerCase() }} / <b>{{ $page.title.toLowerCase() }}</b></p>
+    <h1>{{ $page.title }}</h1>
+    {{#if $page.summary}}<p class="intro">{{{ $utils.inline($page.summary) }}}</p>{{/if}}
+    <article class="prose">
+      {{{ $page.content }}}
+    </article>
+    <nav class="pager" aria-label="More docs">
+      {{#if near.prev}}<a href="{{ near.prev.path }}" rel="prev"><small>← before this</small>{{ near.prev.title.toLowerCase() }}</a>{{/if}}
+      {{#if near.next}}<a class="next" href="{{ near.next.path }}" rel="next"><small>next →</small>{{ near.next.title.toLowerCase() }}</a>{{/if}}
+    </nav>
+    <p class="edit"><a href="{{ $utils.source($page.path) }}">Edit this page on GitHub</a></p>
+  </main>
+  {{#if heads.length}}
+    <aside class="toc" aria-label="On this page">
+      <p>on this page</p>
+      <ol>
+        {{#each heads as head}}
+          <li><a href="#{{ head.id }}"><span>{{{ head.html }}}</span></a></li>
+        {{/each}}
+      </ol>
+    </aside>
+  {{/if}}
+</div>

@@ -1,0 +1,10 @@
+{{#expect list}}
+<div class="itabs">
+  {{#each list as (item, i)}}<input type="radio" name="installer" id="i-{{ item[0] }}"{{#if i === 0}} checked{{/if}} />{{/each}}
+  <div class="tabbar">{{#each list as item}}<label for="i-{{ item[0] }}">{{ item[0] }}</label>{{/each}}</div>
+  <div class="ipanes">
+    {{#each list as item}}
+      <div class="ipane"><pre><span class="p">$</span> {{{ $utils.command(item[1]) }}}</pre><button class="copy" type="button" data-copy="{{ item[1] }}" aria-label="Copy the {{ item[0] }} command">copy</button></div>
+    {{/each}}
+  </div>
+</div>

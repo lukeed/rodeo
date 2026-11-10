@@ -1,0 +1,490 @@
+.dgrid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 760px) 190px;
+  gap: 44px;
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 8px 32px 0;
+  justify-content: center;
+}
+
+.side {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  border-right: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.side .head {
+  padding: 0 0 6px 10px;
+  font-weight: 650;
+}
+
+.side .rule {
+  border-top: 1px solid var(--line);
+  margin: 0 0 10px;
+}
+
+.side ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.side ol a {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  padding: 5px 10px;
+  color: var(--sub);
+  line-height: 1.45;
+}
+
+.side ol a::before {
+  content: "○";
+  color: var(--dim);
+}
+
+.side ol a:hover {
+  text-decoration: none;
+  color: var(--text);
+}
+
+.side ol a[aria-current] {
+  background: var(--raise);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.side ol a[aria-current]::before {
+  content: "●";
+  color: var(--acc);
+}
+
+.side .foot {
+  display: flex;
+  justify-content: space-between;
+  color: var(--dim);
+  padding: 14px 10px 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.side .foot a {
+  color: var(--muted);
+}
+
+.toc {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  font-size: 13px;
+}
+
+.toc p {
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.toc a {
+  color: var(--sub);
+  display: grid;
+  grid-template-columns: 2ch 1fr;
+  text-transform: lowercase;
+}
+
+.toc a::before {
+  content: "─";
+  color: var(--dim);
+}
+
+.toc a code {
+  color: inherit;
+}
+
+.doc {
+  min-width: 0;
+  padding-bottom: 20px;
+}
+
+.doc .path {
+  color: var(--dim);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.doc .path b {
+  color: var(--acc);
+  font-weight: 400;
+}
+
+.doc .path a {
+  color: inherit;
+}
+
+.doc h1 {
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+}
+
+.doc .intro {
+  color: var(--sub);
+  font-size: 15.5px;
+}
+
+.prose h2 {
+  font-size: 18px;
+  margin: 52px 0 14px;
+  scroll-margin-top: 20px;
+}
+
+.prose h2::before {
+  content: "## ";
+  color: var(--acc);
+}
+
+.prose h3 {
+  font-size: 14.5px;
+  margin: 30px 0 10px;
+  color: var(--sub);
+  scroll-margin-top: 20px;
+}
+
+.prose h3::before {
+  content: "### ";
+  color: var(--dim);
+}
+
+.prose ul,
+.prose ol {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 14px;
+}
+
+.prose li {
+  position: relative;
+  padding-left: 22px;
+  margin: 4px 0;
+}
+
+.prose li::before {
+  position: absolute;
+  left: 0;
+}
+
+.prose ul > li::before {
+  content: "─";
+  color: var(--acc);
+}
+
+.prose ol {
+  counter-reset: step;
+}
+
+.prose ol > li {
+  counter-increment: step;
+  padding-left: 3ch;
+}
+
+.prose ol > li::before {
+  content: counter(step) ".";
+  color: var(--acc);
+}
+
+.prose li > p {
+  margin: 0;
+}
+
+.prose strong {
+  font-weight: 650;
+}
+
+.prose :not(pre) > code:not(.short) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.prose blockquote {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--acc);
+  background: var(--panel);
+  padding: 12px 16px;
+  margin: 18px 0;
+}
+
+.prose blockquote p {
+  margin: 0;
+}
+
+.prose blockquote p + p {
+  margin-top: 10px;
+}
+
+.prose .helpbox {
+  margin: 18px 0;
+}
+
+.tbl {
+  overflow-x: auto;
+  margin: 14px 0 18px;
+}
+
+.tbl table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.tbl th {
+  text-align: left;
+  color: var(--dim);
+  font-weight: 400;
+  padding: 0 12px 6px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.tbl td {
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+  color: var(--sub);
+}
+
+.tbl td:first-child {
+  color: var(--text);
+}
+
+.tbl td:last-child,
+.tbl th:last-child {
+  padding-right: 0;
+}
+
+.tbl.cols-2 td:first-child {
+  white-space: nowrap;
+  padding-right: 20px;
+}
+
+.tbl.cols-3 table {
+  table-layout: fixed;
+}
+
+.tbl.cols-3 th:nth-child(1) {
+  width: 38%;
+}
+
+.tbl.cols-3 th:nth-child(2) {
+  width: 26%;
+}
+
+.mode {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+
+.mode .mh {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+
+.mode .mh b {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.mode .mh span {
+  color: var(--dim);
+}
+
+.mode p {
+  margin: 4px 0 0;
+  color: var(--sub);
+}
+
+.modebar {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--raise);
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.85;
+  color: var(--dim);
+}
+
+.modebar .badge {
+  background: var(--acc);
+  color: var(--raise);
+  font-weight: 700;
+  padding: 0 1ch;
+  margin-right: 1ch;
+}
+
+.modebar .badge.mauve {
+  background: var(--mauve);
+}
+
+.modebar .seg {
+  margin-right: 2ch;
+  white-space: nowrap;
+}
+
+.modebar .seg b {
+  color: var(--acc);
+  font-weight: 700;
+  margin-right: 1ch;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 56px;
+}
+
+.pager a {
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  color: var(--text);
+  display: block;
+}
+
+.pager a:hover {
+  border-color: var(--acc);
+  text-decoration: none;
+}
+
+.pager small {
+  display: block;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.pager .next {
+  grid-column: 2;
+  text-align: right;
+}
+
+.edit {
+  margin-top: 28px;
+  font-size: 13px;
+}
+
+.edit a {
+  color: var(--muted);
+}
+
+@media (max-width: 1180px) {
+  .dgrid {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .toc {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .dgrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .side {
+    position: static;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+  }
+
+  .side ol {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .side .foot {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .dgrid {
+    padding: 4px 16px 0;
+  }
+
+  .doc h1 {
+    font-size: 28px;
+  }
+
+  .doc .intro {
+    font-size: 14px;
+  }
+
+  .side {
+    font-size: 13.5px;
+  }
+
+  .side ol a {
+    padding: 5px 8px;
+  }
+
+  .prose h2 {
+    margin-top: 44px;
+  }
+
+  .tbl {
+    overflow: visible;
+  }
+
+  .tbl table,
+  .tbl tbody,
+  .tbl tr,
+  .tbl td {
+    display: block;
+  }
+
+  .tbl thead {
+    display: none;
+  }
+
+  .tbl tr {
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+  }
+
+  .tbl td,
+  .tbl.cols-2 td:first-child {
+    border: 0;
+    padding: 1px 0;
+    white-space: normal;
+  }
+
+  .tbl.cols-3 td:nth-child(1),
+  .tbl.cols-3 td:nth-child(2) {
+    display: inline;
+    margin-right: 10px;
+  }
+
+  .tbl.cols-3 td:nth-child(3) {
+    margin-top: 3px;
+  }
+
+  .pager {
+    grid-template-columns: 1fr;
+  }
+
+  .pager .next {
+    grid-column: 1;
+    text-align: left;
+  }
+}

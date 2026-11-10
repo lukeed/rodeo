@@ -17,6 +17,7 @@
     "@twinkleplop/core": "^0.3.1",
     "@twinkleplop/markdown-core": "^0.2.1",
     "@twinkleplop/toml": "^0.1.7",
+    "@types/bun": "^1.4.4",
     "bongo": "npm:@bongo/bongo@^1.3.0",
     "crowne": "^0.4.0",
     "seolint": "^1.1.0",

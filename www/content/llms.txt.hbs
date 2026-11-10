@@ -1,0 +1,20 @@
+---
+---
+# rodeo
+
+> {{ $site.description }}
+
+rodeo is a terminal UI for herdr-core (`hc`). `hc` owns every program; rodeo only owns the UI, so you can close it, open it again, or run two at once while your terminals keep running. It has the key binds, config schema and screen of Herdr TUI 0.9.5, and it shares its spaces, tabs and panes with the Herdr desktop app through the `herdr-app` doc in `hc`.
+
+Every docs page below is also served as Markdown at the same path with a `.md` extension.
+
+## Docs
+{{#each $utils.nav($pages, '/') as page}}
+- [{{ page.title }}]({{ new URL(page.path, $site.url) }}): {{ $utils.plain(($pages.find(it => it.path === page.path) || {}).summary || '') }}
+{{/each}}
+
+## Source
+
+- [Repository](https://github.com/lukeed/rodeo)
+- [Parity with Herdr TUI 0.9.5](https://github.com/lukeed/rodeo/blob/main/docs/parity.md)
+- [herdr-core](https://github.com/herdrdev/herdr-core)

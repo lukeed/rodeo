@@ -1,0 +1,9 @@
+{{#expect docs}}
+<nav class="top" aria-label="Main">
+  <a href="/" aria-label="rodeo home"><img src="<bongo:asset src='img/lockup.svg' />" alt="rodeo" width="98" height="26" /></a>
+  <div class="links">
+    <a href="/docs/install/"{{#if docs}} aria-current="true"{{/if}}>docs</a>
+    <a href="/#install">install</a>
+    <a class="ext" href="https://github.com/lukeed/rodeo">github ↗</a>
+  </div>
+</nav>

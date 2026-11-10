@@ -1,0 +1,281 @@
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../fonts/geist-mono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0f0e0d;
+  --panel: #171614;
+  --raise: #1c1a18;
+  --line: #2a2724;
+  --line2: #3a3632;
+  --text: #ebe5db;
+  --sub: #b8b1a6;
+  --muted: #8d867c;
+  --dim: #716b63;
+  --acc: #e8673c;
+  --mauve: #c6a8e6;
+  --green: #a7c58b;
+  --yellow: #e8c36a;
+  --red: #e7756f;
+  --teal: #86cbbb;
+  --blue: #86b6e0;
+  --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font: 400 14.5px/1.7 var(--mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--acc);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 1px solid var(--acc);
+  outline-offset: 3px;
+}
+
+code {
+  color: var(--mauve);
+  font-family: var(--mono);
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 0.93em;
+  color: var(--acc);
+  font-weight: 650;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0 0 14px;
+}
+
+p,
+li,
+td,
+dd {
+  text-wrap: pretty;
+}
+
+pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+pre .p {
+  color: var(--acc);
+  user-select: none;
+}
+
+.nw,
+kbd,
+code {
+  white-space: nowrap;
+}
+
+.cur {
+  display: inline-block;
+  width: 0.42em;
+  height: 1em;
+  background: var(--acc);
+  vertical-align: -0.12em;
+  margin-left: 0.06em;
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: var(--acc);
+  color: var(--bg);
+  font-weight: 650;
+}
+
+.skip:focus {
+  top: 12px;
+}
+
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px 32px;
+}
+
+.top img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.top .links {
+  margin-left: auto;
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
+}
+
+.top .links a {
+  color: var(--sub);
+  white-space: nowrap;
+}
+
+.top .links a[aria-current] {
+  color: var(--text);
+}
+
+.top .links a[aria-current]::before {
+  content: "● ";
+  color: var(--acc);
+}
+
+.hband {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 520px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hband.short {
+  height: 78px;
+}
+
+.hband canvas,
+.hfoot canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+.hband ~ .top,
+.hband ~ main,
+.hband ~ .dgrid {
+  position: relative;
+}
+
+.hfoot {
+  position: relative;
+  height: 130px;
+  margin-top: 96px;
+  overflow: hidden;
+}
+
+footer .wrap {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-top: 20px;
+  padding-bottom: 36px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+footer img {
+  width: 20px;
+  height: 20px;
+}
+
+footer nav {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+}
+
+footer nav a {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 13.5px;
+  }
+
+  pre {
+    font-size: 11.5px;
+  }
+
+  .wrap {
+    padding: 0 16px;
+  }
+
+  .top {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .top img {
+    height: 21px;
+  }
+
+  .top .links {
+    gap: 14px;
+    font-size: 13px;
+  }
+
+  .top .links .ext {
+    display: none;
+  }
+
+  .hfoot {
+    height: 100px;
+    margin-top: 64px;
+  }
+
+  footer .wrap {
+    flex-wrap: wrap;
+  }
+
+  footer nav {
+    margin-left: 0;
+    width: 100%;
+  }
+}

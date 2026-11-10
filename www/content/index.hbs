@@ -1,0 +1,75 @@
+---
+title: Round up your terminals
+summary: rodeo is a keyboard-first terminal UI for herdr-core (hc). It shares spaces, tabs and panes with the Herdr desktop app, so a split in one shows up in the other.
+---
+
+{{#var home = $data.home}}
+<main class="wrap" id="main">
+  <header class="hero">
+    <div>
+      <p class="kicker">for herdr-core and the herdr app</p>
+      <h1>Round up your <span class="nw">terminals.<span class="cur"></span></span></h1>
+      <p class="lede">A keyboard-first terminal UI for <b>herdr-core</b>. Same spaces, tabs &amp; panes as the <b>Herdr desktop app</b>: make a split in one and it shows up in the other.</p>
+      <div class="cta"><a class="btn fire" href="#install">Install rodeo</a><a class="btn" href="/docs/install/">Read the docs</a></div>
+    </div>
+  </header>
+  <div class="tui" role="img" aria-label="rodeo with four spaces in the sidebar, a shell and a Claude pane side by side, and a toast that says codex finished in the hc space">
+    <canvas class="screen"></canvas>
+    <canvas class="dust" aria-hidden="true"></canvas>
+  </div>
+  <p class="caption">rodeo on the default hc session. codex finishes in another space; the same toast shows in the Herdr app.</p>
+
+  <div class="stack">
+    <section class="box" id="why" aria-labelledby="why-h">
+      <p class="k">why rodeo</p>
+      <h2 id="why-h">Your terminal and your app see the same thing</h2>
+      {{#each home.why as text}}
+        <p>{{{ text }}}</p>
+      {{/each}}
+    </section>
+
+    <section class="box" id="features" aria-labelledby="features-h">
+      <p class="k">features</p>
+      <h2 id="features-h">Built for the keyboard</h2>
+      <ul class="feat">
+        {{#each home.features as feature}}
+          <li><i style="color:var(--{{ feature[0] }})" aria-hidden="true">●</i><div><b>{{{ feature[1] }}}</b><span>{{{ feature[2] }}}</span></div></li>
+        {{/each}}
+      </ul>
+    </section>
+
+    <section class="box" id="install" aria-labelledby="install-h">
+      <p class="k">install</p>
+      <h2 id="install-h">Pick your installer</h2>
+      <p>Each needs <code>hc</code> {{ $data.release.hc }} or newer on your PATH. Linux or macOS.</p>
+      {{#partial src="installers" list=home.installs}}
+      {{#partial src="helpbox"}}
+    </section>
+
+    <section class="box" id="keys" aria-labelledby="keys-h">
+      <p class="k">key binds</p>
+      <h2 id="keys-h">Keys you already know</h2>
+      <p>Coming from Herdr TUI? Your keys and config work as is. Press <kbd>prefix+?</kbd> in rodeo for the full list.</p>
+      <table class="keys">
+        <thead><tr><th>key</th><th>action</th></tr></thead>
+        <tbody>
+          {{#each home.keys as row}}
+            <tr><td><kbd>{{ row[0] }}</kbd></td><td>{{ row[1] }}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <p class="more"><a href="/docs/keys/">Every key bind →</a></p>
+    </section>
+
+    <section class="box" id="different" aria-labelledby="different-h">
+      <p class="k">coming from herdr tui</p>
+      <h2 id="different-h">What changed</h2>
+      <p>rodeo started as Herdr TUI 0.9.5 on <code>hc</code>, and it&rsquo;ll drift from it over time. Sessions, restore and remote machines belonged to Herdr&rsquo;s own server, so <code>hc</code> covers them now. A few are gone:</p>
+      <ul class="gone">
+        {{#each home.gone as row}}
+          <li><div><b>{{{ row[0] }}}.</b> <span>{{{ row[1] }}}</span></div></li>
+        {{/each}}
+      </ul>
+    </section>
+  </div>
+</main>

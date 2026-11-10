@@ -1,0 +1,526 @@
+.hero {
+  padding: 48px 0 150px;
+}
+
+.hero .kicker {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+
+.hero h1 {
+  font-size: 44px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  max-width: 15em;
+}
+
+.hero h1 .cur {
+  width: 0.5em;
+}
+
+.hero .lede {
+  color: var(--sub);
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 40em;
+  margin: 18px 0 0;
+}
+
+.hero .lede b {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+}
+
+.btn {
+  display: inline-block;
+  font: 500 14px/1 var(--mono);
+  padding: 13px 18px;
+  color: var(--text);
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.btn:hover {
+  text-decoration: none;
+  border-color: var(--acc);
+}
+
+.btn.fire {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #1a0d07;
+  font-weight: 650;
+}
+
+.btn.fire:hover {
+  filter: brightness(1.08);
+}
+
+.tui {
+  position: relative;
+  border: 1px solid var(--line);
+  background: #141312;
+  overflow: hidden;
+  height: calc(var(--tui-h, 414px) + 2px);
+}
+
+.tui canvas {
+  display: block;
+}
+
+.tui canvas.dust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
+
+.caption {
+  color: var(--dim);
+  font-size: 12.5px;
+  margin: 10px 0 0;
+}
+
+.stack {
+  max-width: 840px;
+  margin: 72px auto 0;
+  display: grid;
+  gap: 36px;
+}
+
+.stack > * {
+  min-width: 0;
+}
+
+.box {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 30px 34px;
+}
+
+.box .k {
+  font-weight: 650;
+  color: var(--text);
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+
+.box .k::before {
+  content: "## ";
+  color: var(--acc);
+}
+
+.box h2 {
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+.box p {
+  color: var(--sub);
+}
+
+.feat {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.feat li {
+  padding: 16px 20px 16px 0;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 22px 1fr;
+}
+
+.feat li:nth-child(odd) {
+  border-right: 1px solid var(--line);
+}
+
+.feat li:nth-child(even) {
+  padding-left: 20px;
+}
+
+.feat i {
+  font-style: normal;
+}
+
+.feat b {
+  font-weight: 600;
+  display: block;
+}
+
+.feat span {
+  color: var(--muted);
+  font-size: 13.5px;
+  text-wrap: pretty;
+}
+
+.itabs {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.itabs input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.itabs .tabbar {
+  display: flex;
+  gap: 1ch;
+  background: var(--raise);
+  font-size: 13px;
+  line-height: 1.75;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.itabs label {
+  min-width: 8ch;
+  padding: 0 2ch;
+  text-align: center;
+  background: var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.itabs label:hover {
+  color: var(--text);
+}
+
+.itabs:focus-within .tabbar {
+  outline: 1px solid var(--acc);
+  outline-offset: -1px;
+}
+
+.itabs input:checked:nth-of-type(1) ~ .tabbar label:nth-child(1),
+.itabs input:checked:nth-of-type(2) ~ .tabbar label:nth-child(2),
+.itabs input:checked:nth-of-type(3) ~ .tabbar label:nth-child(3),
+.itabs input:checked:nth-of-type(4) ~ .tabbar label:nth-child(4) {
+  background: var(--acc);
+  color: var(--raise);
+  font-weight: 650;
+}
+
+.ipane {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.itabs input:checked:nth-of-type(1) ~ .ipanes .ipane:nth-child(1),
+.itabs input:checked:nth-of-type(2) ~ .ipanes .ipane:nth-child(2),
+.itabs input:checked:nth-of-type(3) ~ .ipanes .ipane:nth-child(3),
+.itabs input:checked:nth-of-type(4) ~ .ipanes .ipane:nth-child(4) {
+  display: flex;
+}
+
+.ipane pre {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  font-size: 12px;
+  scrollbar-width: none;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.copy {
+  cursor: pointer;
+  white-space: nowrap;
+  font: 500 12.5px/1 var(--mono);
+  color: var(--acc);
+  background: none;
+  border: 1px solid var(--line);
+  padding: 6px 9px;
+}
+
+.copy:hover {
+  border-color: var(--acc);
+}
+
+.term {
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.term .bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.term pre {
+  padding: 14px 16px;
+}
+
+.helpbox {
+  margin-top: 18px;
+}
+
+pre.help {
+  color: var(--sub);
+  line-height: 1.3;
+  font-size: 12px;
+}
+
+pre.help .hat {
+  color: var(--text);
+}
+
+pre.help .rust {
+  color: var(--acc);
+}
+
+pre.help .band {
+  color: var(--text);
+  background: linear-gradient(transparent 50%, var(--acc) 50%);
+}
+
+.box table.keys {
+  width: 100%;
+  margin-top: 18px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.box table.keys th {
+  text-align: left;
+  color: var(--dim);
+  font-weight: 400;
+  padding: 0 12px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.box table.keys td {
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+  color: var(--sub);
+  font-size: 14px;
+}
+
+.box table.keys td:first-child {
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 24px;
+}
+
+.box .more {
+  margin: 18px 0 0;
+}
+
+.box .gone {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.box .gone li {
+  display: grid;
+  grid-template-columns: 3ch 1fr;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.box .gone li::before {
+  content: "-";
+  color: var(--red);
+  font-weight: 650;
+}
+
+.box .gone b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.box .gone span {
+  color: var(--sub);
+}
+
+.feat b .nw,
+.box .gone b .nw {
+  color: inherit;
+  font-size: inherit;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding-top: 26px;
+  }
+
+  .hero h1 {
+    font-size: 30px;
+  }
+
+  .hero .lede {
+    font-size: 14.5px;
+  }
+
+  .btn {
+    font-size: 13.5px;
+    padding: 12px 15px;
+  }
+
+  .tui {
+    margin: 0 -16px;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .caption {
+    font-size: 12px;
+  }
+
+  .stack {
+    margin-top: 48px;
+    gap: 24px;
+  }
+
+  .box {
+    padding: 22px 18px;
+    margin: 0 -4px;
+  }
+
+  .box h2 {
+    font-size: 18px;
+  }
+
+  .feat {
+    grid-template-columns: 1fr;
+  }
+
+  .feat li:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .feat li:nth-child(even) {
+    padding-left: 0;
+  }
+
+  .ipane {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .ipane pre {
+    flex: 1 1 100%;
+    white-space: pre-wrap;
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+
+  .ipane .copy {
+    padding: 6px 10px;
+  }
+
+  .itabs .tabbar {
+    font-size: 12.5px;
+  }
+
+  .itabs label {
+    min-width: 0;
+    padding: 0 1.4ch;
+  }
+
+  .helpbox pre {
+    font-size: 11px;
+    padding: 12px;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+
+  .box table.keys th,
+  .box table.keys td {
+    padding: 8px 12px 8px 0;
+  }
+
+  .box table.keys td {
+    font-size: 13px;
+  }
+
+  .box table.keys td:first-child {
+    padding-right: 12px;
+  }
+
+  .box table.keys td:last-child,
+  .box table.keys th:last-child {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .box table.keys td {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  .box table.keys td {
+    font-size: 12px;
+  }
+}
+
+.lost {
+  padding-top: 12vh;
+  padding-bottom: 8vh;
+}
+
+.lost .kicker {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.lost h1 {
+  font-size: 44px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.lost h1 .cur {
+  width: 0.5em;
+}
+
+.lost .lede {
+  color: var(--sub);
+  font-size: 16px;
+  margin: 18px 0 0;
+}
+
+@media (max-width: 600px) {
+  .lost h1 {
+    font-size: 30px;
+  }
+
+  .lost .lede {
+    font-size: 14.5px;
+  }
+}
