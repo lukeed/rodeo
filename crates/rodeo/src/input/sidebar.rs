@@ -186,19 +186,7 @@ impl App {
             self.not_ready(machine.name.as_deref());
             return;
         }
-        let remembered = self
-            .view
-            .sidebar
-            .last
-            .get(&machine.name)
-            .filter(|key| snapshot.space(key).is_some())
-            .cloned();
-        let first = snapshot
-            .spaces
-            .iter()
-            .find(|s| s.machine == machine.name)
-            .map(|s| s.key.clone());
-        match remembered.or(first) {
+        match self.machine_space(machine.name.as_deref()) {
             Some(key) => self.focus_space(&key),
             None => {
                 self.view.sidebar.picked = Some((machine.name.clone(), self.view.space.clone()));

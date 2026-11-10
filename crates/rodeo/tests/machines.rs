@@ -86,28 +86,56 @@ impl Drop for Second {
     }
 }
 
+fn add_box(h: &Harness) -> Second {
+    hc(h, SECOND, &["server", "start"]);
+    let line = via(h);
+    hc(
+        h,
+        "t",
+        &[
+            "machine",
+            "add",
+            "--via",
+            &line,
+            "--session",
+            SECOND,
+            "--name",
+            "box",
+        ],
+    );
+    Second::new(h)
+}
+
+fn machine_row(h: &mut Harness, name: Option<&str>) -> (u16, u16) {
+    h.screen();
+    let hit = h
+        .app()
+        .hits
+        .sidebar
+        .machines
+        .iter()
+        .find(|m| m.name.as_deref() == name)
+        .map(|m| m.rect)
+        .expect("a machine row");
+    (hit.x + 4, hit.y)
+}
+
+fn spaces_on(h: &Harness, machine: Option<&str>) -> Vec<(String, usize)> {
+    h.app()
+        .machines
+        .spaces()
+        .into_iter()
+        .filter(|s| s.machine == machine)
+        .map(|s| (s.key(), s.space.tabs.len()))
+        .collect()
+}
+
 #[test]
 fn a_second_core_shows_as_a_machine() {
     run(|| async {
         let mut h = Harness::start().await;
         h.ready().await;
-        hc(&h, SECOND, &["server", "start"]);
-        let line = via(&h);
-        hc(
-            &h,
-            "t",
-            &[
-                "machine",
-                "add",
-                "--via",
-                &line,
-                "--session",
-                SECOND,
-                "--name",
-                "box",
-            ],
-        );
-        let _second = Second::new(&h);
+        let _second = add_box(&h);
         let agent = h
             .outside
             .run(&hc::RunParams {
@@ -202,5 +230,65 @@ fn linked_worktrees_group_under_their_repo() {
         assert_eq!(h.app().prefs.collapsed_groups.len(), 1);
         h.until("the folded group", |h| h.screen().contains("▸│"))
             .await;
+    });
+}
+
+#[test]
+fn new_tabs_and_workspaces_follow_a_picked_machine() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let _second = add_box(&h);
+        h.until("the box doc", |h| {
+            h.app()
+                .machines
+                .get(Some("box"))
+                .is_some_and(|m| m.slot.is_ready())
+        })
+        .await;
+        let (x, y) = machine_row(&mut h, Some("box"));
+        h.click(x, y).await;
+        h.until("the footer names box", |h| {
+            h.screen().contains(" new · box")
+        })
+        .await;
+        h.prefix_char('c').await;
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        h.until("a first workspace on box", |h| {
+            spaces_on(h, Some("box")).len() == 1
+        })
+        .await;
+        let first = spaces_on(&h, Some("box"))[0].0.clone();
+        h.until("its focus", |h| {
+            h.app().view.space.as_deref() == Some(first.as_str())
+        })
+        .await;
+        assert_eq!(spaces_on(&h, None)[0].1, 1);
+        let local = spaces_on(&h, None)[0].0.clone();
+        h.app_mut().focus_space(&local);
+        h.until("the footer names Local", |h| {
+            h.screen().contains(" new · Local")
+        })
+        .await;
+        h.app_mut().view.sidebar.picked = Some((Some("box".into()), Some(local.clone())));
+        h.until("the footer names box", |h| {
+            h.screen().contains(" new · box")
+        })
+        .await;
+        h.prefix_char('c').await;
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        h.until("a second tab in the box workspace", |h| {
+            spaces_on(h, Some("box")) == [(first.clone(), 2)]
+        })
+        .await;
+        assert_eq!(spaces_on(&h, None), [(local.clone(), 1)]);
+        h.app_mut().focus_space(&local);
+        h.app_mut().view.sidebar.picked = Some((Some("box".into()), Some(local.clone())));
+        h.prefix(KeyCode::Char('N'), KeyModifiers::SHIFT).await;
+        h.until("a second workspace on box", |h| {
+            spaces_on(h, Some("box")).len() == 2
+        })
+        .await;
+        assert_eq!(spaces_on(&h, None), [(local, 1)]);
     });
 }

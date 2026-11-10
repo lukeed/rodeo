@@ -322,6 +322,33 @@ pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) ->
 }
 
 impl App {
+    pub fn picked_machine(&self) -> Option<Option<String>> {
+        picked(self, &self.snapshot()).map(|(machine, _)| machine)
+    }
+
+    pub fn target_machine(&self) -> Option<String> {
+        self.picked_machine()
+            .unwrap_or_else(|| self.active_machine())
+    }
+
+    pub fn machine_space(&self, machine: Option<&str>) -> Option<String> {
+        let name = machine.map(str::to_owned);
+        let remembered = self
+            .view
+            .sidebar
+            .last
+            .get(&name)
+            .filter(|key| self.machines.space(key).is_some())
+            .cloned();
+        remembered.or_else(|| {
+            self.machines
+                .spaces()
+                .into_iter()
+                .find(|s| s.machine == machine)
+                .map(|s| s.key())
+        })
+    }
+
     pub fn space_order(&self) -> Vec<String> {
         let snapshot = self.snapshot();
         let mobile = self.regions.mobile;
@@ -352,12 +379,12 @@ impl App {
 
 pub fn picked(app: &App, snapshot: &Snapshot) -> Option<(Option<String>, Option<String>)> {
     let (machine, space) = app.view.sidebar.picked.clone()?;
-    let empty = !snapshot.spaces.iter().any(|s| s.machine == machine);
     let online = snapshot
         .machines
         .iter()
         .any(|m| m.name == machine && m.status == MachineStatus::Online);
-    (empty && online && space == app.view.space).then_some((machine, space))
+    let other = app.active_machine() != machine;
+    (online && other && space == app.view.space).then_some((machine, space))
 }
 
 pub fn render(buf: &mut Buffer, area: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {

@@ -118,14 +118,13 @@ impl App {
 
     fn new_workspace(&mut self) {
         if self.config.ui.prompt_new_workspace_name {
-            let machine = self.active_machine();
+            let machine = self.target_machine();
             let source = self.view.focused_pane(&self.machines);
+            let space = (self.active_machine() == machine)
+                .then(|| self.view.space.clone())
+                .flatten();
             let folder = self
-                .new_cwd(
-                    source.as_deref(),
-                    self.view.space.clone().as_deref(),
-                    machine.as_deref(),
-                )
+                .new_cwd(source.as_deref(), space.as_deref(), machine.as_deref())
                 .unwrap_or_default();
             let suggested = if folder.is_empty() {
                 "workspace".to_owned()
@@ -469,11 +468,16 @@ impl App {
     }
 
     fn new_tab(&mut self) {
+        let machine = self.target_machine();
+        let space = match self.picked_machine() {
+            Some(_) => self.machine_space(machine.as_deref()),
+            None => self.view.space.clone(),
+        };
+        let Some(space) = space else {
+            self.new_workspace_on(machine, String::new());
+            return;
+        };
         if self.config.ui.prompt_new_tab_name {
-            let Some(space) = self.view.space.clone() else {
-                self.new_workspace_now(String::new());
-                return;
-            };
             let count = self
                 .machines
                 .space(&space)
@@ -485,7 +489,7 @@ impl App {
             };
             self.set_overlay(Box::new(Rename::new(target, &suggested)));
         } else {
-            self.new_tab_now(String::new());
+            self.new_tab_in(&space, String::new());
         }
     }
 
@@ -528,13 +532,13 @@ impl App {
                 };
                 self.new_workspace_now(name);
             }
-            RenameTarget::NewTab { suggested, .. } => {
+            RenameTarget::NewTab { space, suggested } => {
                 let name = if text.is_empty() || text == suggested {
                     String::new()
                 } else {
                     text
                 };
-                self.new_tab_now(name);
+                self.new_tab_in(&space, name);
             }
             RenameTarget::Workspace { space } => {
                 if text.is_empty() {

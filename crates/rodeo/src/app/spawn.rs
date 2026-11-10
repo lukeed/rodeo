@@ -175,7 +175,7 @@ impl App {
     }
 
     pub fn new_workspace_now(&mut self, name: String) {
-        self.new_workspace_on(self.active_machine(), name);
+        self.new_workspace_on(self.target_machine(), name);
     }
 
     pub fn new_workspace_on(&mut self, machine: Option<String>, name: String) {
@@ -265,12 +265,8 @@ impl App {
         );
     }
 
-    pub fn new_tab_now(&mut self, name: String) {
-        let Some(space_key) = self.view.space.clone() else {
-            self.new_workspace_now(String::new());
-            return;
-        };
-        let Some(space) = self.machines.space(&space_key) else {
+    pub fn new_tab_in(&mut self, space_key: &str, name: String) {
+        let Some(space) = self.machines.space(space_key) else {
             return;
         };
         let machine = space.machine.map(str::to_owned);
@@ -283,7 +279,7 @@ impl App {
         let tab = doc.fresh_id(Prefix::Tab);
         let pane = doc.fresh_id(Prefix::Pane);
         let source = self.view.focused_pane(&self.machines);
-        let cwd = self.new_cwd(source.as_deref(), Some(&space_key), machine.as_deref());
+        let cwd = self.new_cwd(source.as_deref(), Some(space_key), machine.as_deref());
         let spawn = Spawn {
             machine,
             space: space_id.clone(),
