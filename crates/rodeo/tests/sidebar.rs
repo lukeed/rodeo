@@ -915,3 +915,23 @@ fn one_machine_keeps_herdr_arrows() {
     key(&mut app, KeyCode::Up);
     assert_eq!(at(&app), space_nav("s3"), "no machine rows to stop on");
 }
+
+#[test]
+fn machine_clicks_keep_navigate_in_step() {
+    let mut app = app();
+    add_machine(&mut app, "connected", None, &Document::default());
+    navigate(&mut app);
+    click(&mut app, 5, 7);
+    assert_eq!(at(&app), machine_nav(Some("box")));
+    assert_eq!(
+        column(&frame(&mut app), 26)[14],
+        " new · box           menu│"
+    );
+    click(&mut app, 5, 2);
+    assert_eq!(app.view.mode, Mode::Terminal);
+    assert_eq!(app.view.nav, None);
+    assert_eq!(
+        column(&frame(&mut app), 26)[14],
+        " new · Local         menu│"
+    );
+}

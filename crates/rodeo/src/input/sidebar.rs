@@ -9,7 +9,7 @@ use crate::hits::inside;
 use crate::ids::local;
 use crate::model::{MachineStatus, SpaceRow};
 use crate::sidebar::{self, Drag as SidebarDrag, scroll};
-use crate::view::{Drag, Mode, Press};
+use crate::view::{Drag, Mode, Nav, Press};
 
 const NOTICE: Duration = Duration::from_secs(8);
 const DIAGNOSTIC: Duration = Duration::from_secs(15);
@@ -186,10 +186,17 @@ impl App {
             self.not_ready(machine.name.as_deref());
             return;
         }
-        match self.machine_space(machine.name.as_deref()) {
-            Some(key) => self.focus_space(&key),
-            None => {
-                self.view.sidebar.picked = Some((machine.name.clone(), self.view.space.clone()));
+        let navigating = self.view.mode == Mode::Navigate;
+        if let Some(key) = self.machine_space(machine.name.as_deref()) {
+            self.focus_space(&key);
+            if navigating {
+                self.view.mode = Mode::Terminal;
+                self.view.nav = None;
+            }
+        } else {
+            self.view.sidebar.picked = Some((machine.name.clone(), self.view.space.clone()));
+            if navigating {
+                self.view.nav = Some(Nav::Machine(machine.name.clone()));
             }
         }
     }
