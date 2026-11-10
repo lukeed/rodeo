@@ -41,7 +41,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 |---|---|---|
 | Terminal | match | Keys go to the focused pane, encoded by libghostty for the program's modes. |
 | Prefix | match | All rules in `herdr-keys-config.md` 1.7.2, including prefix twice to send it. |
-| Navigate | match | All keys in 1.7.3, including the bare right-hand key of any `prefix+X` binding. |
+| Navigate | match | All keys in 1.7.3, including the bare right-hand key of any `prefix+X` binding. Deliberate difference in the multi-machine sidebar: up/down also stop on machine rows (folded and empty ones too), and a selected machine row becomes the active machine, as a click does. Enter on a machine row opens its last focused space, or stays when it has none. On a machine row or a worktree group parent, the bare left arrow folds it and the bare right arrow unfolds it. On any other space row, the bare left arrow jumps to its machine row. Right on such a row, `h`/`j`/`k`/`l`, and both arrows in the one-machine sidebar keep Herdr's pane focus. |
 | Resize | match | Fixed `hjkl` and arrows, modifiers ignored. |
 | Copy | match | All keys in 1.7.5. History comes from the local VT scrollback, filled by `history` on attach. |
 
@@ -106,10 +106,10 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 |---|---|---|
 | Desktop layout: sidebar left, tab bar top or bottom, pane surface | match | |
 | Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, the full pane split below it, mobile switcher | match | |
-| Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. |
+| Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. In the multi-machine sidebar, NAVIGATE shows `↑/↓ move` in place of `↑/↓ workspace`, then `←/→ fold` on a machine row or group parent, or `← machine` on another space row. |
 | Expanded sidebar: spaces section, agents section, section split, footer with `menu` button | match | |
 | Compact collapsed sidebar (4-column status rail), hidden mode | match | |
-| Multi-machine sidebar (machine headers, per-machine spaces, machine states) | hc | From `machine.list` and each machine's doc. |
+| Multi-machine sidebar (machine headers, per-machine spaces, machine states) | hc | From `machine.list` and each machine's doc. A click on a machine row opens its last focused space; on an empty machine it makes that machine active without a focus change. `new`, `new_tab` and `new_workspace` then target the active machine: a tab goes to its last focused space, or a first workspace is made there. |
 | Sidebar header | match | Deliberate difference: the expanded sidebar header is the `rodeo▍` wordmark (bold text, accent cursor) over a `─` border in the divider color, in both views, in place of Herdr's ` spaces` (one machine) and ` machines` (more machines) and the blank row under them. A short sidebar drops the border. The collapsed compact sidebar shows ` r▍` over a `───` border above its numbered rows. |
 | Agent state glyphs, `dots` and `symbols` styles, colors | match | |
 | Sidebar tokens and rules (`ui.sidebar.*`) | match | `branch` and `git_status` come from `machine.exec git` on the space's machine. `machine`, `workspace`, `tab`, `pane`, `agent`, `terminal_title`, `terminal_title_stripped`, `state_icon`, `state_text`: match. |
