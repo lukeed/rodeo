@@ -284,12 +284,20 @@
 
 pre.help {
   color: var(--sub);
-  line-height: 1.3;
+  line-height: 1.25;
   font-size: 12px;
 }
 
 pre.help .hat {
   color: var(--text);
+}
+
+/* Geist Mono's █ spans 0.19em to 1.21em of a 1.25em row; stretch it to fill the row, as a terminal does. */
+pre.help span:is(.hat, .band, .rust) {
+  display: inline-block;
+  transform-origin: 0 0;
+  transform: translateY(-0.245em) scaleY(1.246);
+  -webkit-text-stroke: 0.04em currentColor;
 }
 
 pre.help .rust {
