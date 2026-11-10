@@ -1,9 +1,7 @@
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/lockup-dark.svg">
-    <img src="assets/lockup-light.svg" alt="rodeo" height="64">
-  </picture>
-</div>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/lockup-dark.svg">
+  <img src="assets/lockup-light.svg" alt="rodeo" height="64">
+</picture>
 
 > Round up your terminals.
 
