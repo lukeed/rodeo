@@ -28,7 +28,10 @@ Detach with the detach key (prefix+q). Terminals keep running in hc.";
 
 pub fn help(ink: Option<Ink>) -> String {
     let wordmark = brand::wordmark(ink.unwrap_or(Ink::PLAIN));
-    format!("{}\n\n{USAGE}", lockup(&[wordmark, Line::from(TITLE)], ink))
+    framed(&format!(
+        "{}\n\n{USAGE}",
+        lockup(&[wordmark, Line::from(TITLE)], ink)
+    ))
 }
 
 pub fn version(ink: Option<Ink>) -> String {
@@ -39,7 +42,21 @@ pub fn version(ink: Option<Ink>) -> String {
         Span::styled("rodeo", name),
         Span::raw(format!(" {}", env!("CARGO_PKG_VERSION"))),
     ]);
-    lockup(&[line], ink)
+    framed(&lockup(&[line], ink))
+}
+
+fn framed(text: &str) -> String {
+    let lines: Vec<String> = text
+        .lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::new()
+            } else {
+                format!("  {line}")
+            }
+        })
+        .collect();
+    format!("\n{}\n", lines.join("\n"))
 }
 
 fn lockup(beside: &[Line<'_>], ink: Option<Ink>) -> String {
@@ -107,35 +124,36 @@ mod tests {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
     #[test]
-    fn plain_help_and_version_show_the_hat_shape() {
-        let hat = [
-            "    ██▄▄██",
-            "█▄  ██████  ▄█",
-            " ▀▀▀▀▀▀▀▀▀▀▀▀ ",
-            "     ████",
-            "     ████",
-            "     ████",
-        ];
-        let help = [
-            hat[0].to_owned(),
-            hat[1].to_owned(),
-            format!("{}   rodeo▍", hat[2]),
-            format!("{}        {TITLE}", hat[3]),
-            hat[4].to_owned(),
-            hat[5].to_owned(),
-            String::new(),
-            USAGE.to_owned(),
-        ];
-        assert_eq!(super::help(None), help.join("\n"));
-        let version = [
-            hat[0].to_owned(),
-            hat[1].to_owned(),
-            format!("{}   rodeo {VERSION}", hat[2]),
-            hat[3].to_owned(),
-            hat[4].to_owned(),
-            hat[5].to_owned(),
-        ];
-        assert_eq!(super::version(None), version.join("\n"));
+    fn plain_version_is_framed_and_indented() {
+        let expected = format!(
+            "\n      ██▄▄██\n  █▄  ██████  ▄█\n   ▀▀▀▀▀▀▀▀▀▀▀▀    rodeo {VERSION}\n       ████\n       ████\n       ████\n"
+        );
+        assert_eq!(super::version(None), expected);
+    }
+
+    #[test]
+    fn plain_help_is_framed_and_indented() {
+        let out = super::help(None);
+        let lines: Vec<&str> = out.split('\n').collect();
+        assert_eq!(lines[0], "");
+        assert_eq!(lines[1], "      ██▄▄██");
+        assert_eq!(lines[2], "  █▄  ██████  ▄█");
+        assert_eq!(lines[3], "   ▀▀▀▀▀▀▀▀▀▀▀▀    rodeo▍");
+        assert_eq!(lines[4], format!("       ████        {TITLE}"));
+        assert_eq!(lines[6], "       ████");
+        assert_eq!(lines[7], "");
+        assert_eq!(lines[8], "  usage:");
+        assert_eq!(
+            lines[9],
+            "    rodeo [--session <name>]   open rodeo on an hc session"
+        );
+        assert_eq!(lines[14], "");
+        assert_eq!(
+            lines[15],
+            "  Detach with the detach key (prefix+q). Terminals keep running in hc."
+        );
+        assert_eq!(lines[16], "");
+        assert_eq!(lines.len(), 17);
     }
 
     #[test]
@@ -146,17 +164,19 @@ mod tests {
         };
         let accent = "\x1b[38;2;232;103;60m";
         let out = super::version(Some(ink));
-        let lines: Vec<&str> = out.lines().collect();
-        assert_eq!(lines[0], "    ██▄▄██");
-        assert_eq!(lines[1], "█▄  \x1b[48;2;232;103;60m▀▀▀▀▀▀\x1b[49m  ▄█");
+        let lines: Vec<&str> = out.split('\n').collect();
+        assert_eq!(lines[0], "");
+        assert_eq!(lines[1], "      ██▄▄██");
+        assert_eq!(lines[2], "  █▄  \x1b[48;2;232;103;60m▀▀▀▀▀▀\x1b[49m  ▄█");
         assert_eq!(
-            lines[2],
-            format!(" ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m {VERSION}")
+            lines[3],
+            format!("   ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m {VERSION}")
         );
-        for line in &lines[3..] {
-            assert_eq!(*line, format!("     {accent}████\x1b[0m"));
+        for line in &lines[4..7] {
+            assert_eq!(*line, format!("       {accent}████\x1b[0m"));
         }
-        assert_eq!(lines.len(), 6);
+        assert_eq!(lines[7], "");
+        assert_eq!(lines.len(), 8);
     }
 
     #[test]
@@ -166,16 +186,16 @@ mod tests {
             accent: ratatui::style::Color::Blue,
         };
         let out = help(Some(ink));
-        let lines: Vec<&str> = out.lines().collect();
-        assert_eq!(
-            lines[2],
-            " ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m\x1b[38;5;4m▍\x1b[0m"
-        );
+        let lines: Vec<&str> = out.split('\n').collect();
         assert_eq!(
             lines[3],
-            format!("     \x1b[38;5;4m████\x1b[39m        {TITLE}")
+            "   ▀▀▀▀▀▀▀▀▀▀▀▀    \x1b[1mrodeo\x1b[0m\x1b[38;5;4m▍\x1b[0m"
         );
-        assert!(out.ends_with(USAGE));
+        assert_eq!(
+            lines[4],
+            format!("       \x1b[38;5;4m████\x1b[39m        {TITLE}")
+        );
+        assert!(out.ends_with("running in hc.\n"));
     }
 
     #[test]

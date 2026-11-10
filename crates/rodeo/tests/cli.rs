@@ -108,7 +108,10 @@ fn no_color_gets_the_plain_hat_on_a_tty() {
         screen.contains(&format!("{BRIM}   rodeo {version}")),
         "{screen:?}"
     );
-    assert!(screen.contains("█▄  ██████  ▄█"), "{screen:?}");
+    assert!(
+        screen.starts_with("\n      ██▄▄██\n  █▄  ██████  ▄█\n"),
+        "{screen:?}"
+    );
 }
 
 #[test]
@@ -128,10 +131,18 @@ fn a_pipe_gets_plain_help_and_version() {
         assert!(out.status.success());
         let text = String::from_utf8(out.stdout).expect("utf-8");
         assert!(!text.contains('\x1b'), "{text:?}");
-        let lines: Vec<&str> = text.lines().collect();
-        assert_eq!(lines[0], "    ██▄▄██");
-        assert_eq!(lines[1], "█▄  ██████  ▄█");
-        assert_eq!(lines[2], format!("{BRIM}   {beside}"));
-        assert_eq!(lines[5], "     ████");
+        assert!(text.starts_with("\n      ██▄▄██\n"), "{text:?}");
+        assert!(
+            text.ends_with(".\n\n") || text.ends_with("████\n\n"),
+            "{text:?}"
+        );
+        let lines: Vec<&str> = text.split('\n').collect();
+        assert_eq!(lines[0], "");
+        assert_eq!(lines[1], "      ██▄▄██");
+        assert_eq!(lines[2], "  █▄  ██████  ▄█");
+        assert_eq!(lines[3], format!("  {BRIM}   {beside}"));
+        assert_eq!(lines[6], "       ████");
+        assert_eq!(lines[lines.len() - 2], "");
+        assert_eq!(lines[lines.len() - 1], "");
     }
 }
