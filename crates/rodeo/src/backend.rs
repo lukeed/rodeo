@@ -332,20 +332,15 @@ mod tests {
     }
 
     #[test]
-    fn clearing_never_asks_the_host_where_the_cursor_is() {
-        let viewport = ratatui::Viewport::Fixed(ratatui::layout::Rect::new(0, 0, 4, 2));
-        let mut terminal = ratatui::Terminal::with_options(
-            HostBackend::new(Vec::new()),
-            ratatui::TerminalOptions { viewport },
-        )
-        .unwrap();
-        terminal.backend_mut().set_cursor_position((2, 1)).unwrap();
+    fn the_cursor_position_never_asks_the_host() {
+        let mut backend = HostBackend::new(Vec::new());
+        backend.set_cursor_position((2, 1)).unwrap();
         let started = std::time::Instant::now();
-        terminal.clear().unwrap();
+        assert_eq!(backend.get_cursor_position().unwrap(), Position::new(2, 1));
         assert!(started.elapsed() < std::time::Duration::from_millis(100));
-        let out = String::from_utf8(terminal.backend().out.clone()).unwrap();
+        let out = String::from_utf8(backend.out.clone()).unwrap();
         assert!(!out.contains("\x1b[6n"), "{out:?}");
-        assert!(out.ends_with("\x1b[2;3H"), "{out:?}");
+        assert_eq!(out, "\x1b[2;3H");
     }
 
     #[test]
