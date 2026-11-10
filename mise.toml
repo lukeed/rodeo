@@ -3,7 +3,11 @@ wrappers = { cargo = { command = "mbx", env = { MBX_CARGO_SHIM_MODE = "1" } } }
 [tools]
 mr-boxington = "1.29.2"
 zig = "0.15.2"
+bun = "1.4.4"
+jactionlint = "2.5.0"
+shellcheck = "0.11.0"
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.146"
+"github:rust-cross/cargo-zigbuild" = "0.24.1"
 
 [tools.rust]
 version = "1.99.1"
@@ -11,13 +15,16 @@ profile = "default"
 components = ["clippy", "rustfmt"]
 
 [tasks.check]
-depends = ["fmt", "clippy", "test"]
+depends = ["fmt", "clippy", "actionlint", "test"]
 
 [tasks.fmt]
 run = "cargo fmt --check"
 
 [tasks.clippy]
-run = "cargo clippy --all-targets -- -D warnings"
+run = "mbx clippy --all-targets -- -D warnings"
+
+[tasks.actionlint]
+run = "jactionlint"
 
 [tasks.test]
-run = "cargo nextest run --status-level fail --final-status-level fail"
+run = "mbx nextest run --status-level fail --final-status-level fail"
