@@ -6,7 +6,7 @@ How to cut a release, what each workflow makes, and the one-time setup they need
 
 1. Set `version` in `[workspace.package]` in the root `Cargo.toml`. Run `cargo check` so `Cargo.lock` follows.
 2. Run `mise run check`.
-3. Commit, for example `chore: release v0.2.0`.
+3. Commit only the version change as `release: vX.Y.Z`, for example `release: v0.3.0`.
 4. Tag that commit and push: `git tag -a v0.2.0 -m v0.2.0 && git push origin main v0.2.0`.
 
 A tag always sits on its own release commit, the one that sets the version. Never tag another commit, even when the version is already right: bump it.
