@@ -156,6 +156,7 @@ fn key_defaults() {
     let expected = [
         ("help", "prefix+?"),
         ("settings", "prefix+s"),
+        ("machines", "prefix+m"),
         ("new_workspace", "prefix+shift+n"),
         ("new_worktree", "prefix+shift+g"),
         ("open_worktree", ""),
@@ -213,7 +214,7 @@ fn key_defaults() {
         ("resize_pane_right", ""),
         ("toggle_sidebar", "prefix+b"),
     ];
-    assert_eq!(binding_fields().count(), 58);
+    assert_eq!(binding_fields().count(), 59);
     for (field, default) in expected {
         assert_eq!(default_binding(field), Some(default), "{field}");
     }

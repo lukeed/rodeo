@@ -86,6 +86,8 @@ pub fn editor_command(path: &str) -> String {
     )
 }
 
+pub type After = Box<dyn FnOnce(&mut App, Option<i32>)>;
+
 pub struct Spec {
     pub argv: Vec<String>,
     pub machine: Option<String>,
@@ -94,6 +96,7 @@ pub struct Spec {
     pub title: String,
     pub width: Option<PopupSize>,
     pub height: Option<PopupSize>,
+    pub after: Option<After>,
 }
 
 pub struct Popup {
@@ -103,6 +106,8 @@ pub struct Popup {
     pub pane: Option<Pane>,
     pub geometry: Option<Geometry>,
     seq: u64,
+    exit: Option<i32>,
+    after: Option<After>,
 }
 
 impl Popup {
@@ -155,6 +160,10 @@ impl App {
     }
 
     pub fn open_popup(&mut self, command: &CustomCommand) {
+        if self.view.space.is_none() {
+            self.show_error("no active workspace");
+            return;
+        }
         let (env, live) = self.active_env();
         let cwd = self.popup_cwd(live);
         let spec = Spec {
@@ -165,8 +174,11 @@ impl App {
             title: "popup".to_owned(),
             width: command.width,
             height: command.height,
+            after: None,
         };
-        self.start_popup(spec);
+        if let Err(error) = self.start_popup(spec) {
+            self.show_error(error);
+        }
     }
 
     pub fn edit_scrollback(&mut self) {
@@ -215,7 +227,7 @@ impl App {
                         return;
                     }
                 };
-                app.start_popup(Spec {
+                let started = app.start_popup(Spec {
                     argv: vec!["/bin/sh".into(), "-c".into(), editor_command(&path)],
                     machine,
                     cwd,
@@ -223,26 +235,24 @@ impl App {
                     title: String::new(),
                     width: Some(PopupSize::Percent(100)),
                     height: Some(PopupSize::Percent(100)),
+                    after: None,
                 });
+                if let Err(error) = started {
+                    app.show_error(error);
+                }
             }
         });
     }
 
-    fn start_popup(&mut self, spec: Spec) {
+    pub fn start_popup(&mut self, spec: Spec) -> Result<(), &'static str> {
         if self.popup.is_some() {
-            self.show_error("popup already open");
-            return;
-        }
-        if self.view.space.is_none() {
-            self.show_error("no active workspace");
-            return;
+            return Err("popup already open");
         }
         let Some(client) = self.client() else {
-            return;
+            return Err("hc is not connected");
         };
         let Some(geometry) = geometry(spec.width, spec.height, self.regions.surface) else {
-            self.show_error("terminal area too small for popup");
-            return;
+            return Err("terminal area too small for popup");
         };
         let size = (geometry.inner.width, geometry.inner.height);
         self.popup_seq += 1;
@@ -254,6 +264,8 @@ impl App {
             pane: None,
             geometry: Some(geometry),
             seq,
+            exit: None,
+            after: spec.after,
         });
         self.view.overlay = None;
         self.view.mode = Mode::Terminal;
@@ -283,11 +295,12 @@ impl App {
                     app.popup_started(seq, qualify(id, machine.as_deref()), size);
                 }
                 Err(error) => {
-                    app.close_popup(seq);
                     app.show_error(format!("cannot start the popup: {error}"));
+                    app.close_popup(seq);
                 }
             }
         });
+        Ok(())
     }
 
     fn popup_owner(&self) -> String {
@@ -432,7 +445,13 @@ impl App {
                 }
             }
             Some(Output::Resize { .. }) => {}
-            Some(Output::Closed(_)) | None => self.close_popup(seq),
+            Some(Output::Closed(ending)) => {
+                if let Some(popup) = self.popup.as_mut() {
+                    popup.exit = ending.exit_code;
+                }
+                self.close_popup(seq);
+            }
+            None => self.close_popup(seq),
         }
     }
 
@@ -454,6 +473,9 @@ impl App {
             Mode::Navigate
         };
         self.relayout();
+        if let Some(after) = popup.after.take() {
+            after(self, popup.exit);
+        }
     }
 
     pub fn fit_popup(&mut self) {

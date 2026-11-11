@@ -22,7 +22,7 @@ use crate::wire::{CONTROL, Codec, Frame, Incoming, Kind, read_size};
 
 pub const GENERATION: u32 = 1;
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
-pub const METHODS: [&str; 16] = [
+pub const METHODS: [&str; 19] = [
     "hello",
     "server.status",
     "terminal.run",
@@ -39,6 +39,9 @@ pub const METHODS: [&str; 16] = [
     "doc.set",
     "machine.list",
     "machine.exec",
+    "machine.rename",
+    "machine.rm",
+    "machine.connect",
 ];
 
 #[derive(Debug)]
@@ -539,8 +542,8 @@ mod tests {
             Err(Mismatch::Generation(Some(2)))
         );
         assert_eq!(
-            check(&hello(&METHODS[..15], 1)),
-            Err(Mismatch::Methods(vec!["machine.exec".into()]))
+            check(&hello(&METHODS[..18], 1)),
+            Err(Mismatch::Methods(vec!["machine.connect".into()]))
         );
     }
 }

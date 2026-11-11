@@ -92,18 +92,23 @@ fn segments(app: &App, styles: &Styles) -> Vec<(String, Style)> {
     }
     match app.view.mode {
         Mode::Terminal => Vec::new(),
-        Mode::Prefix => vec![
-            (" PREFIX ".into(), badge),
-            (" ".into(), base),
-            ("esc".into(), key),
-            (" cancel  ".into(), base),
-            (app.keymap.prefix_label(), key),
-            (" send prefix  ".into(), base),
-            (rhs(app, Action::WorkspacePicker), key),
-            (" workspace nav  ".into(), base),
-            (rhs(app, Action::Help), key),
-            (" keybinds".into(), base),
-        ],
+        Mode::Prefix => {
+            let mut out = vec![
+                (" PREFIX ".into(), badge),
+                (" ".into(), base),
+                ("esc".into(), key),
+                (" cancel  ".into(), base),
+                (app.keymap.prefix_label(), key),
+                (" send prefix  ".into(), base),
+                (rhs(app, Action::WorkspacePicker), key),
+                (" workspace nav  ".into(), base),
+            ];
+            if let Some(machines) = app.keymap.rhs_label(Action::Machines) {
+                out.extend([(machines, key), (" machines  ".into(), base)]);
+            }
+            out.extend([(rhs(app, Action::Help), key), (" keybinds".into(), base)]);
+            out
+        }
         Mode::Navigate => {
             let mut out = vec![
                 (" NAVIGATE ".into(), badge),

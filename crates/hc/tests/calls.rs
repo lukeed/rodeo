@@ -254,6 +254,21 @@ async fn a_fresh_core_has_no_machines() {
 }
 
 #[tokio::test]
+async fn machine_calls_name_an_unknown_machine() {
+    let core = TestCore::start().await;
+    let client = core.client().await;
+    let rename = client.machine_rename("nope", "other").await;
+    assert_eq!(rename.expect_err("rename").kind(), Some("machine_unknown"));
+    let rm = client.machine_rm("nope").await;
+    assert_eq!(rm.expect_err("rm").kind(), Some("machine_unknown"));
+    let connect = client.machine_connect("nope").await;
+    assert_eq!(
+        connect.expect_err("connect").kind(),
+        Some("machine_unknown")
+    );
+}
+
+#[tokio::test]
 async fn a_slow_call_times_out_and_the_client_goes_on() {
     let core = TestCore::start().await;
     let client = core.client().await;

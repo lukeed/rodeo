@@ -95,6 +95,7 @@
 
 # help = "prefix+?"
 # settings = "prefix+s"
+# machines = "prefix+m"
 # detach = "prefix+q"
 # reload_config = "prefix+shift+r"
 # open_notification_target = "prefix+o"

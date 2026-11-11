@@ -48,7 +48,12 @@ impl TestCore {
     }
 
     pub async fn start() -> Self {
-        let core = Self::new().await;
+        Self::start_with(|_, _| {}).await
+    }
+
+    pub async fn start_with(prepare: impl FnOnce(&Path, &mut Env)) -> Self {
+        let mut core = Self::new().await;
+        prepare(core.root.path(), &mut core.env);
         if let Err(error) = start_server(&core.bin, &core.env).await {
             panic!("hc server start: {error}");
         }

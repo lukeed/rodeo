@@ -4,6 +4,8 @@ mod field;
 pub mod frame;
 pub mod goto;
 pub mod help;
+mod machine_add;
+pub mod machines;
 pub mod menu;
 mod rename;
 pub mod scroll;
@@ -19,6 +21,7 @@ use crate::model::Snapshot;
 
 pub use confirm::{CloseTarget, ConfirmClose};
 pub use field::TextField;
+pub use machines::{MachineManager, MachineOp};
 pub use rename::{Rename, RenameTarget};
 pub use worktree::{Worktree, WorktreeOp};
 
@@ -48,6 +51,7 @@ pub enum Request {
     Focus(Focus),
     Settings(config::Edit),
     Worktree(WorktreeOp),
+    Machine(MachineOp),
     Preview(Option<String>),
     Menu {
         target: MenuTarget,
@@ -106,6 +110,7 @@ pub enum Kind {
     OpenWorktree,
     RemoveWorktree,
     GlobalMenu,
+    Machines,
     ContextMenu(MenuTarget),
 }
 

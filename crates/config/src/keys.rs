@@ -62,6 +62,7 @@ macro_rules! keys_config {
 keys_config!(
     help,
     settings,
+    machines,
     new_workspace,
     new_worktree,
     open_worktree,

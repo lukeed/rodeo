@@ -69,8 +69,15 @@ impl Harness {
         Self::build(120, 40, "", Some(folder)).await
     }
 
+    pub async fn prepared(prepare: impl FnOnce(&std::path::Path, &mut hc::Env)) -> Self {
+        Self::on(TestCore::start_with(prepare).await, 120, 40, "", None).await
+    }
+
     async fn build(cols: u16, rows: u16, text: &str, folder: Option<&str>) -> Self {
-        let core = TestCore::start().await;
+        Self::on(TestCore::start().await, cols, rows, text, folder).await
+    }
+
+    async fn on(core: TestCore, cols: u16, rows: u16, text: &str, folder: Option<&str>) -> Self {
         let launch = folder.map_or_else(|| core.root().to_path_buf(), |f| core.root().join(f));
         std::fs::create_dir_all(&launch).expect("a launch folder");
         let dir = core.root().join("config").join("rodeo");

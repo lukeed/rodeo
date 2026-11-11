@@ -2,6 +2,7 @@ mod attach;
 mod conn;
 mod docs;
 mod extras;
+mod manager;
 mod notify;
 mod reconcile;
 mod resume;

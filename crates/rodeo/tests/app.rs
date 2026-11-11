@@ -80,10 +80,17 @@ fn typing_reaches_the_shell_across_a_host_focus_change() {
         h.until("the echo output", |h| h.screen().contains("back-42"))
             .await;
         assert!(h.app().view.host_focused);
-        let (_, row) = h.host_cursor().expect("a caret");
-        let screen = h.screen();
-        let line = screen.lines().nth(usize::from(row)).unwrap_or_default();
-        assert!(line.contains('$'), "the caret is on the prompt: {line:?}");
+        h.until("the caret on the next prompt", |h| {
+            let Some((_, row)) = h.host_cursor() else {
+                return false;
+            };
+            let screen = h.screen();
+            let lines: Vec<&str> = screen.lines().collect();
+            let output = lines.iter().rposition(|l| l.contains("back-42"));
+            let row = usize::from(row);
+            output.is_some_and(|at| row > at) && lines.get(row).is_some_and(|l| l.contains('$'))
+        })
+        .await;
     });
 }
 

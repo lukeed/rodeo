@@ -108,6 +108,7 @@ impl App {
             Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
             Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),
             Request::Worktree(op) => self.worktree_op(op),
+            Request::Machine(op) => self.machine_op(op),
             Request::Menu { target, pick } => self.menu_pick(target, pick),
             Request::Preview(theme) => self.preview_theme(theme.as_deref()),
             Request::Settings(edit) => match edit.write(&self.config_path) {

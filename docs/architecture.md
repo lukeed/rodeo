@@ -19,11 +19,11 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 - One tokio current-thread runtime with a `LocalSet`. All app state lives on that one thread, because `vt::Terminal` is not `Send`.
 - IO runs in tasks that send `Msg` values on one unbounded channel into the main loop: host input (crossterm `EventStream`), hc events, attach output per pane, call results, timers.
 - The main loop takes one message, updates state, marks the frame dirty, and draws at most once per ~8 ms (coalesce bursts of output). Drawing reads state; it never does IO.
-- Slow hc calls (`terminal.kill`, `terminal.list`, `machine.exec`) run in spawned tasks and report back with a `Msg`.
+- Slow hc calls (`terminal.kill`, `terminal.list`, `machine.exec`, `machine.rename`, `machine.rm`, `machine.connect`) run in spawned tasks and report back with a `Msg`.
 
 ## State
 
-- `Machines`: the local machine plus each connected, non-temporary machine from `machine.list`. Each has its name, state, its `herdr-app` doc (`Document` + version, or loading / undecodable), and its edit queue.
+- `Machines`: the local machine plus each connected, non-temporary machine from `machine.list`. Each has its name, state, its `herdr-app` doc (`Document` + version, or loading / undecodable), and its edit queue. `Machines` also keeps the last full `machine.list`, temporary machines too, for the machine manager. rodeo reads `machine.list` on connect, every 2.5 s, and after each machine call: hc sends no machine events.
 - `Terminals`: the hc fold from one unfiltered `events.subscribe` (unfiltered, so doc events arrive). It holds every machine's terminals as `machine/tN`.
 - `Panes`: one entry per terminal block in any doc: the `vt::Terminal`, the attach writer, its current size, whether rodeo has made itself the size leader.
 - `View` (private to this client, never in the doc): active machine and space, active tab per space, focused pane per tab, previous pane, zoom, mode, open overlay, sidebar preferences, scroll offsets, selection, copy mode state, pending highlights.
@@ -43,6 +43,12 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 - Output goes into the pane's VT. VT replies go back as AUTOMATIC_INPUT. Title, bell, clipboard and notification events from the VT go to the app.
 - A stream CLOSE with `exited` or `killed` removes the pane from the doc (as the app does). A lost kept terminal keeps its pane and reattaches on `restarted`.
 
+## Machine manager
+
+- An overlay (`overlay/machines.rs`) over `Snapshot::machine_list`. Its rename and remove steps use the same field and confirm dialogs as the other overlays.
+- Rename, remove and reconnect are RPC calls. Each call reads `machine.list` again before it reports, so the list and the result arrive together. An error shows in the manager, or in the mode bar when the manager is closed.
+- Add, log in and update run `hc machine ...` in a popup terminal on the local machine: `/bin/sh -c` keeps the popup open on a failure, then runs the hc binary from `hc::find_hc` with `HC_SOCKET` and `HC_SESSION` set to the core rodeo talks to. When the popup closes, rodeo reads `machine.list` and opens the manager again, with the exit code when it failed.
+
 ## Agents
 
 - A terminal is an agent when its hc `status` is not null. Displayed state follows the app (`app/model.rs:527-536`): `working`; `blocked` or `error` → blocked; else done when `turn > herdr.seen`, else idle.
@@ -59,7 +65,7 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 
 ## Input
 
-- Order per key: overlay, popup, copy mode, mode handler (terminal, prefix, navigate, resize), then the focused pane. `config::Keymap` resolves keys to actions.
+- Order per key: popup, overlay, copy mode, mode handler (terminal, prefix, navigate, resize), then the focused pane. `config::Keymap` resolves keys to actions.
 - One `Action` enum covers every key bind action. `actions::run(action)` is the single place that changes view state, queues doc edits, or calls hc.
 - Mouse events go through the `Hits` from the last frame.
 

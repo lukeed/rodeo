@@ -123,9 +123,16 @@ fn global_menu_opens_keybinds() {
         h.click(launcher.x + 1, launcher.y).await;
         assert_eq!(kind(&h), Some(Kind::GlobalMenu));
         let screen = h.screen();
-        for item in ["settings", "keybinds", "reload config", "detach"] {
+        for item in [
+            "settings",
+            "machines",
+            "keybinds",
+            "reload config",
+            "detach",
+        ] {
             assert!(screen.contains(item), "{screen}");
         }
+        h.press(KeyCode::Char('j'), KeyModifiers::NONE).await;
         h.press(KeyCode::Char('j'), KeyModifiers::NONE).await;
         h.press(KeyCode::Enter, KeyModifiers::NONE).await;
         assert_eq!(kind(&h), Some(Kind::Help));

@@ -16,12 +16,7 @@ use crate::text::truncate;
 use crate::view::Mode;
 
 const WHEEL: usize = 2;
-const MENU: [(&str, Action); 4] = [
-    ("settings", Action::Settings),
-    ("keybinds", Action::Help),
-    ("reload config", Action::ReloadConfig),
-    ("detach", Action::Detach),
-];
+const MENU: &[(&str, Action)] = crate::overlay::menu::GLOBAL;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {

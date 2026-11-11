@@ -145,6 +145,7 @@ pub struct ExecParams {
 
 const EXEC_DEFAULT: Duration = Duration::from_secs(60);
 const EXEC_GRACE: Duration = Duration::from_secs(10);
+const MACHINE_CONNECT: Duration = Duration::from_secs(30);
 
 #[allow(clippy::ref_option, reason = "serde passes a reference to the field")]
 fn seconds<S: serde::Serializer>(timeout: &Option<Duration>, s: S) -> Result<S::Ok, S::Error> {
@@ -324,6 +325,32 @@ impl Client {
     pub async fn machines(&self) -> Result<Vec<MachineView>, HcError> {
         let list: Machines = self.call("machine.list", json!({})).await?;
         Ok(list.machines)
+    }
+
+    pub async fn machine_rename(
+        &self,
+        machine: &str,
+        new_name: &str,
+    ) -> Result<MachineView, HcError> {
+        self.call(
+            "machine.rename",
+            json!({"machine": machine, "new_name": new_name}),
+        )
+        .await
+    }
+
+    pub async fn machine_rm(&self, machine: &str) -> Result<(), HcError> {
+        let _: serde::de::IgnoredAny = self.call("machine.rm", json!({"machine": machine})).await?;
+        Ok(())
+    }
+
+    pub async fn machine_connect(&self, machine: &str) -> Result<MachineView, HcError> {
+        self.call_within(
+            "machine.connect",
+            json!({"machine": machine}),
+            MACHINE_CONNECT.max(self.timeout()),
+        )
+        .await
     }
 
     pub async fn exec(&self, params: &ExecParams) -> Result<Exec, HcError> {

@@ -110,6 +110,7 @@ impl Keymap {
             entry(self.prefixes_label(), "prefix mode"),
             entry(self.or_unset(Action::Help), "keybinds"),
             entry(self.or_unset(Action::Settings), "settings"),
+            entry(self.or_unset(Action::Machines), "machines"),
             entry(self.or_unset(Action::Detach), "detach"),
             entry(self.or_unset(Action::ReloadConfig), "reload config"),
             entry(

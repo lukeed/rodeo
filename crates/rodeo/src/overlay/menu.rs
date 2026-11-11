@@ -102,8 +102,9 @@ pub fn clamp(screen: Rect, x: u16, y: u16, (w, h): (u16, u16)) -> Rect {
     )
 }
 
-const GLOBAL: &[(&str, Action)] = &[
+pub const GLOBAL: &[(&str, Action)] = &[
     ("settings", Action::Settings),
+    ("machines", Action::Machines),
     ("keybinds", Action::Help),
     ("reload config", Action::ReloadConfig),
     ("detach", Action::Detach),

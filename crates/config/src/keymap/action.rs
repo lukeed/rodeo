@@ -2,6 +2,7 @@
 pub enum Action {
     Help,
     Settings,
+    Machines,
     NewWorkspace,
     NewWorktree,
     OpenWorktree,
@@ -104,6 +105,7 @@ pub(crate) const NAVIGATE_FIELDS: &[(&str, &str, Action)] = &[
 pub(crate) const ACTION_FIELDS: &[(&str, &str, Slot)] = &[
     ("help", "prefix+?", Slot::Action(Action::Help)),
     ("settings", "prefix+s", Slot::Action(Action::Settings)),
+    ("machines", "prefix+m", Slot::Action(Action::Machines)),
     (
         "new_workspace",
         "prefix+shift+n",
@@ -271,6 +273,7 @@ pub(crate) const ACTION_FIELDS: &[(&str, &str, Slot)] = &[
 pub(crate) const RESOLVE_ORDER: &[Action] = &[
     Action::Help,
     Action::Settings,
+    Action::Machines,
     Action::WorkspacePicker,
     Action::NewWorkspace,
     Action::NewWorktree,

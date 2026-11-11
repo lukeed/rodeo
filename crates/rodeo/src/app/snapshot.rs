@@ -45,8 +45,10 @@ impl App {
                 stale_spaces.push(row);
             }
         }
+        let machines = self.machine_rows();
         Snapshot {
-            machines: self.machine_rows(),
+            machine_list: self.machine_list(&machines),
+            machines,
             spaces,
             tabs: self.tab_rows(),
             panes,
@@ -84,6 +86,7 @@ impl App {
             .iter()
             .map(|m| {
                 let (status, auth, why) = self.machine_status(m);
+                let info = m.info.as_ref();
                 MachineRow {
                     name: m.name.clone(),
                     label: m.label().to_owned(),
@@ -102,9 +105,41 @@ impl App {
                     status,
                     auth,
                     why,
+                    target: info.map(|i| i.target.clone()).unwrap_or_default(),
+                    via: info.is_some_and(|i| i.via),
+                    temporary: false,
                 }
             })
             .collect()
+    }
+
+    fn machine_list(&self, sidebar: &[MachineRow]) -> Vec<MachineRow> {
+        let temporary = self
+            .machines
+            .views()
+            .iter()
+            .filter(|v| v.temporary)
+            .map(|view| {
+                let (status, auth, why) = view_status(&view.state, view.why.clone());
+                MachineRow {
+                    name: Some(view.name.clone()),
+                    label: view.name.clone(),
+                    state: view.state.clone(),
+                    connected: view.is_connected(),
+                    status,
+                    auth,
+                    why,
+                    target: view.target.clone(),
+                    via: view.via,
+                    temporary: true,
+                    ..MachineRow::default()
+                }
+            });
+        let mut list: Vec<MachineRow> = sidebar.iter().cloned().chain(temporary).collect();
+        if let Some(rest) = list.get_mut(1..) {
+            rest.sort_by(|a, b| a.name.cmp(&b.name));
+        }
+        list
     }
 
     fn machine_status(&self, machine: &Machine) -> (MachineStatus, bool, Option<String>) {
@@ -125,11 +160,7 @@ impl App {
                 SlotState::Loading => (MachineStatus::Connecting, false, None),
                 SlotState::Ready => (MachineStatus::Online, false, None),
             },
-            "connecting" => (MachineStatus::Connecting, false, why),
-            "unreachable" => (MachineStatus::Reconnecting, false, why),
-            "needs_login" => (MachineStatus::Attention, true, why),
-            "needs_update" => (MachineStatus::Attention, false, why),
-            _ => (MachineStatus::Disabled, false, why),
+            word => view_status(word, why),
         }
     }
 
@@ -299,4 +330,15 @@ fn is_stale(machine: &Machine) -> bool {
     !machine.is_local()
         && machine.slot.version() > 0
         && !(machine.is_connected() && machine.slot.is_ready())
+}
+
+fn view_status(state: &str, why: Option<String>) -> (MachineStatus, bool, Option<String>) {
+    match state {
+        "connected" => (MachineStatus::Online, false, None),
+        "connecting" => (MachineStatus::Connecting, false, why),
+        "unreachable" => (MachineStatus::Reconnecting, false, why),
+        "needs_login" => (MachineStatus::Attention, true, why),
+        "needs_update" => (MachineStatus::Attention, false, why),
+        _ => (MachineStatus::Disabled, false, why),
+    }
 }

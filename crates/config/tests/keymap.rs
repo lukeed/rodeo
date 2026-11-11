@@ -702,6 +702,7 @@ fn prefix_mode() {
     assert_eq!(keymap.resolve_prefix(ch('y')), PrefixKey::Drop);
     let every = [
         ('s', Action::Settings),
+        ('m', Action::Machines),
         ('w', Action::WorkspacePicker),
         ('g', Action::Goto),
         ('q', Action::Detach),
@@ -783,7 +784,8 @@ fn navigate_mode() {
         nav(key(KeyCode::Char('['), CTRL)),
         Some(NavigateKey::Cancel)
     );
-    assert_eq!(nav(ch('m')), None);
+    assert_eq!(nav(ch('m')), Some(NavigateKey::Run(Action::Machines)));
+    assert_eq!(nav(ch('u')), None);
 
     assert_eq!(
         keymap.resolve_navigate(ch('c'), true),
@@ -908,6 +910,7 @@ fn help_global_navigation_custom() {
             ("ctrl+b / ctrl+a", "prefix mode"),
             ("prefix+?", "keybinds"),
             ("prefix+s", "settings"),
+            ("prefix+m", "machines"),
             ("prefix+q", "detach"),
             ("prefix+shift+r", "reload config"),
             ("prefix+o", "open notification target"),
@@ -1019,4 +1022,41 @@ fn help_filter() {
         config::filter_help(keymap.help_groups(), "nothing-here")
     );
     assert_eq!(config::filter_help(keymap.help_groups(), "").len(), 5);
+}
+
+#[test]
+fn machines_binding_moves_and_unbinds() {
+    let keymap = Keymap::default();
+    assert_eq!(keymap.label(Action::Machines).as_deref(), Some("prefix+m"));
+    assert_eq!(
+        keymap.resolve_prefix(ch('m')),
+        PrefixKey::Run(Action::Machines)
+    );
+    assert_eq!(
+        keymap.resolve_navigate(ch('m'), false),
+        Some(NavigateKey::Run(Action::Machines))
+    );
+
+    let moved = self::keymap("machines = \"prefix+shift+m\"\n");
+    assert_eq!(moved.resolve_prefix(ch('m')), PrefixKey::Drop);
+    assert_eq!(
+        moved.resolve_prefix(ch('M')),
+        PrefixKey::Run(Action::Machines)
+    );
+    assert_eq!(
+        moved.resolve_navigate(ch('M'), false),
+        Some(NavigateKey::Run(Action::Machines))
+    );
+    assert_eq!(moved.resolve_navigate(ch('m'), false), None);
+
+    let direct = self::keymap("machines = \"ctrl+alt+m\"\n");
+    assert_eq!(
+        direct.resolve_terminal(key(KeyCode::Char('m'), CTRL | ALT)),
+        Some(TerminalKey::Run(Action::Machines))
+    );
+
+    let unbound = self::keymap("machines = \"\"\n");
+    assert_eq!(unbound.label(Action::Machines), None);
+    assert_eq!(unbound.resolve_prefix(ch('m')), PrefixKey::Drop);
+    assert_eq!(unbound.resolve_navigate(ch('m'), false), None);
 }

@@ -16,6 +16,9 @@ pub struct MachineRow {
     pub status: MachineStatus,
     pub auth: bool,
     pub why: Option<String>,
+    pub target: String,
+    pub via: bool,
+    pub temporary: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -107,6 +110,7 @@ pub struct AgentRow {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Snapshot {
     pub machines: Vec<MachineRow>,
+    pub machine_list: Vec<MachineRow>,
     pub spaces: Vec<SpaceRow>,
     pub tabs: Vec<TabRow>,
     pub panes: Vec<PaneRow>,
@@ -127,6 +131,7 @@ impl Default for Snapshot {
     fn default() -> Self {
         Self {
             machines: Vec::new(),
+            machine_list: Vec::new(),
             spaces: Vec::new(),
             tabs: Vec::new(),
             panes: Vec::new(),

@@ -17,7 +17,7 @@ use ratatui::style::{Color, Style};
 
 use crate::app::App;
 use crate::layout::COMPACT_SIDEBAR;
-use crate::model::{AgentRow, MachineStatus, Snapshot, SpaceRow};
+use crate::model::{AgentRow, MachineRow, MachineStatus, Snapshot, SpaceRow};
 
 pub use entries::{Entry, block, entries, parent_key};
 pub use machines::has_diagnostic;
@@ -256,6 +256,18 @@ pub fn status_look(
         MachineStatus::Attention => ("!", "attention", palette.red),
         MachineStatus::Disabled => ("·", "disabled", palette.overlay0),
     }
+}
+
+pub fn status_text(machine: &MachineRow, palette: &Palette) -> (String, Color) {
+    let (glyph, word, color) = status_look(machine.status, palette);
+    let text = if machine.auth {
+        "! auth".to_owned()
+    } else if machine.status == MachineStatus::Attention {
+        "! error".to_owned()
+    } else {
+        format!("{glyph} {word}")
+    };
+    (text, color)
 }
 
 pub fn draw(app: &mut App, snapshot: &Snapshot, buf: &mut Buffer, area: Rect) -> Hits {

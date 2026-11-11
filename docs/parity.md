@@ -32,7 +32,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Session | hc | An hc session (`HC_SESSION`). `rodeo --session <name>` sets it. |
 | Client / server | hc | hc is the server. rodeo is a client with no server of its own. Detach quits rodeo; terminals keep running. |
 | Multiple clients, per-client view | match | Each rodeo client has its own focus and view. The last active viewer sets a terminal's size (hc rule). |
-| Connected machines (endpoints) | hc | `machine.list`, each machine's own `herdr-app` doc (`on`), and `machine/tN` terminal addresses. Temporary machines are not shown. |
+| Connected machines (endpoints) | hc | `machine.list`, each machine's own `herdr-app` doc (`on`), and `machine/tN` terminal addresses. The sidebar does not show temporary machines; the machine manager does, marked `temp`. |
 
 ## Modes
 
@@ -53,6 +53,7 @@ Every `[keys]` field, with Herdr's defaults and binding syntax (1.1 to 1.3: modi
 | `prefix` | `ctrl+b` | match | String or array. Hidden `extra_prefixes` accepted. |
 | `help` | `prefix+?` | match | |
 | `settings` | `prefix+s` | match | |
+| `machines` | `prefix+m` | hc | Deliberate difference: rodeo only, Herdr has no such key. Opens the machine manager (see Overlays). As with every `prefix+X` binding, the bare `m` opens it in navigate mode; on a machine row of the multi-machine sidebar, that machine is selected. |
 | `new_workspace` | `prefix+shift+n` | match | New space in the doc, folder from `terminal.new_cwd`. |
 | `new_worktree` | `prefix+shift+g` | hc | `git worktree add` with `machine.exec` on the space's machine, into `worktrees.directory`, then a new space there. Same layout as the app's worktree mod. |
 | `open_worktree` | unset | hc | `git worktree list` with `machine.exec`. |
@@ -105,7 +106,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 |---|---|---|
 | Desktop layout: sidebar left, tab bar top or bottom, pane surface | match | |
 | Mobile layout (`cols <= ui.mobile_width_threshold`): 2-row header, the full pane split below it, mobile switcher | match | |
-| Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. In the multi-machine sidebar, NAVIGATE shows `↑/↓ move` in place of `↑/↓ workspace`, then `←/→ fold` on a machine row or group parent, or `← machine` on another space row. |
+| Mode bar (PREFIX, NAVIGATE, RESIZE, COPY, COPY search, ERROR) | match | Same segments and key labels. The navigate-mode `update ready` segment is dropped. PREFIX shows `m machines` after `w workspace nav` (the `machines` key; left out when it is unbound). In the multi-machine sidebar, NAVIGATE shows `↑/↓ move` in place of `↑/↓ workspace`, then `←/→ fold` on a machine row or group parent, or `← machine` on another space row. |
 | Expanded sidebar: spaces section, agents section, section split, footer with `menu` button | match | |
 | Compact collapsed sidebar (4-column status rail), hidden mode | match | |
 | Multi-machine sidebar (machine headers, per-machine spaces, machine states) | hc | From `machine.list` and each machine's doc. A click on a machine row opens its last focused space; on an empty machine it makes that machine active without a focus change. `new`, `new_tab` and `new_workspace` then target the active machine: a tab goes to its last focused space, or a first workspace is made there. |
@@ -141,8 +142,9 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Confirm close | match | |
 | Worktree create, open, remove | hc | `machine.exec git`. |
 | Context menu: workspace, tab, pane | match | Pane menu "Send right-clicks to pane" writes the `herdr.right-click=program` label the app also reads. |
-| Global menu | match | Items: settings, keybinds, reload config, detach. "update ready" and "what's new" are dropped. |
+| Global menu | match | Items: settings, machines, keybinds, reload config, detach. Deliberate difference: `machines` is rodeo only. It sits after settings, because both open a manager, and Herdr's items keep their order. The mobile switcher menu has the same items. "update ready" and "what's new" are dropped. |
 | Settings: theme, indicators, sound, toast | match | Writes rodeo's `config.toml`. |
+| Machine manager | hc | Deliberate difference: rodeo only, Herdr TUI has no machine manager. One row per machine in `machine.list`: Local first, then by name, temporary machines marked `temp`, each with its ssh target (left out when it is the machine's name; `via` and the command for a `--via` machine) and the sidebar's state glyph and word. A status line (busy, done, error) sits in the title row, or above the footer when it is long. One footer line: `↵ actions  a add  esc close`; a click on a hint runs it. `↵` (or a right-click on a row) opens a menu beside the list, like the right-click menus: reconnect `c`, log in again `l`, update hc there `u`, rename `r`, remove `x` (a confirm says its terminals keep running there). Each key also works in the list without the menu. On a narrow screen the menu opens inside a taller list. The local machine offers only `a`. Rename, remove and reconnect call `machine.rename`, `machine.rm` and `machine.connect`. Add, log in and update run `hc machine add|login|update` in a popup terminal, so ssh passwords, host keys and the "copy hc there?" question work. The popup runs the hc binary rodeo finds, with `HC_SOCKET` and `HC_SESSION` of rodeo's own core. A failed command keeps the popup open until enter. hc errors show in the manager. |
 | Settings: integrations | dropped | Agent integrations belong to the app and hc (OSC 7501 reporting). |
 | Onboarding | dropped | Its only job was to lead to integrations. `onboarding` in config is accepted and ignored. |
 | Product announcement | dropped | Herdr product news. |

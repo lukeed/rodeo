@@ -143,12 +143,14 @@ impl PaneRef<'_> {
 #[derive(Debug)]
 pub struct Machines {
     list: Vec<Machine>,
+    views: Vec<hc::MachineView>,
 }
 
 impl Default for Machines {
     fn default() -> Self {
         Self {
             list: vec![Machine::local()],
+            views: Vec::new(),
         }
     }
 }
@@ -178,7 +180,12 @@ impl Machines {
         self.list.len() > 1
     }
 
+    pub fn views(&self) -> &[hc::MachineView] {
+        &self.views
+    }
+
     pub fn update(&mut self, views: Vec<hc::MachineView>) -> Vec<Option<String>> {
+        self.views.clone_from(&views);
         let views: Vec<hc::MachineView> = views.into_iter().filter(|v| !v.temporary).collect();
         self.list
             .retain(|m| m.is_local() || views.iter().any(|v| Some(v.name.as_str()) == m.key()));
@@ -275,6 +282,8 @@ mod tests {
         assert_eq!(changed, [Some("zed".to_owned()), Some("arc".to_owned())]);
         let names: Vec<_> = machines.iter().map(Machine::label).collect();
         assert_eq!(names, ["Local", "arc", "zed"]);
+        let all: Vec<_> = machines.views().iter().map(|v| v.name.as_str()).collect();
+        assert_eq!(all, ["zed", "tmp", "arc"]);
         assert!(!machines.get(Some("arc")).unwrap().is_connected());
         machines.update(vec![view("arc", "connected", false)]);
         let names: Vec<_> = machines.iter().map(Machine::label).collect();

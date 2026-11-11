@@ -2,7 +2,7 @@ use config::{Action, NavigateKey, PrefixKey, ResizeKey, TerminalKey};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::app::App;
-use crate::view::Mode;
+use crate::view::{Mode, Nav};
 
 impl App {
     pub(super) fn key(&mut self, key: KeyEvent) {
@@ -140,6 +140,14 @@ impl App {
                     self.leave_navigate();
                     self.run_action(action);
                 }
+            }
+            NavigateKey::Run(Action::Machines) => {
+                let picked = match &self.view.nav {
+                    Some(Nav::Machine(name)) => name.clone(),
+                    _ => None,
+                };
+                self.leave_navigate();
+                self.open_machines(picked);
             }
             NavigateKey::Run(action) => {
                 self.leave_navigate();

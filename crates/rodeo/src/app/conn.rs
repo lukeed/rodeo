@@ -244,16 +244,20 @@ impl App {
         };
         self.spawn(async move {
             let result = client.machines().await;
-            move |app: &mut App| match result {
-                Ok(views) => {
-                    let changed = app.machines.update(views);
-                    for machine in changed {
-                        app.pump(machine.as_deref());
-                    }
-                    app.after_docs();
-                }
-                Err(error) => tracing::debug!(%error, "machine.list failed"),
-            }
+            move |app: &mut App| app.machines_listed(result)
         });
+    }
+
+    pub fn machines_listed(&mut self, result: Result<Vec<hc::MachineView>, hc::HcError>) {
+        match result {
+            Ok(views) => {
+                let changed = self.machines.update(views);
+                for machine in changed {
+                    self.pump(machine.as_deref());
+                }
+                self.after_docs();
+            }
+            Err(error) => tracing::debug!(%error, "machine.list failed"),
+        }
     }
 }

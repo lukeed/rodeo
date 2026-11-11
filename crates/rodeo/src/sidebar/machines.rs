@@ -6,7 +6,7 @@ use super::expanded::{collapse_toggle, footer, header};
 use super::spaces::{self, Group, List, Row};
 use super::{
     AgentHit, Ctx, Hits, MachineHit, Metrics, SpaceHit, compact_sections, ordered_agents, put,
-    put_right, sections, status_look,
+    put_right, sections, status_look, status_text,
 };
 use crate::agents::State;
 use crate::model::{MachineRow, MachineStatus, SpaceRow};
@@ -96,17 +96,13 @@ pub fn machine_row(
     let p = ctx.palette;
     let folded = collapsed(machine, ctx);
     paint_row(buf, rect, machine, folded, ctx);
-    let (glyph, word, color) = status_look(machine.status, p);
-    let signal = if machine.auth {
-        "! auth".to_owned()
-    } else if machine.status == MachineStatus::Attention {
-        "! error".to_owned()
-    } else if machine.name.is_none() {
+    let (text, color) = status_text(machine, p);
+    let signal = if machine.name.is_none() {
         String::new()
     } else if machine.status == MachineStatus::Online {
-        glyph.to_owned()
+        status_look(machine.status, p).0.to_owned()
     } else {
-        format!("{glyph} {word}")
+        text
     };
     let signal_width = crate::text::width(&signal).min(rect.width);
     let marker = if folded { "▸" } else { "▾" };

@@ -18,6 +18,7 @@ impl App {
             Action::Help => self.open_overlay(&Kind::Help),
             Action::Goto => self.open_overlay(&Kind::Goto),
             Action::Settings => self.open_overlay(&Kind::Settings),
+            Action::Machines => self.open_machines(None),
             Action::NewWorktree => self.open_overlay(&Kind::NewWorktree),
             Action::OpenWorktree => self.open_overlay(&Kind::OpenWorktree),
             Action::RemoveWorktree => self.open_overlay(&Kind::RemoveWorktree),
