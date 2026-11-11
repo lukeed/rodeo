@@ -34,6 +34,7 @@ Or pick your installer:
 ```sh
 $ brew install lukeed/tap/rodeo
 $ mise use -g packslip:github.com/lukeed/rodeo
+$ packslip install github.com/lukeed/rodeo
 ```
 
 See the [install docs](https://rodeo.lukeed.com/docs/install/) for the details, or build from source (see [Development](#development)).

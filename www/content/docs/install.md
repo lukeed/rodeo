@@ -1,6 +1,6 @@
 ---
 title: Install
-summary: Put the `rodeo` binary on your PATH with one of three installers, or build it from source. rodeo runs on Linux and macOS, on top of `hc`.
+summary: Put the `rodeo` binary on your PATH with one of four installers, or build it from source. rodeo runs on Linux and macOS, on top of `hc`.
 group: Get started
 order: 1
 ---
@@ -45,18 +45,26 @@ The checksum comes from the same place as the archive. It finds a broken downloa
 $ brew install lukeed/tap/rodeo
 ```
 
-## mise and packslip
+## mise
 
-Every release carries `packslip.sigstore.json`, a [packslip](https://packslip.dev) manifest. The release workflow signs it with its own identity, with no long-lived key. It states the digest, the platform and the executables of each archive. mise reads it through its packslip backend:
+mise installs rodeo through its packslip backend, which checks the release's signed manifest (see [packslip](#packslip)):
 
 ```sh
 $ mise use -g packslip:github.com/lukeed/rodeo
 ```
 
-Or use packslip on its own:
+## packslip
+
+Every release carries `packslip.sigstore.json`, a [packslip](https://packslip.dev) manifest. The release workflow signs it with its own identity, with no long-lived key. It states the digest, the platform and the executables of each archive. [Install packslip](https://packslip.dev/docs/install/), then:
 
 ```sh
 $ packslip install github.com/lukeed/rodeo
+```
+
+To accept only a release signed in this repository, even on a first install, pin its signer:
+
+```sh
+$ packslip install github.com/lukeed/rodeo --pin ps1_kxeqmeversvmriqiimqnct4q2y
 ```
 
 ## Release archives

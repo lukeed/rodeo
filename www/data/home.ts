@@ -16,6 +16,7 @@ export default {
     ["curl", "curl -fsSL https://rodeo.lukeed.com/install.sh | sh"],
     ["homebrew", "brew install lukeed/tap/rodeo"],
     ["mise", "mise use -g packslip:github.com/lukeed/rodeo"],
+    ["packslip", "packslip install github.com/lukeed/rodeo"],
   ],
   keys: [
     ["ctrl+b", "prefix"],
