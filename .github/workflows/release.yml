@@ -227,3 +227,15 @@ jobs:
           fi
           git commit -m "chore: rodeo ${TAG#v}"
           git push
+
+  # The site goes out last, so it never names a release that installers cannot fetch yet.
+  site:
+    needs: homebrew
+    permissions:
+      contents: read
+    uses: ./.github/workflows/www.yml
+    with:
+      ref: ${{ inputs.tag || github.ref_name }}
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

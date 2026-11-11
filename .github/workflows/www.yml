@@ -5,11 +5,20 @@ on:
     branches: [main]
     paths:
       - "www/**"
-      - "Cargo.toml"
-      - "crates/rodeo/src/cli.rs"
       - "mise.toml"
       - ".github/workflows/www.yml"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: The release tag to build the site from
+        required: true
+        type: string
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
 
 permissions:
   contents: read
@@ -30,7 +39,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      # A site change between releases must not publish an unreleased version, help text or config.
+      - name: Use the released crate files
+        if: ${{ !inputs.ref }}
+        working-directory: .
+        run: |
+          tag=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          if [ -z "$tag" ]; then
+            echo "no release tag yet; building from this commit"
+            exit 0
+          fi
+          echo "crate files from $tag"
+          git checkout "$tag" -- Cargo.toml crates/rodeo/src/cli.rs crates/config/src/default.toml
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: bun
