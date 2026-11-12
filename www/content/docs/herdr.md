@@ -19,6 +19,19 @@ Herdr TUI runs its own server, and the desktop app runs on `hc`. They share no t
 
 rodeo will drift from Herdr TUI over time.
 
+## Migrate from Herdr
+
+Your Herdr TUI workspaces do not move on their own. They live in the `herdr` server, and `hc` cannot take over its terminals. [hcm](https://github.com/lukeed/hcm) rebuilds them in `hc` from Herdr's latest session snapshot: the same workspaces, tab names and folders, with a new shell in each tab. It can also resume each Claude or Codex conversation.
+
+```sh
+$ mise use -g packslip:github.com/lukeed/hcm
+$ hcm plan     # what it would do; changes nothing
+$ hcm apply    # build the workspaces in hc
+$ hcm resume   # after herdr server stop: resume each agent
+```
+
+Run `hcm resume` only after Herdr has stopped, or each conversation runs twice. The [hcm readme](https://github.com/lukeed/hcm#readme) has the details.
+
 ## What `hc` does now
 
 Sessions, restore and remote machines belonged to the Herdr server. `hc` covers them now.
