@@ -234,6 +234,16 @@ impl App {
         self.connect();
     }
 
+    /// Lay out for `screen` when the host terminal changed size, even before its resize event arrives.
+    pub fn fit(&mut self, screen: Rect) {
+        if screen == self.screen {
+            return;
+        }
+        self.screen = screen;
+        self.view.reveal_tab = true;
+        self.relayout();
+    }
+
     pub fn handle(&mut self, msg: Msg) {
         match msg {
             Msg::Host(event) => self.host_event(event),

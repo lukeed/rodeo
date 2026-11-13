@@ -829,3 +829,16 @@ fn dragging_a_tab_reorders_the_doc() {
         assert_eq!(doc.spaces[0].tabs[1].id, first);
     });
 }
+
+#[test]
+fn a_draw_before_the_resize_event_fits_the_shrunk_screen() {
+    run(|| async {
+        let mut h = Harness::sized(159, 41, "").await;
+        h.ready().await;
+        h.screen();
+        h.runner.terminal.backend_mut().resize(159, 40);
+        let screen = h.screen();
+        assert_eq!(screen.lines().count(), 40);
+        assert_eq!(h.app().screen, ratatui::layout::Rect::new(0, 0, 159, 40));
+    });
+}

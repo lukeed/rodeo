@@ -28,11 +28,7 @@ impl App {
             }
             Event::FocusGained => self.focus_changed(true),
             Event::FocusLost => self.focus_changed(false),
-            Event::Resize(cols, rows) => {
-                self.screen = Rect::new(0, 0, cols, rows);
-                self.view.reveal_tab = true;
-                self.relayout();
-            }
+            Event::Resize(cols, rows) => self.fit(Rect::new(0, 0, cols, rows)),
         }
         self.dirty = true;
     }

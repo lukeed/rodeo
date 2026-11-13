@@ -30,6 +30,7 @@ pub struct Cursor {
 
 pub fn draw(app: &mut App, frame: &mut Frame) {
     let area = frame.area();
+    app.fit(area);
     let snapshot = app.snapshot();
     let mut hits = Hits {
         surface: app.regions.surface,
