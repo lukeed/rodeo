@@ -28,6 +28,7 @@ Names: Herdr TUI's "workspace" is the doc's "space". The UI keeps Herdr's words 
 | Zoom, focus, active workspace, active tab | match | Private to each rodeo client, as in the app. Never in the doc. Saved on quit beside the client preferences and restored on the next start, as Herdr's server keeps them. |
 | Agent | hc | A terminal with an hc status (OSC 7501 reports). Kind from `status.app`. |
 | Agent state blocked / working / done / idle / unknown | hc | From `status.state` and `turn` against the shared `herdr.seen` label, as the app computes it. `error` shows as blocked. `status: null` is not an agent. Agents that do not report OSC 7501 show no state (Herdr detected them from the screen). |
+| Sub-agents (children) | hc | Deliberate difference: Herdr TUI has none; rodeo follows the desktop app's `agents` and `peek` mods. A live terminal without a pane whose hc `parent` (mapped to the viewing core's names, as the app's `src/hc.rs` does) leads to a pane's terminal is listed under that pane, depth first with tree lines: under its agent row in the agents panel (not in the narrow rail), the mobile switcher and the goto picker. One line: state glyph, `name` (else template, agent, address), title. State: `error` is blocked, `done` is idle, no status is unknown. Children never toast or play sounds, stay out of space and tab rollups, and are skipped by `previous_agent`, `next_agent` and `focus_agent`; in `priority` sort an agent ranks by its most urgent child. A pick opens the child in a view-only popup at 80% × 80%: keys go to the child; the prefix enters prefix mode with its own bar (`esc cancel  <prefix> send prefix  <detach> close`), and only detach's key closes. Closing (that key, a click outside, or the child ending) detaches and never ends the child. Not yet: folding a parent's children, keeping a child as a tab, nesting children that have a pane. |
 | Seen tracking | hc | `herdr.seen=<turn>` label, raised only while a person looks at the pane, once per turn. Shared with the app. |
 | Session | hc | An hc session (`HC_SESSION`). `rodeo --session <name>` sets it. |
 | Client / server | hc | hc is the server. rodeo is a client with no server of its own. Detach quits rodeo; terminals keep running. |
@@ -124,7 +125,7 @@ Fixed keys in overlays and fields: keybind help, Goto picker, settings, name dia
 | Pane scrollbar | match | |
 | Selection highlight, copy mode cursor and search highlights | match | |
 | Link hover and click (OSC 8 and detected URLs) | match | |
-| Popup pane (custom command `popup`) | hc | |
+| Popup pane (custom command `popup`) | hc | Also shows a child terminal without a pane (see Sub-agents); that popup only detaches on close. |
 | Copy feedback toast ("copied") | match | |
 | Config diagnostic banner | match | Text says `rodeo config check`. |
 | Agent notification toasts | match | |

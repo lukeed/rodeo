@@ -55,6 +55,8 @@ pub struct AgentHit {
     pub pane: String,
     pub machine: Option<String>,
     pub stale: bool,
+    /// A child row's terminal; `pane` is then its parent's.
+    pub child: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -238,7 +240,7 @@ pub fn ordered_agents(snapshot: &Snapshot) -> Vec<&AgentRow> {
         AgentPanelSort::Priority => agents.sort_by(|a, b| {
             a.stale
                 .cmp(&b.stale)
-                .then(b.state.priority().cmp(&a.state.priority()))
+                .then(b.urgency().cmp(&a.urgency()))
                 .then(b.changed_ms.cmp(&a.changed_ms))
         }),
     }

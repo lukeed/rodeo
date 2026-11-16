@@ -893,3 +893,66 @@ fn the_prefix_bar_names_the_machines_key() {
         }
     });
 }
+
+#[test]
+fn children_on_a_machine_nest_under_their_agent() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let _second = add_box(&h);
+        let agent = h
+            .outside
+            .run(&hc::RunParams {
+                on: Some("box".into()),
+                line: Some(r"printf '\033]7501;state=working:app=pi\033\\'; sleep 60".into()),
+                labels: [
+                    ("herdr.space".to_owned(), "rs1".to_owned()),
+                    ("herdr.tab".to_owned(), "rt1".to_owned()),
+                ]
+                .into(),
+                ..hc::RunParams::default()
+            })
+            .await
+            .expect("an agent on box");
+        h.until("the agent on box", |h| {
+            h.app()
+                .snapshot()
+                .agents
+                .iter()
+                .any(|a| a.address.starts_with("box/"))
+        })
+        .await;
+        let parent = h
+            .app()
+            .snapshot()
+            .agents
+            .iter()
+            .find(|a| a.address.starts_with("box/"))
+            .map(|a| a.address.clone())
+            .expect("an agent row");
+        let child = h
+            .outside
+            .run(&hc::RunParams {
+                on: Some("box".into()),
+                parent: Some(rodeo::ids::split(&agent.address).1.to_owned()),
+                name: Some("helper".into()),
+                line: Some("sleep 60".into()),
+                ..hc::RunParams::default()
+            })
+            .await
+            .expect("a child on box");
+        h.until("the child under its agent", |h| {
+            h.app()
+                .snapshot()
+                .children
+                .iter()
+                .any(|c| c.root == parent && c.name == "helper")
+        })
+        .await;
+        let snapshot = h.app().snapshot();
+        assert!(snapshot.children[0].address.starts_with("box/"));
+        assert_eq!(snapshot.children[0].state, rodeo::agents::State::Unknown);
+        let _ = h.outside.kill(&child.address).await;
+        let _ = h.outside.kill(&agent.address).await;
+    });
+}

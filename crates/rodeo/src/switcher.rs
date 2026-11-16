@@ -9,7 +9,7 @@ use ratatui::text::{Line, Span};
 
 use crate::agents::State;
 use crate::app::App;
-use crate::model::Snapshot;
+use crate::model::{AgentRow, Snapshot};
 use crate::overlay::scroll::Bar;
 use crate::render::mobile::{SWITCH, switch_button};
 use crate::text::truncate;
@@ -22,6 +22,7 @@ const MENU: &[(&str, Action)] = crate::overlay::menu::GLOBAL;
 pub enum Target {
     Machine(Option<String>),
     Agent(String),
+    Child(String),
     NewWorkspace,
     Space(String),
     NewTab,
@@ -213,6 +214,40 @@ fn agents(ctx: &Ctx<'_>, items: &mut Vec<Item>) {
             ],
             bg,
             target: Some(Target::Agent(agent.pane.clone())),
+        });
+        if stale.is_some() {
+            continue;
+        }
+        child_items(ctx, agent, items);
+    }
+}
+
+fn child_items(ctx: &Ctx<'_>, agent: &AgentRow, items: &mut Vec<Item>) {
+    let p = ctx.palette;
+    for child in ctx.snapshot.children_of(&agent.address) {
+        let text = if child.title.is_empty() || child.title == child.name {
+            child.name.clone()
+        } else {
+            format!("{} · {}", child.name, child.title)
+        };
+        items.push(Item {
+            lines: vec![Line::from(vec![
+                Span::styled(
+                    format!("   {}", child.prefix),
+                    Style::new().fg(p.overlay0).bg(p.panel_bg),
+                ),
+                Span::styled(
+                    child.state.icon(ctx.indicators),
+                    Style::new().fg(child.state.color(p)).bg(p.panel_bg),
+                ),
+                Span::styled(" ", Style::new().bg(p.panel_bg)),
+                Span::styled(
+                    truncate(&text, usize::from(ctx.width.saturating_sub(7))),
+                    Style::new().fg(p.subtext0).bg(p.panel_bg),
+                ),
+            ])],
+            bg: p.panel_bg,
+            target: Some(Target::Child(child.address.clone())),
         });
     }
 }
@@ -620,6 +655,10 @@ impl App {
             Target::Agent(pane) => {
                 self.leave_switcher();
                 self.focus_pane(&pane);
+            }
+            Target::Child(address) => {
+                self.leave_switcher();
+                self.peek(&address);
             }
             Target::Space(space) => {
                 self.leave_switcher();

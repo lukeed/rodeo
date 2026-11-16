@@ -137,6 +137,7 @@ fn agents(buf: &mut Buffer, bottom: Rect, ctx: &Ctx<'_>, hits: &mut Hits) {
             pane: agent.pane.clone(),
             machine: None,
             stale: false,
+            child: None,
         });
     }
 }

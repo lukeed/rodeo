@@ -33,6 +33,14 @@ The sidebar lists every agent under the spaces, with its state, machine, space a
 
 `[ui.sidebar.agents]` sets what each row shows, and `rows_by_agent` gives one agent its own rows. Drag the line above the list to give it more or less room.
 
+## Helpers an agent starts
+
+When an agent starts a helper with `hc run`, `hc` records the agent as the helper's parent. A helper without a pane shows under its agent in the agent list, the mobile switcher and <kbd>prefix+g</kbd>, one line each, with the helpers it started below it. The Herdr app shows them the same way.
+
+A helper that reports no state shows `·`. A helper never shows done, because the agent finishing is the news, and it does not make toasts or sounds or change the state of its space. In `priority` order, an agent moves up to its most urgent helper.
+
+Click a helper, or pick it in the list, to look at it in a popup. Your keys go to the helper. Press <kbd>prefix</kbd>, then <kbd>q</kbd> (the `detach` key), or click outside to close the popup; <kbd>prefix</kbd> twice sends the prefix to the helper. The helper keeps running. `previous_agent`, `next_agent` and `focus_agent` skip helpers.
+
 | Keys | Does |
 | --- | --- |
 | <kbd>prefix+g</kbd> | Find an agent by name. In the list, <kbd>b</kbd> <kbd>w</kbd> <kbd>i</kbd> <kbd>d</kbd> show only blocked, working, idle or done agents, and <kbd>a</kbd> shows all. |

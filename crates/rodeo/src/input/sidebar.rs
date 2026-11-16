@@ -148,6 +148,8 @@ impl App {
         if let Some(agent) = hits.agent_at(x, y).cloned() {
             if agent.stale {
                 self.not_ready(agent.machine.as_deref());
+            } else if let Some(child) = &agent.child {
+                self.peek(child);
             } else {
                 self.focus_pane(&agent.pane);
             }

@@ -103,6 +103,7 @@ impl App {
             Request::Focus(crate::overlay::Focus::Space(space)) => self.focus_space(&space),
             Request::Focus(crate::overlay::Focus::Tab(tab)) => self.focus_tab(&tab),
             Request::Focus(crate::overlay::Focus::Pane(pane)) => self.focus_pane(&pane),
+            Request::Focus(crate::overlay::Focus::Peek(address)) => self.peek(&address),
             Request::Worktree(op) => self.worktree_op(op),
             Request::Machine(op) => self.machine_op(op),
             Request::Menu { target, pick } => self.menu_pick(target, pick),

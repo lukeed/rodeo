@@ -4,6 +4,7 @@ pub mod app;
 pub mod appearance;
 pub mod backend;
 pub mod brand;
+pub mod children;
 pub mod cli;
 pub mod clipboard;
 pub mod graphics;

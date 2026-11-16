@@ -54,6 +54,7 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 - A terminal is an agent when its hc `status` is not null. Displayed state follows the app (`app/model.rs:527-536`): `working`; `blocked` or `error` → blocked; else done when `turn > herdr.seen`, else idle.
 - rodeo raises `herdr.seen` to `turn` once per turn, only while the pane is visible, focused, and the host terminal has focus.
 - Toasts, sound and `open_notification_target` fire on state transitions seen in hc events.
+- Children (`children.rs`): live terminals without a pane whose `parent` chain leads to a pane's terminal, listed under it in `Snapshot::children`. They have no `Panes` entry, so they never toast or roll up; a pick attaches one in the popup with `peek` set, and closing detaches instead of killing.
 
 ## Layout and rendering
 

@@ -92,6 +92,16 @@ fn segments(app: &App, styles: &Styles) -> Vec<(String, Style)> {
     }
     match app.view.mode {
         Mode::Terminal => Vec::new(),
+        Mode::Prefix if app.popup.as_ref().is_some_and(|p| p.peek) => vec![
+            (" PREFIX ".into(), badge),
+            (" ".into(), base),
+            ("esc".into(), key),
+            (" cancel  ".into(), base),
+            (app.keymap.prefix_label(), key),
+            (" send prefix  ".into(), base),
+            (app.peek_close_label(), key),
+            (" close".into(), base),
+        ],
         Mode::Prefix => {
             let mut out = vec![
                 (" PREFIX ".into(), badge),

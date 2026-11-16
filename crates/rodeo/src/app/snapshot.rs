@@ -1,7 +1,7 @@
 use crate::agents::{self, State};
 use crate::machines::{LOCAL_LABEL, Machine, SpaceRef, TabRef};
 use crate::model::{
-    AgentRow, MachineRow, MachineStatus, PaneRow, Snapshot, SpaceRow, TabRow, Worktree,
+    AgentRow, ChildRow, MachineRow, MachineStatus, PaneRow, Snapshot, SpaceRow, TabRow, Worktree,
 };
 use crate::sync::State as SlotState;
 use crate::view::{Mode, Nav};
@@ -30,6 +30,15 @@ impl App {
             }
             spaces.push(row);
         }
+        let children = self.child_rows(&panes);
+        for agent in &mut agents {
+            agent.kids = agents::rollup(
+                children
+                    .iter()
+                    .filter(|c| c.root == agent.address)
+                    .map(|c| c.state),
+            );
+        }
         let mut stale_spaces = Vec::new();
         let mut stale_agents = Vec::new();
         for machine in self.machines.iter().filter(|m| is_stale(m)) {
@@ -53,6 +62,7 @@ impl App {
             tabs: self.tab_rows(),
             panes,
             agents,
+            children,
             stale_spaces,
             stale_agents,
             active_space: self.view.space.clone(),
@@ -248,8 +258,24 @@ impl App {
                 stale: space.stale,
                 labels: terminal.labels.clone(),
                 address,
+                kids: None,
             });
         }
+    }
+
+    fn child_rows(&self, panes: &[PaneRow]) -> Vec<ChildRow> {
+        let core = self.client().map(|c| c.hello().core.clone());
+        let machines = self.machines.views();
+        crate::children::rows(
+            panes.iter().filter_map(|p| p.address.as_deref()),
+            self.terminals.iter(),
+            |t| {
+                t.parent
+                    .as_deref()
+                    .filter(|p| !p.is_empty())
+                    .map(|p| crate::children::parent_address(p, core.as_ref(), machines))
+            },
+        )
     }
 
     fn pane_rows(&self, tab: TabRef<'_>, out: &mut Vec<PaneRow>) {

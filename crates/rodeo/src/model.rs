@@ -105,6 +105,29 @@ pub struct AgentRow {
     pub focused: bool,
     pub stale: bool,
     pub labels: BTreeMap<String, String>,
+    /// The most urgent state among its children.
+    pub kids: Option<State>,
+}
+
+impl AgentRow {
+    /// Its own state or its most urgent child's, for the priority sort.
+    pub fn urgency(&self) -> u8 {
+        self.state
+            .priority()
+            .max(self.kids.map_or(0, State::priority))
+    }
+}
+
+/// A live terminal without a pane that an agent started (`hc run`), under the pane it came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChildRow {
+    pub address: String,
+    /// The address of the pane terminal it hangs under.
+    pub root: String,
+    pub prefix: String,
+    pub name: String,
+    pub title: String,
+    pub state: State,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,6 +138,7 @@ pub struct Snapshot {
     pub tabs: Vec<TabRow>,
     pub panes: Vec<PaneRow>,
     pub agents: Vec<AgentRow>,
+    pub children: Vec<ChildRow>,
     pub stale_spaces: Vec<SpaceRow>,
     pub stale_agents: Vec<AgentRow>,
     pub active_space: Option<String>,
@@ -136,6 +160,7 @@ impl Default for Snapshot {
             tabs: Vec::new(),
             panes: Vec::new(),
             agents: Vec::new(),
+            children: Vec::new(),
             stale_spaces: Vec::new(),
             stale_agents: Vec::new(),
             active_space: None,
@@ -163,12 +188,15 @@ impl Snapshot {
         let mut agents: Vec<&AgentRow> = self.agents.iter().collect();
         if self.agent_sort == AgentPanelSort::Priority {
             agents.sort_by(|a, b| {
-                b.state
-                    .priority()
-                    .cmp(&a.state.priority())
+                b.urgency()
+                    .cmp(&a.urgency())
                     .then(b.changed_ms.cmp(&a.changed_ms))
             });
         }
         agents
+    }
+
+    pub fn children_of<'a>(&'a self, root: &'a str) -> impl Iterator<Item = &'a ChildRow> + 'a {
+        self.children.iter().filter(move |c| c.root == root)
     }
 }

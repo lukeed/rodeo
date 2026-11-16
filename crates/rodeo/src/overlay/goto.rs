@@ -10,7 +10,7 @@ use super::scroll::Bar;
 use super::{Ctx, Drawn, Focus, Kind, Outcome, Overlay, Request, TextField};
 use crate::agents::State;
 use crate::ids;
-use crate::model::{MachineRow, PaneRow, Snapshot, SpaceRow};
+use crate::model::{ChildRow, MachineRow, PaneRow, Snapshot, SpaceRow};
 use crate::text::width;
 
 const PAGE: isize = 8;
@@ -21,6 +21,7 @@ pub enum Target {
     Machine(Option<String>),
     Space(String),
     Pane(String),
+    Child(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,7 +39,7 @@ pub struct Row {
 
 impl Row {
     fn is_pane(&self) -> bool {
-        matches!(self.target, Target::Pane(_))
+        matches!(self.target, Target::Pane(_) | Target::Child(_))
     }
 }
 
@@ -105,6 +106,20 @@ fn pane_row(pane: &PaneRow, index: usize, multiple_tabs: bool, workspace: &str) 
     }
 }
 
+fn child_row(child: &ChildRow, pane: &Row) -> Row {
+    Row {
+        depth: pane.depth + 1,
+        label: child.name.clone(),
+        meta: child.title.clone(),
+        detail: format!("{} / {}", pane.detail, ids::split(&child.address).1),
+        agent: None,
+        status: Some(child.state),
+        stale: false,
+        current: false,
+        target: Target::Child(child.address.clone()),
+    }
+}
+
 fn pane_matches(row: &Row, pane: &PaneRow, search: &Search<'_>) -> bool {
     search.text(&row.label)
         || search.text(&row.meta)
@@ -142,11 +157,23 @@ fn space_rows(
         let row = pane_row(pane, index, multiple_tabs, &space.name);
         index += 1;
         let tab_hit = matched || search.text(&pane.tab_label);
-        if search.status(row.status.unwrap_or(State::Unknown))
-            && (tab_hit || pane_matches(&row, pane, search))
-        {
+        let hit = tab_hit || pane_matches(&row, pane, search);
+        let kids: Vec<Row> = pane
+            .address
+            .as_deref()
+            .map(|address| snapshot.children_of(address))
+            .into_iter()
+            .flatten()
+            .map(|child| child_row(child, &row))
+            .filter(|kid| {
+                search.status(kid.status.unwrap_or(State::Unknown))
+                    && (hit || search.text(&kid.label) || search.text(&kid.meta))
+            })
+            .collect();
+        if (search.status(row.status.unwrap_or(State::Unknown)) && hit) || !kids.is_empty() {
             children.push(row);
         }
+        children.extend(kids);
     }
     let shown = !search.filtering()
         || !children.is_empty()
@@ -325,6 +352,7 @@ impl Goto {
         }
         let focus = match &row.target {
             Target::Pane(pane) => Focus::Pane(pane.clone()),
+            Target::Child(address) => Focus::Peek(address.clone()),
             Target::Space(space) => Focus::Space(space.clone()),
             Target::Machine(name) => {
                 let Some(space) = snapshot.spaces.iter().find(|s| &s.machine == name) else {

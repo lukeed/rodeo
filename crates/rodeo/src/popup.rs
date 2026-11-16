@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use config::{CustomCommand, PopupSize};
+use config::{Action, CustomCommand, PopupSize};
 use crossterm::event::{MouseEvent, MouseEventKind};
 use hc::{AttachOptions, ExecParams, Output, RunParams, Size};
 use ratatui::buffer::Buffer;
@@ -13,6 +13,7 @@ use vt::{Point, Selection, SelectionKind};
 use crate::app::{App, Msg};
 use crate::clipboard::shell_quote;
 use crate::ids::{local, qualify};
+use crate::overlay::help::typed;
 use crate::panes::{Link, Pane};
 use crate::render::Cursor;
 use crate::view::Mode;
@@ -105,6 +106,8 @@ pub struct Popup {
     pub height: Option<PopupSize>,
     pub pane: Option<Pane>,
     pub geometry: Option<Geometry>,
+    /// Shows a terminal rodeo didn't start: closing detaches, and never ends it.
+    pub peek: bool,
     seq: u64,
     exit: Option<i32>,
     after: Option<After>,
@@ -115,6 +118,8 @@ impl Popup {
         self.pane.as_ref().map(|p| p.address.clone())
     }
 }
+
+const PEEK_SIZE: PopupSize = PopupSize::Percent(80);
 
 impl App {
     pub fn active_env(&self) -> (BTreeMap<String, String>, Option<String>) {
@@ -263,6 +268,7 @@ impl App {
             height: spec.height,
             pane: None,
             geometry: Some(geometry),
+            peek: false,
             seq,
             exit: None,
             after: spec.after,
@@ -303,6 +309,52 @@ impl App {
         Ok(())
     }
 
+    /// The key after the prefix that closes a peek: detach's, else `q`.
+    pub fn peek_close_label(&self) -> String {
+        self.keymap
+            .rhs_label(Action::Detach)
+            .unwrap_or_else(|| "q".to_owned())
+    }
+
+    /// Opens a running terminal (a child without a pane) in the popup, until
+    /// the prefix and the detach key, a click outside it, or its end.
+    pub fn peek(&mut self, address: &str) {
+        if self.popup.is_some() {
+            self.show_error("popup already open".to_owned());
+            return;
+        }
+        let Some(geometry) = geometry(Some(PEEK_SIZE), Some(PEEK_SIZE), self.regions.surface)
+        else {
+            self.show_error("terminal area too small for popup".to_owned());
+            return;
+        };
+        let name = self
+            .terminals
+            .get(address)
+            .map_or_else(|| address.to_owned(), crate::children::name);
+        let size = (geometry.inner.width, geometry.inner.height);
+        self.popup_seq += 1;
+        let seq = self.popup_seq;
+        self.popup = Some(Popup {
+            title: format!(
+                " {name} · {} {} close ",
+                self.keymap.prefix_label(),
+                self.peek_close_label()
+            ),
+            width: Some(PEEK_SIZE),
+            height: Some(PEEK_SIZE),
+            pane: None,
+            geometry: Some(geometry),
+            peek: true,
+            seq,
+            exit: None,
+            after: None,
+        });
+        self.view.overlay = None;
+        self.view.mode = Mode::Terminal;
+        self.popup_started(seq, address.to_owned(), size);
+    }
+
     fn popup_owner(&self) -> String {
         format!("{}:{}", self.hostname, std::process::id())
     }
@@ -328,9 +380,8 @@ impl App {
     }
 
     pub async fn end_popup(&mut self) {
-        let (Some(address), Some(client)) =
-            (self.popup.as_ref().and_then(Popup::address), self.client())
-        else {
+        let owned = self.popup.as_ref().filter(|p| !p.peek);
+        let (Some(address), Some(client)) = (owned.and_then(Popup::address), self.client()) else {
             return;
         };
         if let Ok(Err(error)) = tokio::time::timeout(QUIT_WAIT, client.kill(&address)).await
@@ -348,12 +399,15 @@ impl App {
             self.kill(address);
             return;
         };
+        let owned = !popup.peek;
         let mut pane = match Pane::new(address.clone(), size, options) {
             Ok(pane) => pane,
             Err(error) => {
                 self.show_error(format!("cannot start the popup: {error}"));
                 self.close_popup(seq);
-                self.kill(address);
+                if owned {
+                    self.kill(address);
+                }
                 return;
             }
         };
@@ -499,6 +553,26 @@ impl App {
         let Some(pane) = popup.pane.as_mut() else {
             return true;
         };
+        if popup.peek {
+            if self.view.mode == Mode::Prefix {
+                self.view.mode = Mode::Terminal;
+                let close = match self.keymap.rhs_label(Action::Detach) {
+                    Some(_) => self.keymap.prefixed(*key) == Some(Action::Detach),
+                    None => typed(key) == Some('q'),
+                };
+                if close {
+                    let seq = popup.seq;
+                    self.close_popup(seq);
+                    return true;
+                }
+                if !self.keymap.is_prefix(*key) {
+                    return true;
+                }
+            } else if self.keymap.is_prefix(*key) {
+                self.view.mode = Mode::Prefix;
+                return true;
+            }
+        }
         if self.keymap.is_image_paste(*key) {
             self.image_paste(Some(*key));
             return true;
@@ -538,6 +612,13 @@ impl App {
         };
         let inner = geometry.inner;
         if !inner.contains(Position::new(event.column, event.row)) {
+            let outside = !geometry
+                .outer
+                .contains(Position::new(event.column, event.row));
+            if popup.peek && outside && matches!(event.kind, MouseEventKind::Down(_)) {
+                let seq = popup.seq;
+                self.close_popup(seq);
+            }
             return true;
         }
         let (col, row) = (event.column - inner.x, event.row - inner.y);

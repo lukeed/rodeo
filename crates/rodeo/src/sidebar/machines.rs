@@ -366,6 +366,7 @@ fn compact_agents(buf: &mut Buffer, bottom: Rect, ctx: &Ctx<'_>, hits: &mut Hits
             pane: agent.pane.clone(),
             machine: ctx.machine_name(&agent.machine),
             stale: agent.stale,
+            child: None,
         });
     }
 }

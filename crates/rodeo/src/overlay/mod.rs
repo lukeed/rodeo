@@ -37,6 +37,8 @@ pub enum Focus {
     Space(String),
     Tab(String),
     Pane(String),
+    /// A running terminal without a pane, shown in the popup.
+    Peek(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

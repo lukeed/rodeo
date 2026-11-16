@@ -7,7 +7,7 @@ use super::Ctx;
 use super::entries::Entry;
 use super::tokens::{Span, draw, fit};
 use crate::agents::State;
-use crate::model::{AgentRow, SpaceRow};
+use crate::model::{AgentRow, ChildRow, SpaceRow};
 
 pub struct Look {
     pub focused: bool,
@@ -185,6 +185,35 @@ pub fn agent_lines(agent: &AgentRow, ctx: &Ctx<'_>) -> Vec<Vec<Span>> {
         return vec![vec![Span::icon(glyph, style)]];
     }
     lines
+}
+
+pub fn child_line(child: &ChildRow, ctx: &Ctx<'_>) -> Vec<Span> {
+    let p = ctx.palette;
+    let (glyph, style) = icon(child.state, ctx);
+    let mut spans = vec![
+        Span::icon(glyph, style),
+        Span::text(&child.name, Style::new().fg(p.subtext0)),
+    ];
+    if !child.title.is_empty() && child.title != child.name {
+        spans.push(Span::text(&child.title, Style::new().fg(p.overlay0)));
+    }
+    spans
+}
+
+pub fn draw_child(buf: &mut Buffer, rect: Rect, child: &ChildRow, spans: &[Span], ctx: &Ctx<'_>) {
+    let sep = Style::new().fg(ctx.palette.overlay0);
+    let x = super::put(
+        buf,
+        rect.x + 3,
+        rect.y,
+        rect.width.saturating_sub(3),
+        &child.prefix,
+        sep,
+    );
+    let right = rect.right().saturating_sub(1);
+    if x < right {
+        draw(buf, x, rect.y, right, &fit(spans, right - x, sep));
+    }
 }
 
 pub fn draw_agent(
