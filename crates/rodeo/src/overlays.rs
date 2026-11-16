@@ -143,6 +143,11 @@ impl App {
                     self.toggle_right_click(address);
                 }
             }
+            Pick::CopyTerminalId => {
+                if let Some(address) = address {
+                    self.copied(crate::ids::split(&address).1);
+                }
+            }
             Pick::ClosePane => self.request_close_pane(pane),
             _ => {}
         }

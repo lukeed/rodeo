@@ -22,6 +22,7 @@ pub enum Pick {
     SplitDown,
     Zoom,
     RightClick,
+    CopyTerminalId,
     ClosePane,
 }
 
@@ -39,6 +40,7 @@ pub struct PaneFlags {
     pub named: bool,
     pub focused: bool,
     pub right_click: bool,
+    pub terminal: bool,
 }
 
 pub fn space_items(flags: SpaceFlags) -> Vec<(&'static str, Pick)> {
@@ -97,8 +99,11 @@ pub fn pane_items(flags: PaneFlags) -> Vec<(&'static str, Pick)> {
         ("Split down", Pick::SplitDown),
         ("Zoom", Pick::Zoom),
         (right_click, Pick::RightClick),
-        ("Close pane", Pick::ClosePane),
     ]);
+    if flags.terminal {
+        items.push(("Copy terminal ID", Pick::CopyTerminalId));
+    }
+    items.push(("Close pane", Pick::ClosePane));
     items
 }
 
@@ -108,6 +113,7 @@ pub fn pane_flags(snapshot: &Snapshot, pane: &str) -> Option<PaneFlags> {
         named: row.title.is_some(),
         focused: snapshot.focused_pane.as_deref() == Some(pane),
         right_click: row.right_click,
+        terminal: row.address.is_some(),
     })
 }
 
@@ -260,7 +266,12 @@ mod tests {
             named: true,
             focused: false,
             right_click: true,
+            terminal: true,
         });
+        assert_eq!(
+            labels(&other)[labels(&other).len() - 2..],
+            ["Copy terminal ID", "Close pane"]
+        );
         assert_eq!(
             labels(&other)[..3],
             ["Rename pane", "Clear pane name", "Swap with focused pane"]

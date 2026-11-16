@@ -78,7 +78,7 @@ When two windows change the layout at the same moment, one change wins, and the 
 - Drag a split border to resize two panes. Drag a tab to move it. Drag the edge of the sidebar to change its width.
 - The wheel scrolls the pane. A program that asks for the mouse, such as `vim` or `htop`, gets the wheel instead.
 - Select text to copy it. Double-click a word to select it. Set `ui.copy_on_select = false` to copy with <kbd>ctrl+c</kbd> instead.
-- Right-click a space, tab or pane for its menu. Hold `ui.right_click_passthrough_modifier` to send a right-click to the program.
+- Right-click a space, tab or pane for its menu. Hold `ui.right_click_passthrough_modifier` to send a right-click to the program. A pane's menu has `Copy terminal ID`: the `HC_TERMINAL_ID` its program sees, such as `t7`, for `hc send`, `hc read` and agents on that machine.
 - Set `ui.mouse_capture = false` to give every click to your terminal.
 
 ## Copy mode

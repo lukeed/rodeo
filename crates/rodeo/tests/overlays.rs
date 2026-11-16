@@ -85,6 +85,35 @@ fn pane_menu_splits_the_clicked_pane() {
 }
 
 #[test]
+fn pane_menu_copies_the_terminal_id() {
+    run(|| async {
+        use base64::Engine;
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let address = h.focused_address().expect("a terminal");
+        let pane = h.app().hits.panes[0].clone();
+        h.mouse(
+            MouseEventKind::Down(MouseButton::Right),
+            pane.content.x + 5,
+            pane.content.y + 5,
+        )
+        .await;
+        assert!(h.screen().contains("Copy terminal ID"));
+        for _ in 0..5 {
+            h.press(KeyCode::Down, KeyModifiers::NONE).await;
+        }
+        h.press(KeyCode::Enter, KeyModifiers::NONE).await;
+        assert_eq!(kind(&h), None);
+        let encoded = base64::engine::general_purpose::STANDARD.encode(address.as_bytes());
+        h.until("the id on the clipboard", |h| {
+            h.host_output()
+                .contains(&format!("\x1b]52;c;{encoded}\x07"))
+        })
+        .await;
+    });
+}
+
+#[test]
 fn tab_and_workspace_menus_rename() {
     run(|| async {
         let mut h = Harness::start().await;
