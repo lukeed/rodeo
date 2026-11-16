@@ -23,7 +23,7 @@ Library crates never depend on `rodeo`. Only `rodeo` does IO to the host termina
 
 ## State
 
-- `Machines`: the local machine plus each connected, non-temporary machine from `machine.list`. Each has its name, state, its `herdr-app` doc (`Document` + version, or loading / undecodable), and its edit queue. `Machines` also keeps the last full `machine.list`, temporary machines too, for the machine manager. rodeo reads `machine.list` on connect, every 2.5 s, and after each machine call: hc sends no machine events.
+- `Machines`: the local machine plus each connected, non-temporary machine from `machine.list`. Each has its name, state, its `herdr-app` doc (`Document` + version, or loading / undecodable), and its edit queue. `Machines` also keeps the last full `machine.list`, temporary machines too, for the machine manager. rodeo reads `machine.list` on connect, every 2.5 s, and after each machine call: hc sends no machine events. Machines hidden in the client's preferences stay in the list (docs are still read) but drop out of `Machines::spaces()`, so every view, navigation, attach and notification skips them.
 - `Terminals`: the hc fold from one unfiltered `events.subscribe` (unfiltered, so doc events arrive). It holds every machine's terminals as `machine/tN`.
 - `Panes`: one entry per terminal block in any doc: the `vt::Terminal`, the attach writer, its current size, whether rodeo has made itself the size leader.
 - `View` (private to this client, never in the doc): active machine and space, active tab per space, focused pane per tab, previous pane, zoom, mode, open overlay, sidebar preferences, scroll offsets, selection, copy mode state, pending highlights.

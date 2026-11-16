@@ -174,7 +174,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn multi(&self) -> bool {
-        self.snapshot.machines.len() > 1 || !self.snapshot.online
+        self.snapshot.machine_view()
     }
 
     pub fn navigating(&self) -> bool {

@@ -893,3 +893,117 @@ fn the_prefix_bar_names_the_machines_key() {
         }
     });
 }
+
+fn sidebar_machines(h: &mut Harness) -> Vec<Option<String>> {
+    h.screen();
+    h.app()
+        .hits
+        .sidebar
+        .machines
+        .iter()
+        .map(|m| m.name.clone())
+        .collect()
+}
+
+#[test]
+fn hidden_machines_leave_the_sidebar_and_stay_connected() {
+    run(|| async {
+        let mut h = Harness::start().await;
+        h.ready().await;
+        let _second = add_box(&h);
+        let agent = h
+            .outside
+            .run(&hc::RunParams {
+                on: Some("box".into()),
+                labels: [
+                    ("herdr.space".to_owned(), "rs1".to_owned()),
+                    ("herdr.tab".to_owned(), "rt1".to_owned()),
+                ]
+                .into(),
+                ..hc::RunParams::default()
+            })
+            .await
+            .expect("a terminal on box");
+        h.until("the remote space", |h| {
+            h.screen();
+            h.app()
+                .hits
+                .sidebar
+                .spaces
+                .iter()
+                .any(|s| s.key == "box/rs1")
+        })
+        .await;
+
+        open_manager(&mut h).await;
+        assert!(overlay_text(&mut h).contains("h hide  a add  esc close"));
+        h.press(KeyCode::Char('h'), KeyModifiers::NONE).await;
+        assert!(h.app().machines.is_hidden(None));
+        let text = overlay_text(&mut h);
+        assert!(text.contains("Local  hidden"), "{text}");
+        assert!(text.contains("h show"), "{text}");
+        pick(&mut h, "box").await;
+        h.press(KeyCode::Char('h'), KeyModifiers::NONE).await;
+        let error = manager_error(&mut h).expect("an error");
+        assert!(error.contains("cannot hide box"), "{error}");
+        assert!(!h.app().machines.is_hidden(Some("box")));
+        h.press(KeyCode::Esc, KeyModifiers::NONE).await;
+        h.until("only box in the sidebar", |h| {
+            sidebar_machines(h) == [Some("box".to_owned())]
+        })
+        .await;
+        assert!(
+            h.app()
+                .hits
+                .sidebar
+                .spaces
+                .iter()
+                .all(|s| s.key.starts_with("box/"))
+        );
+        assert_eq!(h.app().view.space.as_deref(), Some("box/rs1"));
+        let saved = config::Preferences::load(&h.app().prefs_path);
+        assert_eq!(saved.hidden_machines, [None]);
+
+        open_manager(&mut h).await;
+        h.press(KeyCode::Char('h'), KeyModifiers::NONE).await;
+        assert!(!h.app().machines.is_hidden(None));
+        pick(&mut h, "box").await;
+        h.press(KeyCode::Char('h'), KeyModifiers::NONE).await;
+        assert!(h.app().machines.is_hidden(Some("box")));
+        h.press(KeyCode::Esc, KeyModifiers::NONE).await;
+        h.until("only Local in the sidebar", |h| {
+            h.screen();
+            !h.app().snapshot().machine_view()
+                && h.app()
+                    .hits
+                    .sidebar
+                    .spaces
+                    .iter()
+                    .all(|s| s.machine.is_none())
+        })
+        .await;
+        assert_eq!(listed(&h).await, ["box"], "box stays in hc");
+        let row = h
+            .app()
+            .snapshot()
+            .machine_list
+            .into_iter()
+            .find(|m| m.name.as_deref() == Some("box"))
+            .expect("box in the manager");
+        assert!(row.hidden && row.connected);
+
+        open_manager(&mut h).await;
+        pick(&mut h, "box").await;
+        h.press(KeyCode::Char('r'), KeyModifiers::NONE).await;
+        h.press(KeyCode::Char('c'), KeyModifiers::CONTROL).await;
+        h.typed("crate\r").await;
+        h.until("the renamed machine", |h| {
+            h.app().machines.get(Some("crate")).is_some()
+        })
+        .await;
+        assert_eq!(h.app().prefs.hidden_machines, [Some("crate".to_owned())]);
+        assert!(h.app().machines.is_hidden(Some("crate")));
+        let _ = h.outside.kill(&agent.address).await;
+        hc(&h, "t", &["machine", "rm", "crate"]);
+    });
+}

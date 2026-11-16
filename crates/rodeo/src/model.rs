@@ -19,6 +19,7 @@ pub struct MachineRow {
     pub target: String,
     pub via: bool,
     pub temporary: bool,
+    pub hidden: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -157,6 +158,11 @@ impl Snapshot {
 
     pub fn active(&self) -> Option<&SpaceRow> {
         self.space(self.active_space.as_deref()?)
+    }
+
+    /// Machine rows in the sidebar: with any remote machine shown, or while hc is down.
+    pub fn machine_view(&self) -> bool {
+        !self.online || self.machines.iter().any(|m| m.name.is_some())
     }
 
     pub fn ordered_agents(&self) -> Vec<&AgentRow> {

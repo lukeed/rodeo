@@ -28,8 +28,7 @@ impl App {
         if self.regions.mobile || self.regions.sidebar.is_empty() {
             return false;
         }
-        let snapshot = self.snapshot();
-        snapshot.machines.len() > 1 || !snapshot.online
+        self.snapshot().machine_view()
     }
 
     pub fn nav_order(&self) -> Vec<Nav> {

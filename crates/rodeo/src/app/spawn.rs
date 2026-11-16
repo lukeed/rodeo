@@ -24,8 +24,15 @@ pub struct Spawn {
 
 impl App {
     pub fn active_machine(&self) -> Option<String> {
-        let space = self.view.space.as_deref()?;
-        self.machines.space(space)?.machine.map(str::to_owned)
+        match self
+            .view
+            .space
+            .as_deref()
+            .and_then(|s| self.machines.space(s))
+        {
+            Some(space) => space.machine.map(str::to_owned),
+            None => self.machines.shown().next().and_then(|m| m.name.clone()),
+        }
     }
 
     pub fn live_cwd(&self, pane: &str) -> Option<String> {

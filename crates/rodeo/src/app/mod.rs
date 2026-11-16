@@ -223,6 +223,8 @@ impl App {
             resume,
             config,
         };
+        app.machines
+            .set_hidden(app.prefs.hidden_machines.iter().cloned());
         for note in options.notes {
             app.toast_feedback(note);
         }

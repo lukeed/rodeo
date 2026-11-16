@@ -59,6 +59,10 @@ impl App {
     }
 
     pub fn machine_op(&mut self, op: MachineOp) {
+        if let MachineOp::Hide { machine, hide } = op {
+            self.hide_machine(machine, hide);
+            return;
+        }
         let Some(client) = self.client() else {
             self.machine_finished(Err("hc is not connected".to_owned()));
             return;
@@ -71,7 +75,12 @@ impl App {
                     .map(|_| None)
                     .map_err(|e| format!("cannot rename {machine}: {e}"));
                 let views = client.machines().await;
-                move |app: &mut App| app.machine_called(views, result)
+                move |app: &mut App| {
+                    if result.is_ok() {
+                        app.rename_hidden(&machine, Some(name));
+                    }
+                    app.machine_called(views, result);
+                }
             }),
             MachineOp::Remove { machine } => self.spawn(async move {
                 let result = client
@@ -80,7 +89,12 @@ impl App {
                     .map(|()| Some(format!("removed {machine}")))
                     .map_err(|e| format!("cannot remove {machine}: {e}"));
                 let views = client.machines().await;
-                move |app: &mut App| app.machine_called(views, result)
+                move |app: &mut App| {
+                    if result.is_ok() {
+                        app.rename_hidden(&machine, None);
+                    }
+                    app.machine_called(views, result);
+                }
             }),
             MachineOp::Connect { machine } => self.spawn(async move {
                 let result = client
@@ -115,7 +129,56 @@ impl App {
                 picked: Some(machine),
                 seek: None,
             }),
+            MachineOp::Hide { .. } => {}
         }
+    }
+
+    fn hide_machine(&mut self, machine: Option<String>, hide: bool) {
+        let label = machine.as_deref().unwrap_or(crate::machines::LOCAL_LABEL);
+        let others = self
+            .machines
+            .shown()
+            .any(|m| m.name != machine && m.is_connected());
+        if hide && !others {
+            self.machine_finished(Err(format!(
+                "cannot hide {label}: no other connected machine is shown"
+            )));
+            return;
+        }
+        let note = if hide {
+            format!("hid {label}")
+        } else {
+            format!("showing {label}")
+        };
+        let hidden = &mut self.prefs.hidden_machines;
+        hidden.retain(|m| *m != machine);
+        if hide {
+            hidden.push(machine);
+            hidden.sort();
+        }
+        self.hidden_changed();
+        self.machine_finished(Ok(Some(note)));
+    }
+
+    /// Keeps a hidden machine hidden across a rename, and forgets it on remove (`to` is `None`).
+    fn rename_hidden(&mut self, from: &str, to: Option<String>) {
+        let hidden = &mut self.prefs.hidden_machines;
+        let Some(at) = hidden.iter().position(|m| m.as_deref() == Some(from)) else {
+            return;
+        };
+        hidden.remove(at);
+        if let Some(to) = to {
+            hidden.push(Some(to));
+            hidden.sort();
+        }
+        self.hidden_changed();
+    }
+
+    fn hidden_changed(&mut self) {
+        self.machines
+            .set_hidden(self.prefs.hidden_machines.iter().cloned());
+        self.save_prefs();
+        self.after_docs();
     }
 
     fn machine_popup(&mut self, run: Run) {

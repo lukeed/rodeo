@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use doc::{Node, Space, Tab};
 
 use crate::ids::qualify;
@@ -144,6 +146,7 @@ impl PaneRef<'_> {
 pub struct Machines {
     list: Vec<Machine>,
     views: Vec<hc::MachineView>,
+    hidden: HashSet<Option<String>>,
 }
 
 impl Default for Machines {
@@ -151,6 +154,7 @@ impl Default for Machines {
         Self {
             list: vec![Machine::local()],
             views: Vec::new(),
+            hidden: HashSet::new(),
         }
     }
 }
@@ -178,6 +182,20 @@ impl Machines {
 
     pub fn is_multi(&self) -> bool {
         self.list.len() > 1
+    }
+
+    pub fn set_hidden(&mut self, hidden: impl IntoIterator<Item = Option<String>>) {
+        self.hidden = hidden.into_iter().collect();
+    }
+
+    /// Hidden only while some other machine stays shown, so the sidebar is never empty.
+    pub fn is_hidden(&self, name: Option<&str>) -> bool {
+        self.hidden.contains(&name.map(str::to_owned))
+            && self.list.iter().any(|m| !self.hidden.contains(&m.name))
+    }
+
+    pub fn shown(&self) -> impl Iterator<Item = &Machine> {
+        self.list.iter().filter(|m| !self.is_hidden(m.key()))
     }
 
     pub fn views(&self) -> &[hc::MachineView] {
@@ -213,8 +231,7 @@ impl Machines {
     }
 
     pub fn spaces(&self) -> Vec<SpaceRef<'_>> {
-        self.list
-            .iter()
+        self.shown()
             .filter(|m| m.is_connected() && m.slot.is_ready())
             .flat_map(|m| {
                 m.slot.doc().spaces.iter().map(|space| SpaceRef {
@@ -289,5 +306,19 @@ mod tests {
         let names: Vec<_> = machines.iter().map(Machine::label).collect();
         assert_eq!(names, ["Local", "arc"]);
         assert!(machines.get(Some("arc")).unwrap().is_connected());
+    }
+
+    #[test]
+    fn hidden_machines_drop_out_until_none_would_be_left() {
+        let mut machines = Machines::default();
+        machines.update(vec![view("arc", "connected", false)]);
+        machines.set_hidden([None, Some("gone".to_owned())]);
+        assert!(machines.is_hidden(None));
+        assert!(!machines.is_hidden(Some("arc")));
+        let shown: Vec<_> = machines.shown().map(Machine::label).collect();
+        assert_eq!(shown, ["arc"]);
+        machines.set_hidden([None, Some("arc".to_owned())]);
+        assert!(!machines.is_hidden(None), "all hidden shows all");
+        assert_eq!(machines.shown().count(), 2);
     }
 }

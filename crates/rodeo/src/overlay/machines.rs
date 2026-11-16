@@ -36,6 +36,10 @@ pub enum MachineOp {
     Update {
         machine: String,
     },
+    Hide {
+        machine: Option<String>,
+        hide: bool,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +50,7 @@ enum Key {
     Connect,
     Login,
     Update,
+    Hide,
     Menu,
     Close,
 }
@@ -54,11 +59,25 @@ const ACTIONS: &[(&str, char, Key)] = &[
     ("reconnect", 'c', Key::Connect),
     ("log in again", 'l', Key::Login),
     ("update hc there", 'u', Key::Update),
+    ("hide", 'h', Key::Hide),
     ("rename", 'r', Key::Rename),
     ("remove", 'x', Key::Remove),
 ];
 
-const LOCAL_HINTS: &[(&str, &str, Key)] = &[("a", "add", Key::Add), ("esc", "close", Key::Close)];
+const LOCAL_HINTS: &[(&str, &str, Key)] = &[
+    ("h", "hide", Key::Hide),
+    ("a", "add", Key::Add),
+    ("esc", "close", Key::Close),
+];
+
+/// The hide entry reads "show" on a hidden machine.
+fn named(label: &'static str, key: Key, machine: Option<&MachineRow>) -> &'static str {
+    if key == Key::Hide && machine.is_some_and(|m| m.hidden) {
+        "show"
+    } else {
+        label
+    }
+}
 const REMOTE_HINTS: &[(&str, &str, Key)] = &[
     ("↵", "actions", Key::Menu),
     ("a", "add", Key::Add),
@@ -210,6 +229,20 @@ impl MachineManager {
         }
         let at = self.sync(list);
         let selected = list.get(at);
+        if key == Key::Hide {
+            return match selected.filter(|m| !m.temporary) {
+                Some(row) => {
+                    self.note = None;
+                    self.error = None;
+                    self.stage = Stage::List;
+                    Outcome::Keep(Request::Machine(MachineOp::Hide {
+                        machine: row.name.clone(),
+                        hide: !row.hidden,
+                    }))
+                }
+                None => Outcome::Stay,
+            };
+        }
         if key != Key::Add && !remote(selected) {
             return Outcome::Stay;
         }
@@ -262,7 +295,7 @@ impl MachineManager {
                 },
                 format!("updating {machine}…"),
             ),
-            Key::Add | Key::Close | Key::Menu => return Outcome::Stay,
+            Key::Add | Key::Close | Key::Menu | Key::Hide => return Outcome::Stay,
         };
         self.busy = Some(busy);
         Outcome::Keep(Request::Machine(op))
@@ -286,6 +319,7 @@ impl MachineManager {
                     Some('c') => Key::Connect,
                     Some('l') => Key::Login,
                     Some('u') => Key::Update,
+                    Some('h') => Key::Hide,
                     _ => return Outcome::Stay,
                 };
                 return self.act(key, list);
@@ -446,7 +480,7 @@ impl MachineManager {
                 .iter()
                 .find(|(_, index)| *index == selected)
                 .map_or(body.y, |(rect, _)| rect.y);
-            self.render_menu(area, buf, anchor, highlighted, p);
+            self.render_menu(area, buf, anchor, highlighted, list.get(selected), p);
         }
         let covered = self.menu.map_or(outer, |menu| outer.union(menu));
         Some(Drawn::new(covered, None))
@@ -471,6 +505,7 @@ impl MachineManager {
             );
             x = x.saturating_add(width(key) + 1);
             let room = inner.right().saturating_sub(x);
+            let label = named(label, *action, machine);
             text(
                 buf,
                 x,
@@ -492,6 +527,7 @@ impl MachineManager {
         buf: &mut Buffer,
         row: u16,
         highlighted: usize,
+        machine: Option<&MachineRow>,
         p: &Palette,
     ) {
         let wide = menu_width();
@@ -525,12 +561,19 @@ impl MachineManager {
                 Style::new().fg(p.text).bg(p.panel_bg)
             };
             buf.set_style(line, base);
-            let named = if !chosen && *action == Key::Remove {
+            let red = if !chosen && *action == Key::Remove {
                 base.fg(p.red)
             } else {
                 base
             };
-            text(buf, line.x + 1, y, label, name, named);
+            text(
+                buf,
+                line.x + 1,
+                y,
+                label,
+                named(name, *action, machine),
+                red,
+            );
             let hint = if chosen { base } else { base.fg(p.overlay0) };
             text(
                 buf,
@@ -617,11 +660,20 @@ fn first_line(text: &str) -> String {
         .to_owned()
 }
 
-fn label_of(machine: &MachineRow) -> String {
+fn tag(machine: &MachineRow) -> Option<&'static str> {
     if machine.temporary {
-        format!("{}  temp", machine.label)
+        Some("temp")
+    } else if machine.hidden {
+        Some("hidden")
     } else {
-        machine.label.clone()
+        None
+    }
+}
+
+fn label_of(machine: &MachineRow) -> String {
+    match tag(machine) {
+        Some(tag) => format!("{}  {tag}", machine.label),
+        None => machine.label.clone(),
     }
 }
 
@@ -693,20 +745,25 @@ fn machine_rows(
             &label,
             base.add_modifier(Modifier::BOLD),
         );
-        if machine.temporary {
+        if let Some(word) = tag(machine) {
             let at = x + width(&label) + 2;
-            let tag = if chosen {
+            let color = if machine.temporary {
+                p.yellow
+            } else {
+                p.overlay0
+            };
+            let style = if chosen {
                 base
             } else {
-                Style::new().fg(p.yellow).bg(p.panel_bg)
+                Style::new().fg(color).bg(p.panel_bg)
             };
             text(
                 buf,
                 at,
                 rect.y,
                 rect.right().saturating_sub(at),
-                "temp",
-                tag,
+                word,
+                style,
             );
         }
         let (state, color) = &states[index];
@@ -881,6 +938,39 @@ mod tests {
         );
         assert!(manager.is_busy());
         assert_eq!(manager.act(Key::Update, &list), Outcome::Stay);
+    }
+
+    #[test]
+    fn h_hides_or_shows_any_machine_but_a_temporary_one() {
+        let hidden = MachineRow {
+            hidden: true,
+            ..row(Some("box"), "b")
+        };
+        let temp = MachineRow {
+            temporary: true,
+            ..row(Some("tmp"), "t")
+        };
+        let list = vec![row(None, ""), hidden, temp];
+        let h = KeyEvent::from(KeyCode::Char('h'));
+        let mut manager = MachineManager::new(None);
+        assert_eq!(
+            manager.list_key(&h, &list),
+            Outcome::Keep(Request::Machine(MachineOp::Hide {
+                machine: None,
+                hide: true
+            }))
+        );
+        manager.pick(&list, 1);
+        assert_eq!(named("hide", Key::Hide, list.get(1)), "show");
+        assert_eq!(
+            manager.list_key(&h, &list),
+            Outcome::Keep(Request::Machine(MachineOp::Hide {
+                machine: Some("box".into()),
+                hide: false
+            }))
+        );
+        manager.pick(&list, 2);
+        assert_eq!(manager.list_key(&h, &list), Outcome::Stay);
     }
 
     #[test]

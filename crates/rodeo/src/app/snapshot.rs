@@ -32,7 +32,7 @@ impl App {
         }
         let mut stale_spaces = Vec::new();
         let mut stale_agents = Vec::new();
-        for machine in self.machines.iter().filter(|m| is_stale(m)) {
+        for machine in self.machines.shown().filter(|m| is_stale(m)) {
             for (index, space) in machine.slot.doc().spaces.iter().enumerate() {
                 let space = SpaceRef {
                     machine: machine.key(),
@@ -45,10 +45,10 @@ impl App {
                 stale_spaces.push(row);
             }
         }
-        let machines = self.machine_rows();
+        let rows = self.machine_rows();
         Snapshot {
-            machine_list: self.machine_list(&machines),
-            machines,
+            machine_list: self.machine_list(&rows),
+            machines: rows.into_iter().filter(|m| !m.hidden).collect(),
             spaces,
             tabs: self.tab_rows(),
             panes,
@@ -73,7 +73,9 @@ impl App {
     }
 
     pub fn active_machine_row(&self) -> Option<MachineRow> {
-        self.machine_rows().into_iter().find(|m| m.active)
+        self.machine_rows()
+            .into_iter()
+            .find(|m| m.active && !m.hidden)
     }
 
     fn machine_rows(&self) -> Vec<MachineRow> {
@@ -108,12 +110,13 @@ impl App {
                     target: info.map(|i| i.target.clone()).unwrap_or_default(),
                     via: info.is_some_and(|i| i.via),
                     temporary: false,
+                    hidden: self.machines.is_hidden(m.key()),
                 }
             })
             .collect()
     }
 
-    fn machine_list(&self, sidebar: &[MachineRow]) -> Vec<MachineRow> {
+    fn machine_list(&self, machines: &[MachineRow]) -> Vec<MachineRow> {
         let temporary = self
             .machines
             .views()
@@ -135,7 +138,7 @@ impl App {
                     ..MachineRow::default()
                 }
             });
-        let mut list: Vec<MachineRow> = sidebar.iter().cloned().chain(temporary).collect();
+        let mut list: Vec<MachineRow> = machines.iter().cloned().chain(temporary).collect();
         if let Some(rest) = list.get_mut(1..) {
             rest.sort_by(|a, b| a.name.cmp(&b.name));
         }

@@ -33,6 +33,12 @@ With more than one machine, the sidebar lists machines, and the spaces of each m
 
 The spaces of a machine that is not connected show dim. A machine marked as temporary, such as a sandbox for one task, does not show.
 
+## Hide a machine
+
+To work on fewer machines at a time, open the machine manager with <kbd>prefix+m</kbd>, pick a machine and press <kbd>h</kbd>. This works for your own machine too. A hidden machine leaves this rodeo's sidebar, agent list, goto picker and agent keys, and its toasts and sounds stop. It stays connected in `hc`, its terminals keep running, and the desktop app and other rodeo clients still show it.
+
+The manager marks the machine `hidden`. Press <kbd>h</kbd> again to show it. rodeo saves the choice for each `hc` session in `~/.local/state/rodeo/`. One connected machine always stays shown, and while only one remote machine is shown, its machine row stays so you can see its state.
+
 ## Work on a machine
 
 Click a machine row to open the space you used last on it. On a machine with no spaces, the click makes it the active machine. `new`, <kbd>prefix+c</kbd> and <kbd>prefix+shift+n</kbd> then work on the active machine: a new tab goes to the space you used last there, and with no space yet, rodeo makes the first one.

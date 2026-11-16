@@ -156,7 +156,9 @@ impl App {
             self.focus_pane(&pane);
         }
         self.ensure_first_space();
-        let empty = self.machines.local().slot.is_ready() && self.machines.spaces().is_empty();
+        let empty = self.machines.local().slot.is_ready()
+            && !self.machines.is_hidden(None)
+            && self.machines.spaces().is_empty();
         if empty && self.view.mode == crate::view::Mode::Terminal {
             self.view.mode = crate::view::Mode::Navigate;
         }
@@ -170,7 +172,7 @@ impl App {
             return;
         }
         self.first_space = true;
-        if self.machines.spaces().is_empty() {
+        if self.machines.spaces().is_empty() && !self.machines.is_hidden(None) {
             match self.launch_dir.clone() {
                 Some(dir) => self.new_space_in(None, dir, String::new()),
                 None => self.new_workspace_now(String::new()),

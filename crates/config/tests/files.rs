@@ -218,6 +218,7 @@ fn preferences_round_trip() {
         sidebar_collapsed: Some(true),
         agent_panel_sort: Some(AgentPanelSort::Priority),
         collapsed_groups: vec!["/repo/.git".into()],
+        hidden_machines: vec![None, Some("box".into())],
     };
     prefs.save(&path).unwrap();
     assert_eq!(Preferences::load(&path), prefs);
@@ -225,6 +226,7 @@ fn preferences_round_trip() {
         serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(json["agent_panel_sort"], "priority");
     assert_eq!(json["sidebar_width"], 31);
+    assert_eq!(json["hidden_machines"], serde_json::json!([null, "box"]));
 
     Preferences::default().save(&path).unwrap();
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "{}");

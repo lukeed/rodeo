@@ -232,7 +232,9 @@ impl View {
         }
         let gone = match &self.nav {
             Some(Nav::Space(key)) => !spaces.contains(key),
-            Some(Nav::Machine(name)) => machines.get(name.as_deref()).is_none(),
+            Some(Nav::Machine(name)) => {
+                machines.get(name.as_deref()).is_none() || machines.is_hidden(name.as_deref())
+            }
             None => false,
         };
         if gone {

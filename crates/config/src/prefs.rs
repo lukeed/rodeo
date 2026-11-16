@@ -22,6 +22,9 @@ pub struct Preferences {
     pub agent_panel_sort: Option<AgentPanelSort>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub collapsed_groups: Vec<String>,
+    /// Machines this client leaves out of the sidebar; `null` is the local machine.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub hidden_machines: Vec<Option<String>>,
 }
 
 impl Preferences {
